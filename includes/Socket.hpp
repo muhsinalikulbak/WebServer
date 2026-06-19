@@ -17,9 +17,9 @@ enum State
 };
 enum Role
 {
-    IDLE,
-    SERVER,
-    CLIENT
+    ROLE_IDLE,
+    ROLE_SERVER,
+    ROLE_CLIENT
 };
 
 class Socket

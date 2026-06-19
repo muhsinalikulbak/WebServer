@@ -1,9 +1,10 @@
 NAME = webserver
 
 CXX = c++
-CXXFLAGS =  -Wall -Wextra -Werror -std=c++98
+CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -Iincludes
 
-SRCS =	src/main.cpp
+SRCS =	src/main.cpp \
+		src/network/Socket.cpp
 
 OBJS_DIR = obj
 OBJS = $(SRCS:%.cpp=$(OBJS_DIR)/%.o)

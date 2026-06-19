@@ -1,5 +1,6 @@
 #include "Socket.hpp"
 #include <exception>
+#include <stdio.h>
 
 Socket::Socket(/* args */)
 {
@@ -8,7 +9,7 @@ Socket::Socket(/* args */)
     _type = -1;
     _protocol = -1;
     _state = (State)IDLE;
-    _role = IDLE;
+    _role = ROLE_IDLE;
     _readBuffer = "";
     _writeBuffer = "";
 }
@@ -27,6 +28,7 @@ int Socket::createSocket()
         return -1; // Exception fırlat
     }
     _state = CREATED;
+    return _fd;
 
 }
 
@@ -46,7 +48,7 @@ void Socket::bindSocket()
 
 void Socket::startListening()
 {
-    if (listen(_fd, SOMAXCONN) == -1);
+    if (listen(_fd, SOMAXCONN) == -1)
     {
         perror("Listen");
         // Exception Fırlat;
@@ -56,7 +58,9 @@ void Socket::startListening()
 
 int Socket::acceptConnection()
 {
-
+    socklen_t len = sizeof(_addr);
+    int client_fd = accept(_fd, (sockaddr*)&_addr, &len);
+    return client_fd;
 }
 
 
