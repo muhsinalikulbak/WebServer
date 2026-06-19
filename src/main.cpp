@@ -1,7 +1,9 @@
 #include <iostream>
 
+#include <sys/socket.h>
 
 int main()
 {
-    return 0;
+    int serverFd = socket(AF_INET, SOCK_STREAM, 0);
+    bind(serverFd, )
 }
