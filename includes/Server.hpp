@@ -1,5 +1,5 @@
-#ifndef WEBSERVER_SERVER_HPP
-#define WEBSERVER_SERVER_HPP
+#ifndef SERVER_HPP
+#define SERVER_HPP
 
 
-#endif // WEBSERVER_SERVER_HPP
+#endif // SERVER_HPP

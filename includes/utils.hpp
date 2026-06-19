@@ -1,5 +1,5 @@
-#ifndef WEBSERVER_UTILS_HPP
-#define WEBSERVER_UTILS_HPP
+#ifndef UTILS_HPP
+#define UTILS_HPP
 
 
-#endif // WEBSERVER_UTILS_HPP
+#endif // UTILS_HPP

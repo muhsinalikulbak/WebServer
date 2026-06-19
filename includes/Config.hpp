@@ -1,5 +1,5 @@
-#ifndef WEBSERVER_CONFIG_HPP
-#define WEBSERVER_CONFIG_HPP
+#ifndef CONFIG_HPP
+#define CONFIG_HPP
 
 
-#endif // WEBSERVER_CONFIG_HPP
+#endif // CONFIG_HPP

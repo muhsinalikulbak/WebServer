@@ -1,5 +1,5 @@
-#ifndef WEBSERVER_ROUTER_HPP
-#define WEBSERVER_ROUTER_HPP
+#ifndef ROUTER_HPP
+#define ROUTER_HPP
 
 
-#endif // WEBSERVER_ROUTER_HPP
+#endif // ROUTER_HPP

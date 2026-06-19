@@ -1,5 +1,5 @@
-#ifndef WEBSERVER_SOCKET_HPP
-#define WEBSERVER_SOCKET_HPP
+#ifndef SOCKET_HPP
+#define SOCKET_HPP
 
 
-#endif // WEBSERVER_SOCKET_HPP
+#endif // SOCKET_HPP
