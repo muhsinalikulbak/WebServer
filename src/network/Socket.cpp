@@ -1,6 +1,7 @@
 #include "Socket.hpp"
 #include <exception>
 #include <stdio.h>
+#include <iostream>
 
 Socket::Socket(/* args */)
 {
@@ -59,10 +60,41 @@ void Socket::startListening()
 int Socket::acceptConnection()
 {
     socklen_t len = sizeof(_addr);
+    // addr sockaddr_in olduğu için cast yapıyoruz.
     int client_fd = accept(_fd, (sockaddr*)&_addr, &len);
     return client_fd;
 }
 
+
+void Socket::readFromClient(int clientFd)
+{
+    char buffer[4096];
+    int byte = 1;
+    std::string request;
+
+    while (byte > 0)
+    {
+        byte = (int)recv(clientFd, buffer, 4096, 0);
+        if (byte == -1)
+        {
+            perror("Recv");
+            return; // Exception fırlat
+        }
+        else if (byte == 0)
+        {
+            // Client bağlantıyı kapattı.
+            return;
+        }
+        request.append(buffer, byte);
+        if (request.find("\r\n\r\n") != std::string::npos)
+        {
+            std::cout << "Request ready" << std::endl;
+            break;
+        }
+    }
+    std::cout << request << std::endl;
+    
+}
 
 void Socket::closeSocket()
 {

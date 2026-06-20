@@ -15,5 +15,6 @@ int main()
         int client = sc.acceptConnection();
         if (client != -1)
             std::cout << "New client: " << client << std::endl;
+        sc.readFromClient(client);
     }
 }

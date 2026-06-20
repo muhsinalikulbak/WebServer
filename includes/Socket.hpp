@@ -45,6 +45,7 @@ public:
     void startListening();
     int acceptConnection();
     void closeSocket();
+    void readFromClient(int clientFd);
 
     int getFd();
     int getDomain();
