@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 #include <string>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 
 enum State
@@ -29,7 +28,6 @@ private:
 public:
     Socket();
     Socket(int domain, int type);
-
     ~Socket();
 
     int createSocket();
@@ -38,11 +36,9 @@ public:
     void bindSocket(int port);
 
     
-    void readFromClient(int clientFd); // Taşınacak
-
-    int getFd();
-    int getDomain();
-    int getType();
+    int getFd() const;
+    int getDomain() const;
+    int getType() const;
 
 };
 

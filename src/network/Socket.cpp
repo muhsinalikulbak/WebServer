@@ -75,46 +75,17 @@ int Socket::acceptConnection()
 }
 
 
-void Socket::readFromClient(int clientFd)
-{
-    char buffer[4096];
-    int byte = 1;
-    std::string request;
-
-    while (byte > 0)
-    {
-        byte = (int)recv(clientFd, buffer, 4096, 0);
-        if (byte == -1)
-        {
-            perror("Recv");
-            return; // Exception fırlat
-        }
-        else if (byte == 0)
-        {
-            // Client bağlantıyı kapattı.
-            return;
-        }
-        request.append(buffer, byte);
-        if (request.find("\r\n\r\n") != std::string::npos)
-        {
-            std::cout << "Request ready" << std::endl;
-            break;
-        }
-    }
-    std::cout << request << std::endl;
-}
-
-int Socket::getFd()
+int Socket::getFd() const
 {
     return _fd;
 }
 
-int Socket::getDomain()
+int Socket::getDomain() const
 {
     return _domain;
 }
 
-int Socket::getType()
+int Socket::getType() const
 {
     return _type;
 }
