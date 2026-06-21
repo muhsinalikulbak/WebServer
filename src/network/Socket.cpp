@@ -17,7 +17,7 @@ Socket::Socket(/* args */)
 
 Socket::~Socket()
 {
-
+    closeSocket();
 }
 
 int Socket::createSocket()
@@ -30,7 +30,6 @@ int Socket::createSocket()
     }
     _state = CREATED;
     return _fd;
-
 }
 
 void Socket::bindSocket()
@@ -57,11 +56,18 @@ void Socket::startListening()
     _state = LISTENING;
 }
 
+// addr sockaddr_in olduğu için cast yapıyoruz.
 int Socket::acceptConnection()
 {
-    socklen_t len = sizeof(_addr);
-    // addr sockaddr_in olduğu için cast yapıyoruz.
-    int client_fd = accept(_fd, (sockaddr*)&_addr, &len);
+    sockaddr_in client_addr; // Client bilgilerini geçici olarak tutacak yer
+    socklen_t len = sizeof(client_addr);
+    
+    // İşletim sistemi client bilgilerini sunucunun üzerine değil, client_addr'ye yazacak
+    int client_fd = accept(_fd, (sockaddr*)&client_addr, &len);
+    
+    if (client_fd == -1) {
+        perror("accept");
+    }
     return client_fd;
 }
 
@@ -93,12 +99,16 @@ void Socket::readFromClient(int clientFd)
         }
     }
     std::cout << request << std::endl;
-    
 }
 
 void Socket::closeSocket()
 {
-
+    if (_fd != -1)
+    {
+        close(_fd);
+        _fd = -1;
+        _state = IDLE;
+    }
 }
 
 
