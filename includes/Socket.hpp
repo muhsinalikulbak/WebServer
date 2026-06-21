@@ -16,12 +16,6 @@ enum State
     CONNECTED,
     CLOSED
 };
-enum Role
-{
-    ROLE_IDLE,
-    ROLE_SERVER,
-    ROLE_CLIENT
-};
 
 class Socket
 {
@@ -29,29 +23,26 @@ private:
     int _fd;
     int _domain;   // AF_INET
     int _type;     // SOCK_STREAM
-    int _protocol; // 0
-    State _state;
-    Role _role;
-    std::string _readBuffer;
-    std::string _writeBuffer;
     struct sockaddr_in _addr;
 
 
 public:
-    Socket(/* args */);
+    Socket();
+    Socket(int domain, int type);
+
     ~Socket();
 
     int createSocket();
-    void bindSocket();
-    void startListening();
     int acceptConnection();
-    void closeSocket();
-    void readFromClient(int clientFd);
+    void startListening();
+    void bindSocket(int port);
+
+    
+    void readFromClient(int clientFd); // Taşınacak
 
     int getFd();
     int getDomain();
     int getType();
-    int getProtocol();
 
 };
 

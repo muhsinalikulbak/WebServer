@@ -3,60 +3,63 @@
 #include <stdio.h>
 #include <iostream>
 
+Socket::Socket(int domain, int type)
+{
+    _fd = -1;
+    _domain = domain;
+    _type = type;
+}
+
 Socket::Socket(/* args */)
 {
     _fd = -1;
-    _domain = -1;
-    _type = -1;
-    _protocol = -1;
-    _state = (State)IDLE;
-    _role = ROLE_IDLE;
-    _readBuffer = "";
-    _writeBuffer = "";
+    _domain = AF_INET;
+    _type = SOCK_STREAM;
 }
 
 Socket::~Socket()
 {
-    closeSocket();
+    if (_fd != -1)
+    {
+        close(_fd);
+        _fd = -1;
+    }
 }
 
 int Socket::createSocket()
 {
-    _fd = socket(AF_INET, SOCK_STREAM, 0);
+    _fd = socket(_domain, _type, 0);
     if (_fd == -1)
     {
         perror("socket");
         return -1; // Exception fırlat
     }
-    _state = CREATED;
     return _fd;
 }
 
-void Socket::bindSocket()
+void Socket::bindSocket(int port)
 {
-    _addr.sin_family = AF_INET;
-    _addr.sin_port = htons(8080);
-    _addr.sin_addr.s_addr = INADDR_ANY;
+    _addr.sin_family = _domain; // Genellikle AF_INET
+    _addr.sin_port = htons(port); // Genellikle 8080
+    _addr.sin_addr.s_addr = INADDR_ANY; // BU ne
 
     if (bind(_fd, (sockaddr*)&_addr, sizeof(_addr)) == -1)
     {
         perror("bind");
         // Exception Fırlat
     }
-    _state = BOUND;
 }
 
 void Socket::startListening()
 {
+    // SOMAXCONN ?
     if (listen(_fd, SOMAXCONN) == -1)
     {
         perror("Listen");
         // Exception Fırlat;
     }
-    _state = LISTENING;
 }
 
-// addr sockaddr_in olduğu için cast yapıyoruz.
 int Socket::acceptConnection()
 {
     sockaddr_in client_addr; // Client bilgilerini geçici olarak tutacak yer
@@ -101,17 +104,6 @@ void Socket::readFromClient(int clientFd)
     std::cout << request << std::endl;
 }
 
-void Socket::closeSocket()
-{
-    if (_fd != -1)
-    {
-        close(_fd);
-        _fd = -1;
-        _state = IDLE;
-    }
-}
-
-
 int Socket::getFd()
 {
     return _fd;
@@ -127,7 +119,4 @@ int Socket::getType()
     return _type;
 }
 
-int Socket::getProtocol()
-{
-    return  _protocol;
-}
+
