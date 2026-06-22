@@ -23,6 +23,7 @@ private:
     int _domain;   // AF_INET
     int _type;     // SOCK_STREAM
     struct sockaddr_in _addr;
+    State _state;
 
 
 public:

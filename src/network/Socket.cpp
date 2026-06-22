@@ -8,6 +8,7 @@ Socket::Socket(int domain, int type)
     _fd = -1;
     _domain = domain;
     _type = type;
+    _state = IDLE;
 }
 
 Socket::Socket(/* args */)
@@ -15,6 +16,7 @@ Socket::Socket(/* args */)
     _fd = -1;
     _domain = AF_INET;
     _type = SOCK_STREAM;
+    _state = IDLE;
 }
 
 Socket::~Socket()
@@ -22,6 +24,7 @@ Socket::~Socket()
     if (_fd != -1)
     {
         close(_fd);
+        _state = CLOSED;
         _fd = -1;
     }
 }
@@ -34,6 +37,7 @@ int Socket::createSocket()
         perror("socket");
         return -1; // Exception fırlat
     }
+    _state = CREATED;
     return _fd;
 }
 
@@ -48,6 +52,7 @@ void Socket::bindSocket(int port)
         perror("bind");
         // Exception Fırlat
     }
+    _state = BOUND;
 }
 
 void Socket::startListening()
@@ -58,6 +63,7 @@ void Socket::startListening()
         perror("Listen");
         // Exception Fırlat;
     }
+    _state = LISTENING;
 }
 
 int Socket::acceptConnection()
@@ -71,6 +77,7 @@ int Socket::acceptConnection()
     if (client_fd == -1) {
         perror("accept");
     }
+    _state = CONNECTED;
     return client_fd;
 }
 
