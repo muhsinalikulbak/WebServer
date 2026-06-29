@@ -21,6 +21,7 @@ public:
     int  getFd() const;
     const std::string& getReadBuffer() const;
     void clearReadBuffer();
+    void appendToWriteBuffer(const std::string& responseChunk);
 
     // Ağ operasyonları
     int  readData();           // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon

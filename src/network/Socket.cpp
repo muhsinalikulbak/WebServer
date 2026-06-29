@@ -14,8 +14,8 @@ Socket::Socket(int domain, int type)
 Socket::Socket(/* args */)
 {
     _fd = -1;
-    _domain = AF_INET;
-    _type = SOCK_STREAM;
+    _domain = AF_INET; // IPv4
+    _type = SOCK_STREAM; // TCP
     _state = IDLE;
 }
 
@@ -35,7 +35,7 @@ int Socket::createSocket()
     if (_fd == -1)
     {
         perror("socket");
-        return -1; // Exception fırlat
+        return -1;
     }
     _state = CREATED;
     return _fd;
@@ -44,8 +44,11 @@ int Socket::createSocket()
 void Socket::bindSocket(int port)
 {
     _addr.sin_family = _domain; // Genellikle AF_INET
-    _addr.sin_port = htons(port); // Genellikle 8080
-    _addr.sin_addr.s_addr = INADDR_ANY; // BU ne
+    _addr.sin_port = htons(port); // Genellikle 8080, portu 80 Olarak deneyelim daha sonra.
+
+    _addr.sin_addr.s_addr = INADDR_ANY; // Bu sunucuya bağlı tüm ip'lerden atılan istekleri kabul et demektir.
+    // Fiziksel ip, localhost ip, wifi ip gibi farklı ağ girişlerinden gelen istekleri alır. Çünkü 0.0.0.0 = ANY demektir.
+    // İstersek bunu sınırlayabilir sadece localhosttan ya da fiziksel ip'den istekleri kabul edebiliriz.
 
     if (bind(_fd, (sockaddr*)&_addr, sizeof(_addr)) == -1)
     {
@@ -58,6 +61,7 @@ void Socket::bindSocket(int port)
 void Socket::startListening()
 {
     // SOMAXCONN ?
+    // Listen fonksiyonunun sürekli dinlemesi için bir loop içerisinde olması gerekmiyor mu ?
     if (listen(_fd, SOMAXCONN) == -1)
     {
         perror("Listen");
@@ -74,10 +78,14 @@ int Socket::acceptConnection()
     // İşletim sistemi client bilgilerini sunucunun üzerine değil, client_addr'ye yazacak
     int client_fd = accept(_fd, (sockaddr*)&client_addr, &len);
     
-    if (client_fd == -1) {
+    // Client adresi kullanmıyorsa, geçiciyse neden oluşturup parametreye veriyoruz.
+    if (client_fd == -1) 
+    {
         perror("accept");
     }
-    _state = CONNECTED;
+// inet_ntoa (Network to ASCII): Sayısal IP'yi yazıya döker
+    std::cout << "Yeni baglanti: " << inet_ntoa(client_addr.sin_addr) 
+              << ":" << ntohs(client_addr.sin_port) << std::endl;
     return client_fd;
 }
 
@@ -96,5 +104,4 @@ int Socket::getType() const
 {
     return _type;
 }
-
 

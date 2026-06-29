@@ -5,6 +5,8 @@
 #include <string>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <iostream>
+#include <arpa/inet.h>
 
 enum State
 {

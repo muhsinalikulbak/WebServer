@@ -17,7 +17,6 @@ Client::~Client()
         close(_clientFd);
     }
 }
-    
 
 int  Client::getFd() const
 {
@@ -55,7 +54,7 @@ int  Client::readData()
     else
         _readBuffer.append(buffer, byte);
     
-    if (_readBuffer.find("\r\n\r\n ") != std::string::npos)
+    if (_readBuffer.find("\r\n\r\n") != std::string::npos)
     {
         // Veri okundu ve istek bitti
         return 2;
@@ -88,4 +87,17 @@ int Client::sendData()
         return 0; 
 
     return 1; // Hala gönderilecek veri kalmışsa 1 dönelim
+}
+
+void Client::appendToWriteBuffer(const std::string& responseChunk)
+{
+    _writeBuffer.append(responseChunk);
+
+    // Burada bir akış söz konusudur. Yani bir response gönderilirken 
+    // O esnada bir request gelip response üretilip bu writebuffer'ın kuyruğuna eklenmelidir.
+    // Diğer türlü = eşitleme o an gönderilen response'u siler.
+
+    // örneğin merhaba response'u varken
+    // Sonra selam response'U geldiğinde durum > merhabaselam olur ,
+    // Send data 0. indexten veri gönderir merhaba'dan devam eder.
 }
