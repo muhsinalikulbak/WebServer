@@ -3,12 +3,16 @@
 #include "Client.hpp"
 #include <string>
 #include <map>
+#include <poll.h>
+#include <vector>
 
 class Server
 {
 private:
     // Client'in heap'de olmasının sebebi map kopyalama yaprken eski Client'ler stack de olduğundan hafızadan silinir ve SOCKET KAPANIR.
-    std::map<std::string, Client*> _clientFd;
+    std::map<int, Client*> _clientMap;
+    std::vector<struct pollfd> _pollFds;
+    
     Socket _masterSocket;
 
 public:

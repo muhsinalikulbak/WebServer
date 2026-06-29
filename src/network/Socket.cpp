@@ -29,16 +29,16 @@ Socket::~Socket()
     }
 }
 
-int Socket::createSocket()
+void Socket::createSocket()
 {
     _fd = socket(_domain, _type, 0);
     if (_fd == -1)
     {
         perror("socket");
-        return -1;
+        // Throw fırlat
     }
-    _state = CREATED;
-    return _fd;
+    else
+        _state = CREATED;
 }
 
 void Socket::bindSocket(int port)
@@ -61,7 +61,6 @@ void Socket::bindSocket(int port)
 void Socket::startListening()
 {
     // SOMAXCONN ?
-    // Listen fonksiyonunun sürekli dinlemesi için bir loop içerisinde olması gerekmiyor mu ?
     if (listen(_fd, SOMAXCONN) == -1)
     {
         perror("Listen");
@@ -105,3 +104,7 @@ int Socket::getType() const
     return _type;
 }
 
+State Socket::getState() const
+{
+    return _state;
+}

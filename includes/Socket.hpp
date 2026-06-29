@@ -33,8 +33,8 @@ public:
     Socket(int domain, int type);
     ~Socket();
 
-    int createSocket();
     int acceptConnection();
+    void createSocket();
     void startListening();
     void bindSocket(int port);
 
@@ -42,6 +42,7 @@ public:
     int getFd() const;
     int getDomain() const;
     int getType() const;
+    State getState() const;
 
 };
 
