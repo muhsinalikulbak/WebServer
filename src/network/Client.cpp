@@ -97,7 +97,10 @@ void Client::appendToWriteBuffer(const std::string& responseChunk)
     // O esnada bir request gelip response üretilip bu writebuffer'ın kuyruğuna eklenmelidir.
     // Diğer türlü = eşitleme o an gönderilen response'u siler.
 
-    // örneğin merhaba response'u varken
-    // Sonra selam response'U geldiğinde durum > merhabaselam olur ,
+    // örneğin merhaba\r\n\r\ response'u varken
+    // Sonra selam response'U geldiğinde durum > merhaba\r\n\r\selam\r\n\r\ olur ,
     // Send data 0. indexten veri gönderir merhaba'dan devam eder.
+
+    // Client'a farklı requestlerin response'ları tek bir string üzerinde birleştirilip gönderilmesi sorun değildir.
+    // Client tarafında HTTP 1.1 protokolü bunu kendi içinde halleder. 
 }
