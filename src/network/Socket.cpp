@@ -82,7 +82,7 @@ int Socket::acceptConnection()
     {
         perror("accept");
     }
-// inet_ntoa (Network to ASCII): Sayısal IP'yi yazıya döker
+    // inet_ntoa (Network to ASCII): Sayısal IP'yi yazıya döker
     std::cout << "Yeni baglanti: " << inet_ntoa(client_addr.sin_addr) 
               << ":" << ntohs(client_addr.sin_port) << std::endl;
     return client_fd;

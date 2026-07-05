@@ -84,7 +84,7 @@ int Client::sendData()
 
     // Eğer buffer tamamen bittiyse (her şey gönderildiyse) 0 dönelim
     if (_writeBuffer.empty())
-        return 0; 
+        return 0;
 
     return 1; // Hala gönderilecek veri kalmışsa 1 dönelim
 }

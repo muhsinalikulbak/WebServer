@@ -24,6 +24,8 @@ public:
     
     void init(int port); // port numarası alır ve masterSocket'e verir  
     void run();
+    bool acceptNewConnection();
+    void handleClientData(int clientFd);
 };
 
 
