@@ -26,6 +26,7 @@ public:
     void run();
     bool acceptNewConnection();
     void handleClientData(int clientFd);
+    bool deleteClient(int clientFd);
 };
 
 

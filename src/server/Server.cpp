@@ -44,7 +44,6 @@ void Server::init(int port)
     }
 
     _events.resize(100);
-
 }
 bool Server::acceptNewConnection()
 {
@@ -73,13 +72,42 @@ bool Server::acceptNewConnection()
 
 void Server::handleClientData(int clientFd)
 {
+    int byte = _clientMap[clientFd]->readData();
+
+    if (byte == -1)
+    {
+        deleteClient(clientFd);
+    }
+    else if (byte == 0)
+    {
+        // Client bağlantıyı kapattı eof
+    }
+    else if (byte == 2)
+    {
+        // istek bitti
+    }
+}
+
+bool Server::deleteClient(int clientFd)
+{
 
 }
 
 void Server::run()
 {
+    int fd = 0;
+
     while (true)
     {
+        // Makrolara (EPOLLIN vs) & ile kontrol etmemizin nedeni her bir durumun
+        // Tek 1 biti ile temsil edilmesinden kaynaklanır. Ve birden fazla durum var ise
+        // kernel bu iki makroru OR'lar ve sonucu öyle verir.
+        // Yani örneğin EPOLLIN = 0001 temsil ederken EPOLLHUP 1000'ı temsil edebilir.
+        // Ve aynı anda ikisi olduğu zaman bunu OR'lar ve sonuç 1001 olur.
+        // Bu durumda 32 Bitlik == karşılaştırma yapmak burada hatalıdır.
+        // Onun yerine EPOLLIN & 1001 yapıldığında buradan 1 gelir ve 1 True'dur
+        // Diğer türlü EPOLLIN == 1001 yapsaydı false olurdu ve isteği kaçırmış olurdu.
+
         int activeEvents = epoll_wait(_epollFd, &_events[0], _events.size(), -1);
 
         if (activeEvents == -1)
@@ -90,24 +118,30 @@ void Server::run()
 
         for (int i = 0; i < activeEvents; i++)
         {
-            if (_events[i].events & (EPOLLERR || EPOLLHUP))
+            fd = _events[i].data.fd;
+
+            if (_events[i].events & (EPOLLERR | EPOLLHUP))
             {
-                if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, _events[i].data.fd, &_events[i]) == -1)
+                if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, &_events[i]) == -1)
                 {
                     perror("error epoll dell");
                 }
+                close(fd);
+                // Burada map'den fd'yi sil ve Client nesnesini delete et
+
                 // socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
                 // Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set edilir.)
             }
             else if (_events[i].events & EPOLLIN)
             {
-                if (_events[i].data.fd == _masterSocket.getFd())
+                if (fd == _masterSocket.getFd())
                 {
                     // Yeni client'i epoll'a ekliyoruz.
                     acceptNewConnection();
                 }
                 else
-                {
+                { 
+                    handleClientData(fd);
                     // Var olan client'dan request gelmiş
                 }
             }
