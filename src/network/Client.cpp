@@ -35,7 +35,7 @@ void Client::clearReadBuffer()
 
 // Ağ operasyonları
 // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
-int  Client::readData()
+StreamState Client::receiveData()
 {
     char buffer[4096];
     int byte = 0;
@@ -44,29 +44,29 @@ int  Client::readData()
 
     if (byte == -1)
     {
-        perror ("Recv");
-        return -1; // Throw fırlat
+        perror("Recv");
+        return TRANSFER_ERROR;  // Sistem hatası
     }
     else if (byte == 0)
     {
-        return 0; // Client bağlantıyı kapattı (EOF)
+        return PEER_CLOSED;  // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
     }
     else
         _readBuffer.append(buffer, byte);
     
     if (_readBuffer.find("\r\n\r\n") != std::string::npos)
     {
-        // Veri okundu ve istek bitti
-        return 2;
+        // Veri okundu ve istek tamamen alındı
+        return TRANSFER_COMPLETE;
     }
-    // Veri okundu ama istek henüz bitmedi
-    return 1;
+    // Hala alınacak veri var
+    return TRANSFER_INCOMPLETE;
 }
 
-int Client::sendData()
+StreamState Client::sendData()
 {
     if (_writeBuffer.empty())
-        return 0;
+        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
     // _writeBuffer içindeki veriyi istemciye gönderiyoruz
     int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
@@ -74,7 +74,7 @@ int Client::sendData()
     if (byte == -1)
     {
         perror("Send");
-        return -1; // Hata durumu
+        return TRANSFER_ERROR;  // Sistem hatası
     }
     else if (byte > 0)
     {
@@ -82,11 +82,11 @@ int Client::sendData()
         _writeBuffer.erase(0, byte);
     }
 
-    // Eğer buffer tamamen bittiyse (her şey gönderildiyse) 0 dönelim
+    // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
     if (_writeBuffer.empty())
-        return 0;
+        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
-    return 1; // Hala gönderilecek veri kalmışsa 1 dönelim
+    return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
 void Client::appendToWriteBuffer(const std::string& responseChunk)

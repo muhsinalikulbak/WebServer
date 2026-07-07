@@ -70,32 +70,78 @@ bool Server::acceptNewConnection()
     return true;
 }
 
-void Server::handleClientData(int clientFd)
+void Server::handleClientReceive(int clientFd, epoll_event *event)
 {
-    int byte = _clientMap[clientFd]->readData();
+    Client* client = _clientMap[clientFd];
+    StreamState state = client->receiveData();
 
-    if (byte == -1)
+    if (state == TRANSFER_ERROR || state == PEER_CLOSED)
     {
-        deleteClient(clientFd);
+        // Client bağlantıyı kapattı (EOF) veya hata oluştu
+        deleteClient(clientFd, event);
     }
-    else if (byte == 0)
+    else if (state == TRANSFER_COMPLETE)
     {
-        // Client bağlantıyı kapattı eof
-    }
-    else if (byte == 2)
-    {
-        // istek bitti
+        // 1. Burada Request parse edilip response üretilecek (Şimdilik dummy bir response ekleyelim)
+        // Request'i request parser alacak, ardından http_request nesnesi dönecek
+        // Bu nesneyi response builder alacak verileri httpresponse nesnesi olarak dönecek.
+        // Nesne response'su getResponse() string olarak getirecek.
+
+
+        std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
+        client->appendToWriteBuffer(dummyResponse);
+
+        event->events = EPOLLOUT;
+
+        if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+        {
+            perror("Error modifying to EPOLLOUT");
+            deleteClient(clientFd, event);
+        }
+        client->clearReadBuffer();
     }
 }
 
-bool Server::deleteClient(int clientFd)
-{
 
+
+void Server::handleClientSend(int clientFd, epoll_event *event)
+{
+    Client *client = _clientMap[clientFd];
+    StreamState state = client->sendData();
+
+    if (state == TRANSFER_ERROR)
+    {
+        // Gönderim hatası, bağlantıyı kopar
+        deleteClient(clientFd, event);
+    }
+    else if (state == TRANSFER_COMPLETE)
+    {
+        // Response başarıyla tamamen gönderildi!
+        // Keep-Alive aktif olduğu için soketi kapatmıyoruz, yeni istekler için tekrar EPOLLIN moduna alıyoruz.
+        event->events = EPOLLIN;
+        if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+        {
+            perror("Error modifying back to EPOLLIN");
+            deleteClient(clientFd, event);
+        }
+    }
+    // state == TRANSFER_INCOMPLETE ise ellemiyoruz, bir sonraki döngüde kalan veriyi göndermeye devam edecek.
+}
+
+void Server::deleteClient(int clientFd, epoll_event* event)
+{
+    if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, clientFd, event) == -1)
+    {
+        perror("error epoll dell");
+    }
+    close(clientFd);
+    delete _clientMap[clientFd];
+    _clientMap.erase(clientFd);
 }
 
 void Server::run()
 {
-    int fd = 0;
+    int currentFd = 0;
 
     while (true)
     {
@@ -104,6 +150,7 @@ void Server::run()
         // kernel bu iki makroru OR'lar ve sonucu öyle verir.
         // Yani örneğin EPOLLIN = 0001 temsil ederken EPOLLHUP 1000'ı temsil edebilir.
         // Ve aynı anda ikisi olduğu zaman bunu OR'lar ve sonuç 1001 olur.
+        
         // Bu durumda 32 Bitlik == karşılaştırma yapmak burada hatalıdır.
         // Onun yerine EPOLLIN & 1001 yapıldığında buradan 1 gelir ve 1 True'dur
         // Diğer türlü EPOLLIN == 1001 yapsaydı false olurdu ve isteği kaçırmış olurdu.
@@ -118,36 +165,30 @@ void Server::run()
 
         for (int i = 0; i < activeEvents; i++)
         {
-            fd = _events[i].data.fd;
+            currentFd = _events[i].data.fd;
 
             if (_events[i].events & (EPOLLERR | EPOLLHUP))
             {
-                if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, &_events[i]) == -1)
-                {
-                    perror("error epoll dell");
-                }
-                close(fd);
-                // Burada map'den fd'yi sil ve Client nesnesini delete et
-
                 // socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
                 // Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set edilir.)
+                deleteClient(currentFd, &_events[i]);
             }
             else if (_events[i].events & EPOLLIN)
             {
-                if (fd == _masterSocket.getFd())
+                if (currentFd == _masterSocket.getFd())
                 {
                     // Yeni client'i epoll'a ekliyoruz.
                     acceptNewConnection();
                 }
                 else
                 { 
-                    handleClientData(fd);
                     // Var olan client'dan request gelmiş
+                    handleClientReceive(currentFd, &_events[i]);
                 }
             }
             else if (_events[i].events & EPOLLOUT)
             {
-                // Yazma işlemi için için buffer'a veri yazılır
+                handleClientSend(currentFd, &_events[i]);
             }
         }
     }

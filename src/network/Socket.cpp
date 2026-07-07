@@ -60,7 +60,10 @@ void Socket::bindSocket(int port)
 
 void Socket::startListening()
 {
-    // SOMAXCONN ?
+    // Socket Maximum Connections, bir ağ sunucusunun (server) 
+    // dinleme sırasına alabileceği maksimum bekleyen (pending) bağlantı
+    // talebi sayısını belirleyen sistem limitidir.
+    
     if (listen(_fd, SOMAXCONN) == -1)
     {
         perror("Listen");

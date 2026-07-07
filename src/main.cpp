@@ -1,10 +1,12 @@
 #include <iostream>
-#include "Socket.hpp"
+#include "Server.hpp"
 #include <sys/socket.h>
 #include <unistd.h>
 
 int main()
 {
-    Socket sc;
+    Server s;
+    s.init(7676);
+    s.run();
 
 }

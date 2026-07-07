@@ -4,8 +4,19 @@
 #include <string>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <cstdio>
 
-class Client {
+enum StreamState
+{
+    TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)
+    PEER_CLOSED,            // Uzak taraf bağlantıyı kapattı (EOF)
+    TRANSFER_INCOMPLETE,    // Okuma/Yazma işlemi tamamlanmadı
+    TRANSFER_COMPLETE       // Okuma/Yazma işlemi tamamlandı
+};
+
+class Client 
+{
 private:
     int         _clientFd;     // accept() fonksiyonundan dönen dosya tanımlayıcı
     std::string _readBuffer;   // İstemciden recv ile parça parça okunan ham istek verisi
@@ -24,8 +35,8 @@ public:
     void appendToWriteBuffer(const std::string& responseChunk);
 
     // Ağ operasyonları
-    int  readData();           // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
-    int  sendData();           // İleride yazacağın send() çağrısını yapacak fonksiyon
+    StreamState receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
+    StreamState sendData();           // Send() çağrısını yapacak fonksiyon
 };
 
 #endif

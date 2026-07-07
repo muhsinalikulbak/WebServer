@@ -4,7 +4,18 @@ CXX = c++
 CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -Iincludes
 
 SRCS =	src/main.cpp \
-		src/network/Socket.cpp
+		src/network/Socket.cpp \
+		src/network/Client.cpp \
+		src/http/HttpRequest.cpp \
+		src/http/HttpResponse.cpp \
+		src/http/RequestParser.cpp \
+		src/http/ResponseBuilder.cpp \
+		src/http/Router.cpp \
+		src/server/Server.cpp \
+		src/server/Config.cpp \
+		src/server/ConfigParser.cpp \
+		src/server/CgiHandler.cpp \
+		src/server/Cluster.cpp
 
 OBJS_DIR = obj
 OBJS = $(SRCS:%.cpp=$(OBJS_DIR)/%.o)

@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 #include "Client.hpp"
+#include "Socket.hpp"
 #include <string>
 #include <map>
 #include <sys/epoll.h>
@@ -25,8 +26,9 @@ public:
     void init(int port); // port numarası alır ve masterSocket'e verir  
     void run();
     bool acceptNewConnection();
-    void handleClientData(int clientFd);
-    bool deleteClient(int clientFd);
+    void handleClientReceive(int clientFd, epoll_event *event);  // EPOLLIN: istemciden veri alma
+    void handleClientSend(int clientFd, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
+    void deleteClient(int clientFd, epoll_event *event);
 };
 
 
