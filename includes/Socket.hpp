@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <fcntl.h>
 
 enum State
 {

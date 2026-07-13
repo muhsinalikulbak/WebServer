@@ -8,6 +8,7 @@ Server::Server(/* args */)
 
 Server::~Server()
 {
+
     std::map <int, Client*>::iterator it = _clientMap.begin();
     
     while (it != _clientMap.end())
@@ -33,7 +34,7 @@ void Server::init(int port)
     
     // Master sockete yeni bir biri bağlantığında bu bir okuma/connect olayıdır. Bu yüzden EPOLLIN ile master sockete epoll_ctl ile ekliyoruz.
     _masterEvent.events = EPOLLIN;
-    
+
     _masterEvent.data.fd = _masterSocket.getFd();
 
     // (master socket) için içerideki veri akışı, yeni bir istemcinin (client) kapıyı çalıp bağlanmak istemesi demektir.
@@ -101,7 +102,6 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
         client->clearReadBuffer();
     }
 }
-
 
 
 void Server::handleClientSend(int clientFd, epoll_event *event)

@@ -39,6 +39,9 @@ void Socket::createSocket()
     }
     else
         _state = CREATED;
+        
+    int flags = fcntl(_fd, F_GETFL, 0);
+    fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 void Socket::bindSocket(int port)
@@ -78,17 +81,24 @@ int Socket::acceptConnection()
     socklen_t len = sizeof(client_addr);
     
     // İşletim sistemi client bilgilerini sunucunun üzerine değil, client_addr'ye yazacak
-    int client_fd = accept(_fd, (sockaddr*)&client_addr, &len);
+    int clientFd = accept(_fd, (sockaddr*)&client_addr, &len);
     
+    int opt = 1;
+
+    int flags = fcntl(clientFd, F_GETFL, 0);
+    fcntl(clientFd, F_SETFL, flags | O_NONBLOCK); // fd'yi non blocking yapar
+
+    setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)); // NAGLE ALGORİTMASINI KAPAT
+
     // Client adresi kullanmıyorsa, geçiciyse neden oluşturup parametreye veriyoruz.
-    if (client_fd == -1) 
+    if (clientFd == -1) 
     {
         perror("accept");
     }
     // inet_ntoa (Network to ASCII): Sayısal IP'yi yazıya döker
     std::cout << "Yeni baglanti: " << inet_ntoa(client_addr.sin_addr) 
               << ":" << ntohs(client_addr.sin_port) << std::endl;
-    return client_fd;
+    return clientFd;
 }
 
 
