@@ -64,29 +64,29 @@ StreamState Client::receiveData()
 }
 
 StreamState Client::sendData()
-{
-    if (_writeBuffer.empty())
-        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
-
-    // _writeBuffer içindeki veriyi istemciye gönderiyoruz
-    int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
-
-    if (byte == -1)
     {
-        perror("Send");
-        return TRANSFER_ERROR;  // Sistem hatası
-    }
-    else if (byte > 0)
-    {
-        // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
-        _writeBuffer.erase(0, byte);
-    }
+        if (_writeBuffer.empty())
+            return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
-    // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
-    if (_writeBuffer.empty())
-        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+        // _writeBuffer içindeki veriyi istemciye gönderiyoruz
+        int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
 
-    return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
+        if (byte == -1)
+        {
+            perror("Send");
+            return TRANSFER_ERROR;  // Sistem hatası
+        }
+        else if (byte > 0)
+        {
+            // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
+            _writeBuffer.erase(0, byte);
+        }
+
+        // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
+        if (_writeBuffer.empty())
+            return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+
+        return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
 void Client::appendToWriteBuffer(const std::string& responseChunk)

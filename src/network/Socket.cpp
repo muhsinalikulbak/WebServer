@@ -83,12 +83,6 @@ int Socket::acceptConnection()
     // İşletim sistemi client bilgilerini sunucunun üzerine değil, client_addr'ye yazacak
     int clientFd = accept(_fd, (sockaddr*)&client_addr, &len);
     
-    int opt = 1;
-
-    int flags = fcntl(clientFd, F_GETFL, 0);
-    fcntl(clientFd, F_SETFL, flags | O_NONBLOCK); // fd'yi non blocking yapar
-
-    setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)); // NAGLE ALGORİTMASINI KAPAT
 
     // Client adresi kullanmıyorsa, geçiciyse neden oluşturup parametreye veriyoruz.
     if (clientFd == -1) 

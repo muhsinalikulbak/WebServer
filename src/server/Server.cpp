@@ -1,20 +1,27 @@
 #include "Server.hpp"
 #include "Socket.hpp"
 
-Server::Server(/* args */)
+Server::Server()
 {
-    
+    _epollFd = -1;
+    // Sunucu portu field'mı olmalı cluster için sorun yaratır mı
+
 }
 
 Server::~Server()
 {
-
     std::map <int, Client*>::iterator it = _clientMap.begin();
     
     while (it != _clientMap.end())
     {
         delete it->second;
         it++;
+    }
+
+    // Burada epoll da daki delete edecek miyiz.
+    if (_epollFd != -1)
+    {
+        close(_epollFd);
     }
 }
 
@@ -48,13 +55,19 @@ void Server::init(int port)
 }
 bool Server::acceptNewConnection()
 {
-     int clientFd = _masterSocket.acceptConnection();
+    int clientFd = _masterSocket.acceptConnection();
                     
     if (clientFd == -1)
     {
         perror("Error accept");
         return false;
     }
+
+    int opt = 1;
+    int flags = fcntl(clientFd, F_GETFL, 0);
+
+    fcntl(clientFd, F_SETFL, flags | O_NONBLOCK); // fd'yi non blocking yapar
+    setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)); // NAGLE ALGORİTMASINI KAPAT
 
     struct epoll_event event;
     event.data.fd = clientFd;
@@ -192,4 +205,4 @@ void Server::run()
             }
         }
     }
-}
+}   

@@ -1,5 +1,6 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
+
 #include "Client.hpp"
 #include "Socket.hpp"
 #include <string>
@@ -22,6 +23,9 @@ private:
 public:
     Server(/* args */);
     ~Server();
+    
+    Server(const Server& other);
+    Server& operator = (const Server& other);
     
     void init(int port); // port numarası alır ve masterSocket'e verir  
     void run();
