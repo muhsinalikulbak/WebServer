@@ -23,28 +23,29 @@ enum State
 class Socket
 {
 private:
-    int _fd;
-    int _domain;   // AF_INET
-    int _type;     // SOCK_STREAM
-    struct sockaddr_in _addr;
-    State _state;
+    int                 _fd;
+    int                 _domain;   // AF_INET
+    int                 _type;     // SOCK_STREAM
+    State               _state;
+    struct sockaddr_in  _addr;
 
-
+ 
 public:
     Socket();
     Socket(int domain, int type);
     ~Socket();
 
-    int acceptConnection();
-    void createSocket();
-    void startListening();
-    void bindSocket(int port);
+
+    int     acceptConnection();
+    void    createSocket();
+    void    startListening();
+    void    bindSocket(int port);
 
     
-    int getFd() const;
-    int getDomain() const;
-    int getType() const;
-    State getState() const;
+    int     getFd() const;
+    int     getDomain() const;
+    int     getType() const;
+    State   getState() const;
 
 };
 

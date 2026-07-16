@@ -1,21 +1,50 @@
 #include "Client.hpp"
 
-// Constructor: accept'ten dönen fd'yi içeri alacak
+/**** CANONIC FORM ****/
+
+Client::Client()
+{
+    _clientFd = -1;
+    _readBuffer = "";
+    _writeBuffer = "";
+    _lastActivity = time(NULL);
+    _clientState = CLOSING;
+}
 
 Client::Client(int fd)
 {
     _clientFd = fd;
     _readBuffer = "";
     _writeBuffer = "";
+    _lastActivity = time(NULL);
+    _clientState = WAITING_FOR_REQUEST;
 }
 
-// Destructor: En kritik yer! close(_clientFd) burada yapılacak.
+
 Client::~Client()
 {
     if (_clientFd != -1)
     {
         close(_clientFd);
     }
+}
+
+/**** GETTER SETTER ****/
+
+std::time_t Client::getLastActivity() const
+{
+    return _lastActivity;
+}
+
+
+ClientState Client::getClientState() const
+{
+    return _clientState;
+}
+
+void Client::setClientState(ClientState state)
+{
+    _clientState = state;
 }
 
 int  Client::getFd() const
@@ -28,13 +57,23 @@ const std::string& Client::getReadBuffer() const
     return _readBuffer;
 }
 
+void Client::setLastActivity(std::time_t time)
+{
+    _lastActivity = time;
+}
+
+
+
+
+/**** READ WRITE / HELPER FUNCTIONS ****/
+
+
 void Client::clearReadBuffer()
 {
     _readBuffer.clear();
 }
 
-// Ağ operasyonları
-// İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
+
 StreamState Client::receiveData()
 {
     char buffer[4096];
@@ -45,14 +84,17 @@ StreamState Client::receiveData()
     if (byte == -1)
     {
         perror("Recv");
-        return TRANSFER_ERROR;  // Sistem hatası
+        return TRANSFER_ERROR;
     }
     else if (byte == 0)
     {
         return PEER_CLOSED;  // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
     }
     else
+    {
+        _lastActivity = time(NULL);
         _readBuffer.append(buffer, byte);
+    }
     
     if (_readBuffer.find("\r\n\r\n") != std::string::npos)
     {
@@ -64,29 +106,29 @@ StreamState Client::receiveData()
 }
 
 StreamState Client::sendData()
+{
+    if (_writeBuffer.empty())
+        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+
+    // _writeBuffer içindeki veriyi istemciye gönderiyoruz
+    int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
+
+    if (byte == -1)
     {
-        if (_writeBuffer.empty())
-            return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+        perror("Send");
+        return TRANSFER_ERROR;  // Sistem hatası
+    }
+    else if (byte > 0)
+    {
+        // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
+        _writeBuffer.erase(0, byte);
+    }
 
-        // _writeBuffer içindeki veriyi istemciye gönderiyoruz
-        int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
+    // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
+    if (_writeBuffer.empty())
+        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
-        if (byte == -1)
-        {
-            perror("Send");
-            return TRANSFER_ERROR;  // Sistem hatası
-        }
-        else if (byte > 0)
-        {
-            // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
-            _writeBuffer.erase(0, byte);
-        }
-
-        // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
-        if (_writeBuffer.empty())
-            return TRANSFER_COMPLETE;  // Tüm veri gönderildi
-
-        return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
+    return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
 void Client::appendToWriteBuffer(const std::string& responseChunk)

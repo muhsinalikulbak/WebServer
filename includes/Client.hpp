@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <cstdio>
+#include <ctime>
 
 enum StreamState
 {
@@ -15,28 +16,47 @@ enum StreamState
     TRANSFER_COMPLETE       // Okuma/Yazma işlemi tamamlandı
 };
 
+enum ClientState
+{
+    READING_REQUEST,
+    PROCESSING_REQUEST,
+    SENDING_RESPONSE,
+    WAITING_FOR_REQUEST,
+    CLOSING
+};
+
 class Client 
 {
 private:
-    int         _clientFd;     // accept() fonksiyonundan dönen dosya tanımlayıcı
+    int         _clientFd;
     std::string _readBuffer;   // İstemciden recv ile parça parça okunan ham istek verisi
     std::string _writeBuffer;  // İleride tarayıcıya göndereceğimiz HTTP Cevabı (Response) burada birikecek
+    std::time_t _lastActivity;
+    ClientState _clientState;
 
-    // İhtiyaca göre client'ın durumunu tutmak isteyebilirsin (Örn: Okuma mı yapıyor, yazma mı?)
-    // enum ClientState { READING, WRITING, DONE };
+
 
 public:
-    Client(int fd);            // Constructor: accept'ten dönen fd'yi içeri alacak
-    ~Client();                 // Destructor: En kritik yer! close(_clientFd) burada yapılacak.
 
-    int  getFd() const;
-    const std::string& getReadBuffer() const;
-    void clearReadBuffer();
-    void appendToWriteBuffer(const std::string& responseChunk);
+    Client(int fd);
+    ~Client();
+    Client();
+
+    
+    ClientState         getClientState() const;
+    void                setClientState(ClientState state);
+    std::time_t         getLastActivity() const;
+    void                setLastActivity(std::time_t time);
+    const std::string&  getReadBuffer() const;
+    int                 getFd() const;
+
+    
+    void                clearReadBuffer();
+    void                appendToWriteBuffer(const std::string& responseChunk);
 
     // Ağ operasyonları
-    StreamState receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
-    StreamState sendData();           // Send() çağrısını yapacak fonksiyon
+    StreamState         receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
+    StreamState         sendData();           // Send() çağrısını yapacak fonksiyon
 };
 
 #endif
