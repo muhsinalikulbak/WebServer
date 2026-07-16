@@ -1,0 +1,36 @@
+Knk execute dinamik hale getireceğim bu şekilde bir şematik class yapıları çıkardım.
+Bunları referans alarak dinamik hale getireceğim, parser yazarken direkt aynılarını kullanabilirsin.
+Eksik veya fazla bir veri tutuyorsak bildirmen yeterli :=)
+
+
+verileri tutacak class
+class LocationConfig {
+private:
+    std::string                 _path;              // Rota (Örn: "/kapouet")
+    std::vector<std::string>    _allow_methods;     // İzin verilen metotlar (GET, POST, DELETE)
+    std::string                 _return;            // HTTP yönlendirmesi (Örn: "301 /yeni-sayfa")
+    std::string                 _root;              // Kök dizin (Örn: "/tmp/www")
+    bool                        _autoindex;         // Dizin listeleme (Açık/Kapalı)
+    std::string                 _index;             // Varsayılan dosya (Örn: "index.html")
+    std::string                 _upload_store;      // Dosya yükleme dizini
+    std::map<std::string, std::string> _cgi_pass;   // CGI ayarları (Uzantı -> CGI Executable yolu, Örn: ".php" -> "/usr/bin/php-cgi")
+};
+
+ilgili serverın verilerini tutacak class
+class ServerConfig {
+private:
+    std::vector<std::pair<std::string, int> >   _listen;                // IP ve Port çiftleri
+    std::vector<std::string>                    _server_name;           // Sunucu adları (Örn: "localhost", "example.com")
+    std::map<int, std::string>                  _error_pages;           // Hata kodları ve sayfaları (Örn: 404 -> "/404.html")
+    size_t                                      _client_max_body_size;  // Maksimum istek gövdesi boyutu (byte cinsinden)
+    std::vector<LocationConfig>                 _locations;             // Bu sunucuya ait rotalar (Location blokları)
+};
+
+birden fazla server gerekirse _servers değişkeni her bir server için parse edilmeli ve vector içinde tutulmalı
+class ConfigParser {
+private:
+    std::string                 _configFile;    // Okunacak dosyanın yolu
+    std::vector<ServerConfig>   _servers;       // Ayrıştırılmış sunucu bloklarının listesi
+};
+
+çalışma sıraları sayfanın altından başlıyor inceleyince anlarsın zaten o7
