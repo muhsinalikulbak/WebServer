@@ -100,9 +100,10 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
 		// Client bağlantıyı kapattı (EOF) veya hata oluştu
 		client->setClientState(CLOSING);
 		deleteClient(clientFd);
-	} 
+	}
 	else if (state == TRANSFER_COMPLETE)
 	{
+		// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
 		client->setClientState(PROCESSING_REQUEST);
 
 		std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
@@ -117,7 +118,6 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
 		}
 		client->clearReadBuffer();
 	}
-
 }
 
 void Server::handleClientSend(int clientFd, epoll_event *event)

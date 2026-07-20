@@ -31,36 +31,17 @@ Client::~Client()
 
 /**** GETTER SETTER ****/
 
-std::time_t Client::getLastActivity() const
-{
-    return _lastActivity;
-}
+const std::string& Client::getReadBuffer() const { return _readBuffer; }
 
+std::time_t Client::getLastActivity() const { return _lastActivity; }
 
-ClientState Client::getClientState() const
-{
-    return _clientState;
-}
+ClientState Client::getClientState() const { return _clientState; }
 
-void Client::setClientState(ClientState state)
-{
-    _clientState = state;
-}
+void Client::setLastActivity(std::time_t time) { _lastActivity = time; }
 
-int  Client::getFd() const
-{
-    return _clientFd;
-}
+void Client::setClientState(ClientState state) { _clientState = state; }
 
-const std::string& Client::getReadBuffer() const
-{
-    return _readBuffer;
-}
-
-void Client::setLastActivity(std::time_t time)
-{
-    _lastActivity = time;
-}
+int  Client::getFd() const { return _clientFd; }
 
 
 
@@ -92,7 +73,6 @@ StreamState Client::receiveData()
     }
     else
     {
-        _lastActivity = time(NULL);
         _readBuffer.append(buffer, byte);
     }
     

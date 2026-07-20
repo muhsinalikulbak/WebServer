@@ -11,7 +11,7 @@ Socket::Socket(int domain, int type)
   _state = IDLE;
 }
 
-Socket::Socket(/* args */)
+Socket::Socket()
 {
   _fd = -1;
   _domain = AF_INET;   // IPv4
@@ -25,9 +25,9 @@ Socket::~Socket()
   if (_fd != -1)
   {
     close(_fd);
-    _state = CLOSED;
-    _fd = -1;
   }
+  _state = CLOSED;
+  _fd = -1;
 }
 
 void Socket::createSocket()
