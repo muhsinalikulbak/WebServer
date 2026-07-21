@@ -26,8 +26,6 @@ Socket::~Socket()
   {
     close(_fd);
   }
-  _state = CLOSED;
-  _fd = -1;
 }
 
 void Socket::createSocket()
