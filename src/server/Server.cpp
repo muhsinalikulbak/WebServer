@@ -1,5 +1,7 @@
 #include "Server.hpp"
 #include "ServerConfig.hpp"
+#include <cstring>
+#include <cerrno>
 
 Server::Server()
 {
@@ -102,109 +104,124 @@ void Server::init(const Config& config)
 
 void Server::acceptNewConnection(Socket* masterSocket)
 {
-	int clientFd = masterSocket->acceptConnection();
-
-	if (clientFd == -1)
+	try
 	{
-		perror("Error accept");
-		return;
-	}
+		int clientFd = masterSocket->acceptConnection();
 
-	int flags = fcntl(clientFd, F_GETFL, 0);
-	if (flags == -1)
-	{
-		perror("Error fcntl F_GETFL");
-		close(clientFd);
-		return;
-	}
-	int opt = 1;
+		if (clientFd == -1)
+		{
+			throw std::runtime_error(std::string("Error accept: ") + strerror(errno));
+		}
 
-	if (fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) // fd'yi non blocking yapar
-	{
-		perror("Error fcntl F_SETFL");
-		close(clientFd);
-		return;
-	}
-	if (setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) // NAGLE ALGORİTMASINI KAPAT
-	{
-		perror("Error setsockopt TCP_NODELAY");
-		close(clientFd);
-		return;
-	}
+		int flags = fcntl(clientFd, F_GETFL, 0);
+		if (flags == -1)
+		{
+			close(clientFd);
+			throw std::runtime_error(std::string("Error fcntl F_GETFL: ") + strerror(errno));
+		}
+		int opt = 1;
 
-	struct epoll_event event;
-	event.data.fd = clientFd;
-	event.events = EPOLLIN; // Bu yeni client'den gelen istekleri dinlemek istiyorum
+		if (fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) // fd'yi non blocking yapar
+		{
+			close(clientFd);
+			throw std::runtime_error(std::string("Error fcntl F_SETFL: ") + strerror(errno));
+		}
+		if (setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) // NAGLE ALGORİTMASINI KAPAT
+		{
+			close(clientFd);
+			throw std::runtime_error(std::string("Error setsockopt TCP_NODELAY: ") + strerror(errno));
+		}
 
-	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &event) == -1)
-	{
-		perror("Error epoll add");
-		close(clientFd);
-		return;
+		struct epoll_event event;
+		event.data.fd = clientFd;
+		event.events = EPOLLIN; // Bu yeni client'den gelen istekleri dinlemek istiyorum
+
+		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &event) == -1)
+		{
+			close(clientFd);
+			throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
+		}
+		_clientMap[clientFd] = new Client(clientFd);
 	}
-	_clientMap[clientFd] = new Client(clientFd);
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
 }
 
-void Server::handleClientReceive(int clientFd, epoll_event *event) 
+void Server::handleClientReceive(int clientFd, epoll_event *event)
 {
-	Client *client = _clientMap[clientFd];
-	StreamState state = client->receiveData();
-
-	client->setClientState(READING_REQUEST);
-
-	if (state == TRANSFER_ERROR || state == PEER_CLOSED)
+	try
 	{
-		// Client bağlantıyı kapattı (EOF) veya hata oluştu
-		client->setClientState(CLOSING);
-		deleteClient(clientFd);
-	}
-	else if (state == TRANSFER_COMPLETE)
-	{
-		// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
-		client->setClientState(PROCESSING_REQUEST);
+		Client *client = _clientMap[clientFd];
+		StreamState state = client->receiveData();
 
-		std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 14\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
-		client->appendToWriteBuffer(dummyResponse);
+		client->setClientState(READING_REQUEST);
 
-		event->events = EPOLLOUT;
-
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+		if (state == TRANSFER_ERROR || state == PEER_CLOSED)
 		{
-			perror("Error modifying to EPOLLOUT");
+			// Client bağlantıyı kapattı (EOF) veya hata oluştu
+			client->setClientState(CLOSING);
 			deleteClient(clientFd);
 		}
-		client->clearReadBuffer();
+		else if (state == TRANSFER_COMPLETE)
+		{
+			// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
+			client->setClientState(PROCESSING_REQUEST);
+
+			std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 14\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
+			client->appendToWriteBuffer(dummyResponse);
+
+			event->events = EPOLLOUT;
+
+			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+			{
+				throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+			}
+			client->clearReadBuffer();
+		}
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+		deleteClient(clientFd);
 	}
 }
 
 void Server::handleClientSend(int clientFd, epoll_event *event)
 {
-	Client *client = _clientMap[clientFd];
-	StreamState state = client->sendData();
-
-	client->setClientState(SENDING_RESPONSE);
-
-	if (state == TRANSFER_ERROR)
+	try
 	{
-		// Gönderim hatası, bağlantıyı kopar
-		deleteClient(clientFd);
-	}
-	else if (state == TRANSFER_COMPLETE)
-	{
-		client->setLastActivity(time(NULL));
-		client->setClientState(WAITING_FOR_REQUEST);
+		Client *client = _clientMap[clientFd];
+		StreamState state = client->sendData();
 
-		// Response başarıyla tamamen gönderildi!
-		// Keep-Alive aktif olduğu için soketi kapatmıyoruz, yeni istekler için
-		// tekrar EPOLLIN moduna alıyoruz.
-		event->events = EPOLLIN;
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+		client->setClientState(SENDING_RESPONSE);
+
+		if (state == TRANSFER_ERROR)
 		{
-			perror("Error modifying back to EPOLLIN");
+			// Gönderim hatası, bağlantıyı kopar
 			deleteClient(clientFd);
 		}
-	}
+		else if (state == TRANSFER_COMPLETE)
+		{
+			client->setLastActivity(time(NULL));
+			client->setClientState(WAITING_FOR_REQUEST);
 
+			// Response başarıyla tamamen gönderildi!
+			// Keep-Alive aktif olduğu için soketi kapatmıyoruz, yeni istekler için
+			// tekrar EPOLLIN moduna alıyoruz.
+			event->events = EPOLLIN;
+			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+			{
+				throw std::runtime_error(std::string("Error modifying back to EPOLLIN: ") + strerror(errno));
+			}
+		}
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+		deleteClient(clientFd);
+	}
 }
 
 void Server::deleteClient(int clientFd)

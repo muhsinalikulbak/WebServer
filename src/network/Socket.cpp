@@ -2,6 +2,8 @@
 #include <exception>
 #include <iostream>
 #include <stdio.h>
+#include <cstring>
+#include <cerrno>
 
 Socket::Socket(int domain, int type)
 {
@@ -37,17 +39,20 @@ void Socket::createSocket()
   // kullanılır.
   int opt = 1;
   if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-    throw std::runtime_error("setsockopt SO_REUSEADDR");
+    throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
 
   if (_fd == -1)
   {
-    throw std::runtime_error("Socket creation failed");
+    throw std::runtime_error(std::string("Socket creation failed: ") + strerror(errno));
   }
   else
     _state = CREATED;
 
   int flags = fcntl(_fd, F_GETFL, 0);
-  fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
+  if (flags == -1)
+    throw std::runtime_error(std::string("fcntl F_GETFL failed: ") + strerror(errno));
+  if (fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+    throw std::runtime_error(std::string("fcntl F_SETFL failed: ") + strerror(errno));
 }
 
 void Socket::bindSocket(int port)
@@ -63,7 +68,7 @@ void Socket::bindSocket(int port)
 
   if (bind(_fd, (sockaddr *)&_addr, sizeof(_addr)) == -1)
   {
-    throw std::runtime_error("Socket bind failed");
+    throw std::runtime_error(std::string("Socket bind failed: ") + strerror(errno));
   }
   _state = BOUND;
 }
@@ -76,7 +81,7 @@ void Socket::startListening()
 
   if (listen(_fd, SOMAXCONN) == -1)
   {
-    throw std::runtime_error("Socket listen failed");
+    throw std::runtime_error(std::string("Socket listen failed: ") + strerror(errno));
   }
   _state = LISTENING;
 }
