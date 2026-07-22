@@ -29,6 +29,7 @@ Server::~Server()
 	
 
 	_clientMap.clear();
+	_listenSockets.clear();
 
 	if (_epollFd != -1)
 		close(_epollFd);
@@ -37,7 +38,6 @@ Server::~Server()
 void Server::init(const Config& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
-	epoll_event masterEvent;
 	std::set<int> openedPorts;
 	int currentPort = 0;
 
@@ -56,15 +56,24 @@ void Server::init(const Config& config)
 		// Configde aynı port gelirse tekrar bind etmesin
 		if (openedPorts.find(currentPort) != openedPorts.end())
 			continue;
-		
-		openedPorts.insert(currentPort);
 
 		Socket* sock = new Socket(AF_INET, SOCK_STREAM);
 
-		sock->createSocket();
-		sock->bindSocket(currentPort);
-		sock->startListening();
+		try
+		{
+			sock->createSocket();
+			sock->bindSocket(currentPort);
+			sock->startListening();
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << e.what() << std::endl;
+			delete sock;
+			continue;
+		}
 
+
+		epoll_event masterEvent;
 		std::memset(&masterEvent, 0, sizeof(masterEvent));
 
 		// Master sockete yeni bir biri bağlantığında bu bir okuma/connect olayıdır.
@@ -84,26 +93,44 @@ void Server::init(const Config& config)
 			continue;
 		}
 
+		// epoll_ctl başarılı olduktan sonra port'u openedPorts'a ekle
+		openedPorts.insert(currentPort);
 		_listenSockets[sock->getFd()] = sock;
 	}
 	_events.resize(100);
 }
 
-bool Server::acceptNewConnection(Socket* masterSocket)
+void Server::acceptNewConnection(Socket* masterSocket)
 {
 	int clientFd = masterSocket->acceptConnection();
 
 	if (clientFd == -1)
 	{
 		perror("Error accept");
-		return false;
+		return;
 	}
 
 	int flags = fcntl(clientFd, F_GETFL, 0);
+	if (flags == -1)
+	{
+		perror("Error fcntl F_GETFL");
+		close(clientFd);
+		return;
+	}
 	int opt = 1;
 
-	fcntl(clientFd, F_SETFL, flags | O_NONBLOCK); // fd'yi non blocking yapar
-	setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)); // NAGLE ALGORİTMASINI KAPAT
+	if (fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) // fd'yi non blocking yapar
+	{
+		perror("Error fcntl F_SETFL");
+		close(clientFd);
+		return;
+	}
+	if (setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) // NAGLE ALGORİTMASINI KAPAT
+	{
+		perror("Error setsockopt TCP_NODELAY");
+		close(clientFd);
+		return;
+	}
 
 	struct epoll_event event;
 	event.data.fd = clientFd;
@@ -113,11 +140,9 @@ bool Server::acceptNewConnection(Socket* masterSocket)
 	{
 		perror("Error epoll add");
 		close(clientFd);
-		return false;
+		return;
 	}
-
 	_clientMap[clientFd] = new Client(clientFd);
-	return true;
 }
 
 void Server::handleClientReceive(int clientFd, epoll_event *event) 
@@ -138,7 +163,7 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
 		// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
 		client->setClientState(PROCESSING_REQUEST);
 
-		std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
+		std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 14\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
 		client->appendToWriteBuffer(dummyResponse);
 
 		event->events = EPOLLOUT;
@@ -163,7 +188,7 @@ void Server::handleClientSend(int clientFd, epoll_event *event)
 	{
 		// Gönderim hatası, bağlantıyı kopar
 		deleteClient(clientFd);
-	} 
+	}
 	else if (state == TRANSFER_COMPLETE)
 	{
 		client->setLastActivity(time(NULL));

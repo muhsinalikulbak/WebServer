@@ -33,7 +33,7 @@ public:
 
     void    init(const Config& config); // port numarası alır ve masterSocket'e verir  
     void    run();
-    bool    acceptNewConnection(Socket* masterSocket);
+    void    acceptNewConnection(Socket* masterSocket);
     void    handleClientReceive(int clientFd, epoll_event *event);  // EPOLLIN: istemciden veri alma
     void    handleClientSend(int clientFd, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
     void    deleteClient(int clientFd);

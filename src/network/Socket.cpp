@@ -37,13 +37,12 @@ void Socket::createSocket()
   // kullanılır.
   int opt = 1;
   if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-    perror("setsockopt SO_REUSEADDR");
+    throw std::runtime_error("setsockopt SO_REUSEADDR");
 
   if (_fd == -1)
   {
-    perror("socket");
     throw std::runtime_error("Socket creation failed");
-  } 
+  }
   else
     _state = CREATED;
 
@@ -64,8 +63,7 @@ void Socket::bindSocket(int port)
 
   if (bind(_fd, (sockaddr *)&_addr, sizeof(_addr)) == -1)
   {
-    perror("bind");
-    // Exception Fırlat
+    throw std::runtime_error("Socket bind failed");
   }
   _state = BOUND;
 }
@@ -78,8 +76,7 @@ void Socket::startListening()
 
   if (listen(_fd, SOMAXCONN) == -1)
   {
-    perror("Listen");
-    // Exception Fırlat;
+    throw std::runtime_error("Socket listen failed");
   }
   _state = LISTENING;
 }
