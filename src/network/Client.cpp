@@ -31,18 +31,19 @@ Client::~Client()
 
 /**** GETTER SETTER ****/
 
-const std::string& Client::getReadBuffer() const { return _readBuffer; }
+const std::string&  Client::getReadBuffer() const { return _readBuffer; }
 
-std::time_t Client::getLastActivity() const { return _lastActivity; }
+std::time_t         Client::getLastActivity() const { return _lastActivity; }
 
-ClientState Client::getClientState() const { return _clientState; }
+ClientState         Client::getClientState() const { return _clientState; }
 
-void Client::setLastActivity(std::time_t time) { _lastActivity = time; }
+void                Client::setLastActivity(std::time_t time) { _lastActivity = time; }
 
-void Client::setClientState(ClientState state) { _clientState = state; }
+void                Client::setClientState(ClientState state) { _clientState = state; }
 
-int  Client::getFd() const { return _clientFd; }
+int                 Client::getFd() const { return _clientFd; } // Override
 
+bool                Client::isListening() const { return false; } // Override
 
 
 
@@ -111,7 +112,7 @@ StreamState Client::sendData()
     return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
-void Client::appendToWriteBuffer(const std::string& responseChunk)
+void    Client::appendToWriteBuffer(const std::string& responseChunk)
 {
     _writeBuffer.append(responseChunk);
 
@@ -126,3 +127,4 @@ void Client::appendToWriteBuffer(const std::string& responseChunk)
     // Client'a farklı requestlerin response'ları tek bir string üzerinde birleştirilip gönderilmesi sorun değildir.
     // Client tarafında HTTP 1.1 protokolü bunu kendi içinde halleder. 
 }
+

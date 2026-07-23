@@ -3,6 +3,9 @@
 
 #include "Client.hpp"
 #include "Socket.hpp"
+#include "Config.hpp"
+#include "EpollHandler.hpp"
+
 #include <string>
 #include <map>
 #include <sys/epoll.h>
@@ -10,15 +13,17 @@
 #include <cstring>
 #include <signal.h>
 #include <set>
-#include "Config.hpp"
+
 
 class Server
 {
 private:
-    std::map<int, Socket*>          _listenSockets; 
+
+    std::set<Socket*>               _listenSockets;
+    std::set<Client*>               _clientSockets;
+
 
     // İstemci haritası: clientFd -> Client*
-    std::map<int, Client*>          _clientMap;
 
     // Config nesnesi
     Config                          _config;
@@ -34,11 +39,10 @@ public:
     void    init(const Config& config); // port numarası alır ve masterSocket'e verir  
     void    run();
     void    acceptNewConnection(Socket* masterSocket);
-    void    handleClientReceive(int clientFd, epoll_event *event);  // EPOLLIN: istemciden veri alma
-    void    handleClientSend(int clientFd, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
-    void    deleteClient(int clientFd);
+    void    handleClientReceive(Client* client, epoll_event *event);  // EPOLLIN: istemciden veri alma
+    void    handleClientSend(Client* client, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
+    void    deleteClient(Client* client);
     void    checkExpiredSockets();
-    bool    isListeningFd(int fd) const;
 
 };
 

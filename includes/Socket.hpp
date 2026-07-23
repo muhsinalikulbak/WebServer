@@ -1,6 +1,9 @@
 #ifndef SOCKET_HPP
 #define SOCKET_HPP
 
+
+#include "EpollHandler.hpp"
+
 #include <sys/socket.h>
 #include <string>
 #include <netinet/in.h>
@@ -9,6 +12,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <fcntl.h>
+
 
 enum State
 {
@@ -20,7 +24,7 @@ enum State
     CLOSED
 };
 
-class Socket
+class Socket : public EpollHandler
 {
 private:
     int                 _fd;
@@ -36,16 +40,17 @@ public:
     ~Socket();
 
 
-    int     acceptConnection();
-    void    createSocket();
-    void    startListening();
-    void    bindSocket(int port);
+    virtual bool    isListening() const;
 
-    
-    int     getFd() const;
-    int     getDomain() const;
-    int     getType() const;
-    State   getState() const;
+    int             acceptConnection();
+    void            createSocket();
+    void            startListening();
+    void            bindSocket(int port);
+
+    virtual int     getFd() const;
+    int             getDomain() const;
+    int             getType() const;
+    State           getState() const;
 
 };
 

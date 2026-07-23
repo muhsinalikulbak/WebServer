@@ -16,7 +16,7 @@ SRCS =	src/main.cpp \
 		src/server/ConfigParser.cpp \
 		src/server/CgiHandler.cpp \
 		src/server/LocationConfig.cpp \
-		src/server/ServerConfig.cpp
+		src/server/ServerConfig.cpp  
 
 
 OBJS_DIR = obj

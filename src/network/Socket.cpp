@@ -1,9 +1,11 @@
 #include "Socket.hpp"
+
 #include <exception>
 #include <iostream>
 #include <stdio.h>
 #include <cstring>
 #include <cerrno>
+
 
 Socket::Socket(int domain, int type)
 {
@@ -110,10 +112,14 @@ int Socket::acceptConnection()
   return clientFd;
 }
 
-int Socket::getFd() const { return _fd; }
+bool  Socket::isListening() const { return true; } // Override
 
-int Socket::getDomain() const { return _domain; }
+int   Socket::getFd() const { return _fd; } // Override
 
-int Socket::getType() const { return _type; }
+int   Socket::getDomain() const { return _domain; }
+
+int   Socket::getType() const { return _type; }
 
 State Socket::getState() const { return _state; }
+
+

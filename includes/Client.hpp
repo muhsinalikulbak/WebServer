@@ -1,6 +1,9 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
+
+#include "EpollHandler.hpp"
+
 #include <string>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -25,7 +28,7 @@ enum ClientState
     CLOSING
 };
 
-class Client 
+class Client : public EpollHandler
 {
 private:
     int         _clientFd;
@@ -42,13 +45,14 @@ public:
     ~Client();
     Client();
 
-    
+    virtual bool        isListening() const;
+
     ClientState         getClientState() const;
     void                setClientState(ClientState state);
     std::time_t         getLastActivity() const;
     void                setLastActivity(std::time_t time);
     const std::string&  getReadBuffer() const;
-    int                 getFd() const;
+    virtual int         getFd() const;
 
     
     void                clearReadBuffer();

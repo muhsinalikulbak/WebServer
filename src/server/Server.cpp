@@ -11,26 +11,30 @@ Server::Server()
 
 Server::~Server()
 {
-	std::map<int, Client *>::iterator client = _clientMap.begin();
-	std::map<int, Socket *>::iterator sock = _listenSockets.begin();
+	std::set<Client *>::iterator client = _clientSockets.begin();
+	std::set<Socket *>::iterator sock = _listenSockets.begin();
 
 
-	while (client != _clientMap.end())
+	while (client != _clientSockets.end())
 	{
-		epoll_ctl(_epollFd, EPOLL_CTL_DEL, client->first, NULL);
-		delete client->second;
+		Client* temp = (*client);
 		client++;
+
+		deleteClient(temp);
 	}
 	
 	while (sock != _listenSockets.end())
 	{
-		epoll_ctl(_epollFd, EPOLL_CTL_DEL, sock->first, NULL);
-		delete sock->second;
+		epoll_ctl(_epollFd, EPOLL_CTL_DEL, (*sock)->getFd(), NULL);
+		Socket* temp = *sock;
 		sock++;
+
+		_listenSockets.erase(temp);
+		delete temp;
 	}
 
 
-	_clientMap.clear();
+	_clientSockets.clear();
 	_listenSockets.clear();
 
 	if (_epollFd != -1)
@@ -60,7 +64,7 @@ void Server::init(const Config& config)
 			continue;
 
 		Socket* sock = new Socket(AF_INET, SOCK_STREAM);
-
+		
 		try
 		{
 			sock->createSocket();
@@ -81,7 +85,7 @@ void Server::init(const Config& config)
 		// Master sockete yeni bir biri bağlantığında bu bir okuma/connect olayıdır.
 		// Bu yüzden EPOLLIN ile master sockete epoll_ctl ile ekliyoruz.
 		masterEvent.events = EPOLLIN;
-		masterEvent.data.fd = sock->getFd();
+		masterEvent.data.ptr = sock;
 
 		// (master socket) için içerideki veri akışı, yeni bir istemcinin (client)
 		// kapıyı çalıp bağlanmak istemesi demektir. Master socket'i epoll'a
@@ -97,7 +101,7 @@ void Server::init(const Config& config)
 
 		// epoll_ctl başarılı olduktan sonra port'u openedPorts'a ekle
 		openedPorts.insert(currentPort);
-		_listenSockets[sock->getFd()] = sock;
+		_listenSockets.insert(sock);
 	}
 	_events.resize(100);
 }
@@ -132,16 +136,18 @@ void Server::acceptNewConnection(Socket* masterSocket)
 			throw std::runtime_error(std::string("Error setsockopt TCP_NODELAY: ") + strerror(errno));
 		}
 
+		Client* client = new Client(clientFd);
 		struct epoll_event event;
-		event.data.fd = clientFd;
+		event.data.ptr = client;
 		event.events = EPOLLIN; // Bu yeni client'den gelen istekleri dinlemek istiyorum
 
 		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &event) == -1)
 		{
 			close(clientFd);
+			delete client;
 			throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
 		}
-		_clientMap[clientFd] = new Client(clientFd);
+		_clientSockets.insert(client);
 	}
 	catch (const std::exception& e)
 	{
@@ -149,11 +155,10 @@ void Server::acceptNewConnection(Socket* masterSocket)
 	}
 }
 
-void Server::handleClientReceive(int clientFd, epoll_event *event)
+void Server::handleClientReceive(Client* client, epoll_event *event)
 {
 	try
 	{
-		Client *client = _clientMap[clientFd];
 		StreamState state = client->receiveData();
 
 		client->setClientState(READING_REQUEST);
@@ -162,7 +167,7 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
 		{
 			// Client bağlantıyı kapattı (EOF) veya hata oluştu
 			client->setClientState(CLOSING);
-			deleteClient(clientFd);
+			deleteClient(client);
 		}
 		else if (state == TRANSFER_COMPLETE)
 		{
@@ -174,7 +179,7 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
 
 			event->events = EPOLLOUT;
 
-			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
 			{
 				throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
 			}
@@ -184,15 +189,14 @@ void Server::handleClientReceive(int clientFd, epoll_event *event)
 	catch (const std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
-		deleteClient(clientFd);
+		deleteClient(client);
 	}
 }
 
-void Server::handleClientSend(int clientFd, epoll_event *event)
+void Server::handleClientSend(Client* client, epoll_event *event)
 {
 	try
 	{
-		Client *client = _clientMap[clientFd];
 		StreamState state = client->sendData();
 
 		client->setClientState(SENDING_RESPONSE);
@@ -200,7 +204,7 @@ void Server::handleClientSend(int clientFd, epoll_event *event)
 		if (state == TRANSFER_ERROR)
 		{
 			// Gönderim hatası, bağlantıyı kopar
-			deleteClient(clientFd);
+			deleteClient(client);
 		}
 		else if (state == TRANSFER_COMPLETE)
 		{
@@ -211,7 +215,7 @@ void Server::handleClientSend(int clientFd, epoll_event *event)
 			// Keep-Alive aktif olduğu için soketi kapatmıyoruz, yeni istekler için
 			// tekrar EPOLLIN moduna alıyoruz.
 			event->events = EPOLLIN;
-			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, event) == -1)
+			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
 			{
 				throw std::runtime_error(std::string("Error modifying back to EPOLLIN: ") + strerror(errno));
 			}
@@ -220,25 +224,25 @@ void Server::handleClientSend(int clientFd, epoll_event *event)
 	catch (const std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
-		deleteClient(clientFd);
+		deleteClient(client);
 	}
 }
 
-void Server::deleteClient(int clientFd)
+void Server::deleteClient(Client* client)
 {
 	// Delete ederken epoll_event nesnesine gerek yok sadece fd ile epoll dan
 	// silebilir
-	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1)
+	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, client->getFd(), NULL) == -1)
 	{
 		perror("error epoll dell");
 	}
-	delete _clientMap[clientFd];
-	_clientMap.erase(clientFd);
+	_clientSockets.erase(client);
+	delete client;
 }
 
 void Server::run()
 {
-	int currentFd = 0;
+	EpollHandler* sock = NULL;
 	_lastTimeoutCheck = time(NULL);
 
 	while (true)
@@ -254,16 +258,16 @@ void Server::run()
 
 		for (int i = 0; i < activeEvents; i++)
 		{
-			currentFd = _events[i].data.fd;
+			sock = static_cast<EpollHandler*>(_events[i].data.ptr);
 
 			if (_events[i].events & (EPOLLERR | EPOLLHUP))
 			{
-				if (isListeningFd(currentFd))
+				if (sock->isListening())
 				{
 					perror("Listening socket error");
-					epoll_ctl(_epollFd, EPOLL_CTL_DEL, currentFd, NULL);
-					delete _listenSockets[currentFd];
-					_listenSockets.erase(currentFd);
+					epoll_ctl(_epollFd, EPOLL_CTL_DEL, sock->getFd(), NULL);
+					_listenSockets.erase(static_cast<Socket*> (sock));
+					delete sock;
 
 					if (_listenSockets.empty())
 					{
@@ -271,27 +275,27 @@ void Server::run()
 					}
 				}
 				else
-					deleteClient(currentFd);
+					deleteClient(static_cast<Client*>(sock));
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
 				// Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set
 				// edilir.)
 			} 
 			else if (_events[i].events & EPOLLIN)
 			{
-				if (isListeningFd(currentFd))
+				if (sock->isListening())
 				{
 					// Yeni client'i epoll'a ekliyoruz.
-					acceptNewConnection(_listenSockets[currentFd]);
+					acceptNewConnection(static_cast<Socket*> (sock));
 				}
 				else
 				{
 					// Var olan client'dan request gelmiş
-					handleClientReceive(currentFd, &_events[i]);
+					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
 				}
 			} 
 			else if (_events[i].events & EPOLLOUT)
 			{
-				handleClientSend(currentFd, &_events[i]);
+				handleClientSend(static_cast<Client*> (sock), &_events[i]);
 			}
 		}
 		checkExpiredSockets();
@@ -310,30 +314,26 @@ void Server::checkExpiredSockets()
     }
 
 
-    std::map<int, Client*>::iterator it = _clientMap.begin();
-    std::map<int, Client*>::iterator end = _clientMap.end();
+    std::set<Client*>::iterator it = _clientSockets.begin();
+    std::set<Client*>::iterator end = _clientSockets.end();
 
     while (it != end)
     {
-        std::map<int, Client*>::iterator current = it;
+        Client* current = *it;
         it++;
 
 		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
 		// Uzun sürerek çok fazla beklemeye yol açabilir.
-        if (current->second->getClientState() == WAITING_FOR_REQUEST &&	 
-				now - current->second->getLastActivity() > 5)
+		
+        if (current->getClientState() == WAITING_FOR_REQUEST &&	 
+				now - current->getLastActivity() > 5)
         {
-            std::cout << "[Timeout] Client Fd " << current->first << " zaman aşımına uğradı, kapatılıyor." << std::endl;
-            deleteClient(current->first); 
+            std::cout << "[Timeout] Client Fd " << current->getFd() << " zaman aşımına uğradı, kapatılıyor." << std::endl;
+            deleteClient(current); 
         }
     }
 
     // 5 saniye geçtiyse zaman damgasını güncelle ve taramayı yap
     _lastTimeoutCheck = time(NULL);
-}
-
-bool    Server::isListeningFd(int fd) const
-{
-	return _listenSockets.find(fd) != _listenSockets.end();
 }
 
