@@ -28,7 +28,7 @@ Server::~Server()
 		delete sock->second;
 		sock++;
 	}
-	
+
 
 	_clientMap.clear();
 	_listenSockets.clear();
@@ -267,8 +267,7 @@ void Server::run()
 
 					if (_listenSockets.empty())
 					{
-						std::cerr << "[Fatal] Tüm dinleme soketleri kapandı, sunucu durduruluyor." << std::endl;
-						return;
+						throw std::runtime_error("Fatal: All listening sockets closed, server is shutting down.");
 					}
 				}
 				else
@@ -283,7 +282,7 @@ void Server::run()
 				{
 					// Yeni client'i epoll'a ekliyoruz.
 					acceptNewConnection(_listenSockets[currentFd]);
-				} 
+				}
 				else
 				{
 					// Var olan client'dan request gelmiş
@@ -319,6 +318,8 @@ void Server::checkExpiredSockets()
         std::map<int, Client*>::iterator current = it;
         it++;
 
+		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
+		// Uzun sürerek çok fazla beklemeye yol açabilir.
         if (current->second->getClientState() == WAITING_FOR_REQUEST &&	 
 				now - current->second->getLastActivity() > 5)
         {
@@ -328,7 +329,7 @@ void Server::checkExpiredSockets()
     }
 
     // 5 saniye geçtiyse zaman damgasını güncelle ve taramayı yap
-    _lastTimeoutCheck = now;
+    _lastTimeoutCheck = time(NULL);
 }
 
 bool    Server::isListeningFd(int fd) const
