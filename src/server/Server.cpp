@@ -242,7 +242,6 @@ void Server::deleteClient(Client* client)
 
 void Server::run()
 {
-	EpollHandler* sock = NULL;
 	_lastTimeoutCheck = time(NULL);
 
 	while (true)
@@ -258,7 +257,7 @@ void Server::run()
 
 		for (int i = 0; i < activeEvents; i++)
 		{
-			sock = static_cast<EpollHandler*>(_events[i].data.ptr);
+			EpollHandler* sock = static_cast<EpollHandler*>(_events[i].data.ptr);
 
 			if (_events[i].events & (EPOLLERR | EPOLLHUP))
 			{
