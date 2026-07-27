@@ -8,16 +8,16 @@
 struct LocationConfig
 {
 public:
-    std::string                         path;            // Rota: "/upload"
-    std::string                         root;            // Kök Dizin: "/var/www/uploads"
-    std::string                         index;           // Varsayılan Dosya: "index.html"
-    std::vector<std::string>            allowed_methods; // İzin Verilen Metotlar: ["GET", "POST"]
-    bool                                autoindex;       // Dizin Listeleme: true/false
-    std::string                         return_url;      // Redirection Adresi: "https://..."
-    int                                 return_code;     // Redirection Kodu: 301, 302
-    bool                                upload_enable;   // Upload İzni: true/false
-    std::string                         upload_store;    // Yükleme Dizini: "/var/www/uploads/files"
-    std::map<std::string, std::string>  cgi_extension;   // CGI Eşleşmesi: [".py"] = "/usr/bin/python3"
+    std::string                         path;
+    std::string                         root;
+    std::string                         index;
+    std::vector<std::string>            allowed_methods;
+    bool                                autoindex;
+    std::string                         return_url;
+    int                                 return_code;
+    bool                                upload_enable;
+    std::string                         upload_store;
+    std::map<std::string, std::string>  cgi_extension;
 
     LocationConfig();
     ~LocationConfig();

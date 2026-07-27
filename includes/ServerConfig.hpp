@@ -9,14 +9,13 @@
 struct ServerConfig
 {
 public:
-    std::string                 host;                 // IP Adresi: "127.0.0.1"
-    int                         port;                 // Port: 8080
-    std::string                 server_name;          // Sunucu İsmi: "example.com"
-    size_t                      client_max_body_size; // Bayt Cinsinden Limit: 10485760 (10M)
-    std::map<int, std::string>  error_pages;          // Hata Sayfaları: [404] = "/errors/404.html"
-    std::vector<LocationConfig> locations;            // İçindeki Location Blokları
+    std::vector<std::pair<std::string , int> >  listens; // host & port çiftleri
+    std::string                                 server_name;          // Sunucu İsmi: "example.com"
+    size_t                                      client_max_body_size; // Bayt Cinsinden Limit: 10485760 (10M)
+    std::map<int, std::string>                  error_pages;          // Hata Sayfaları: [404] = "/errors/404.html"
+    std::vector<LocationConfig>                 locations;            // İçindeki Location Blokları
 
-    ServerConfig();
+    ServerConfig(std::string allConf);
     ~ServerConfig();
 };
 

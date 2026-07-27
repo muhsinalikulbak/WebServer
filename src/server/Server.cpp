@@ -37,7 +37,7 @@ Server::~Server()
 		close(_epollFd);
 }
 
-void Server::init(const Config& config)
+void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
 	std::set<int> openedPorts;
@@ -53,51 +53,53 @@ void Server::init(const Config& config)
 
 	for (size_t i = 0; i < servers.size(); i++)
 	{
-		currentPort = servers[i].port;
-
-		// Configde aynı port gelirse tekrar bind etmesin
-		if (openedPorts.find(currentPort) != openedPorts.end())
-			continue;
-
-		Socket* sock = new Socket(AF_INET, SOCK_STREAM);
-
-		try
+		for (size_t j = 0; j < servers[i].listens.size(); j++)
 		{
-			sock->createSocket();
-			sock->bindSocket(currentPort);
-			sock->startListening();
+			currentPort = servers[i].listens[j].second;
+
+			// Configde aynı port gelirse tekrar bind etmesin
+			if (openedPorts.find(currentPort) != openedPorts.end())
+				continue;
+
+			Socket* sock = new Socket(AF_INET, SOCK_STREAM);
+
+			try
+			{
+				sock->createSocket();
+				sock->bindSocket(currentPort);
+				sock->startListening();
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << e.what() << std::endl;
+				delete sock;
+				continue;
+			}
+
+			epoll_event masterEvent;
+			std::memset(&masterEvent, 0, sizeof(masterEvent));
+
+			// Master sockete yeni bir biri bağlantığında bu bir okuma/connect olayıdır.
+			// Bu yüzden EPOLLIN ile master sockete epoll_ctl ile ekliyoruz.
+			masterEvent.events = EPOLLIN;
+			masterEvent.data.fd = sock->getFd();
+
+			// (master socket) için içerideki veri akışı, yeni bir istemcinin (client)
+			// kapıyı çalıp bağlanmak istemesi demektir. Master socket'i epoll'a
+			// ekliyoruz. Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
+			// bunu yakalayabileceğiz.
+
+			if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, sock->getFd(), &masterEvent) == -1)
+			{
+				perror("epoll ctrl error");
+				delete sock;
+				continue;
+			}
+
+			// epoll_ctl başarılı olduktan sonra port'u openedPorts'a ekle
+			openedPorts.insert(currentPort);
+			_listenSockets[sock->getFd()] = sock;
 		}
-		catch (const std::exception& e)
-		{
-			std::cerr << e.what() << std::endl;
-			delete sock;
-			continue;
-		}
-
-
-		epoll_event masterEvent;
-		std::memset(&masterEvent, 0, sizeof(masterEvent));
-
-		// Master sockete yeni bir biri bağlantığında bu bir okuma/connect olayıdır.
-		// Bu yüzden EPOLLIN ile master sockete epoll_ctl ile ekliyoruz.
-		masterEvent.events = EPOLLIN;
-		masterEvent.data.fd = sock->getFd();
-
-		// (master socket) için içerideki veri akışı, yeni bir istemcinin (client)
-		// kapıyı çalıp bağlanmak istemesi demektir. Master socket'i epoll'a
-		// ekliyoruz. Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
-		// bunu yakalayabileceğiz.
-
-		if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, sock->getFd(), &masterEvent) == -1)
-		{
-			perror("epoll ctrl error");
-			delete sock;
-			continue;
-		}
-
-		// epoll_ctl başarılı olduktan sonra port'u openedPorts'a ekle
-		openedPorts.insert(currentPort);
-		_listenSockets[sock->getFd()] = sock;
 	}
 	_events.resize(100);
 }
@@ -336,4 +338,3 @@ bool    Server::isListeningFd(int fd) const
 {
 	return _listenSockets.find(fd) != _listenSockets.end();
 }
-

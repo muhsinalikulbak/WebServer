@@ -10,7 +10,7 @@
 #include <cstring>
 #include <signal.h>
 #include <set>
-#include "Config.hpp"
+#include "ConfigParser.hpp"
 
 class Server
 {
@@ -20,8 +20,6 @@ private:
     // İstemci haritası: clientFd -> Client*
     std::map<int, Client*>          _clientMap;
 
-    // Config nesnesi
-    Config                          _config;
     int                             _epollFd;
     
     std::vector<struct epoll_event> _events; // epoll_wait'in dolduracağı dinamik dizi
@@ -31,7 +29,7 @@ public:
     Server(/* args */);
     ~Server();
 
-    void    init(const Config& config); // port numarası alır ve masterSocket'e verir  
+    void    init(const ConfigParser& config); // port numarası alır ve masterSocket'e verir
     void    run();
     void    acceptNewConnection(Socket* masterSocket);
     void    handleClientReceive(int clientFd, epoll_event *event);  // EPOLLIN: istemciden veri alma
