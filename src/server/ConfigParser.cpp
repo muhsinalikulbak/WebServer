@@ -15,10 +15,10 @@ Config ConfigParser::createMockConfig()
 
     // --- SERVER 1 (Port 8080) ---
     ServerConfig server1;
-    server1.host = "127.0.0.1";
+    server1.host = "0.0.0.0";
     server1.port = 8080;
     server1.server_name = "example.com";
-    server1.client_max_body_size = 10485760; // 10MB
+    server1.client_max_body_size = 10485760; // 10MB    
 
     server1.error_pages[404] = "/errors/404.html";
     server1.error_pages[500] = "/errors/500.html";
@@ -57,8 +57,8 @@ Config ConfigParser::createMockConfig()
 
     // --- SERVER 2 (Port 9090) ---
     ServerConfig server2;
-    server2.host = "0.0.0.0";
-    server2.port = 9090;
+    server2.host = "127.0.0.1";
+    server2.port = 8080;
     server2.server_name = "test.com";
     server2.client_max_body_size = 2097152; // 2MB
 

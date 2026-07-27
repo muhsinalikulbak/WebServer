@@ -7,7 +7,7 @@ Client::Client()
     _clientFd = -1;
     _readBuffer = "";
     _writeBuffer = "";
-    _lastActivity = time(NULL);
+    _lastActivity = std::time(NULL);
     _clientState = CLOSING;
 }
 
@@ -16,7 +16,7 @@ Client::Client(int fd)
     _clientFd = fd;
     _readBuffer = "";
     _writeBuffer = "";
-    _lastActivity = time(NULL);
+    _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
 }
 
@@ -45,6 +45,8 @@ int                 Client::getFd() const { return _clientFd; } // Override
 
 bool                Client::isListening() const { return false; } // Override
 
+void                Client::setServerConfig(const ServerConfig* config) {_serverConfig = config; }
+
 
 
 /**** READ WRITE / HELPER FUNCTIONS ****/
@@ -70,7 +72,11 @@ StreamState Client::receiveData()
     }
     else if (byte == 0)
     {
-        return PEER_CLOSED;  // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
+        return PEER_CLOSED;  
+        // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
+        // Bir client tek bir istek gönderip kendini kapatırsa totalda 4 işlem olur
+        // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
+        // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 4- TCP fin paketi (kapanma) isteği recv   
     }
     else
     {

@@ -5,7 +5,7 @@ int main(int argc, char** argv)
 {
 	(void)argc;
 	(void)argv;
-	
+
 	signal(SIGPIPE, SIG_IGN);
 
 	try

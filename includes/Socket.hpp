@@ -3,6 +3,7 @@
 
 
 #include "EpollHandler.hpp"
+#include "ServerConfig.hpp"
 
 #include <sys/socket.h>
 #include <string>
@@ -32,6 +33,7 @@ private:
     int                 _type;     // SOCK_STREAM
     State               _state;
     struct sockaddr_in  _addr;
+    const ServerConfig* _serverConfig; // bu socket hangi server bloğuna ait
 
  
 public:
@@ -40,17 +42,19 @@ public:
     ~Socket();
 
 
-    virtual bool    isListening() const;
+    virtual bool        isListening() const;
 
-    int             acceptConnection();
-    void            createSocket();
-    void            startListening();
-    void            bindSocket(int port);
+    int                 acceptConnection();
+    void                createSocket();
+    void                startListening();
+    void                bindSocket(const std::string& host, int port);
 
-    virtual int     getFd() const;
-    int             getDomain() const;
-    int             getType() const;
-    State           getState() const;
+    virtual int         getFd() const;
+    int                 getDomain() const;
+    int                 getType() const;
+    State               getState() const;
+    const ServerConfig* getServerConfig() const;
+    void                setServerConfig(const ServerConfig* config);
 
 };
 

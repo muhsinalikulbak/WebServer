@@ -36,34 +36,39 @@ void Socket::createSocket()
 {
   _fd = socket(_domain, _type, 0);
 
-  // SO_REUSEADDR: socket oluştuktan hemen sonra atılır.
-  // Bind etmeden önce, server kapandıktan sonra portu hemen tekrar açmak için
-  // kullanılır.
-  int opt = 1;
-  if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-    throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
-
   if (_fd == -1)
   {
     throw std::runtime_error(std::string("Socket creation failed: ") + strerror(errno));
   }
-  else
-    _state = CREATED;
+  
+  // SO_REUSEADDR: socket oluştuktan hemen sonra atılır.
+  // Bind etmeden önce, server kapandıktan sonra portu hemen tekrar açabilmek için
+  // kullanılır. Yoksa bind adress already uyarısı var ve TIME-WAIT atarak biraz bekletir.
+  
+  int opt = 1;
+  if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
 
-  int flags = fcntl(_fd, F_GETFL, 0);
-  if (flags == -1)
-    throw std::runtime_error(std::string("fcntl F_GETFL failed: ") + strerror(errno));
-  if (fcntl(_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+  _state = CREATED;
+
+  // GET_FLAG Kullanmamak büyük problem yaratacak mı bize
+  if (fcntl(_fd, F_SETFL, O_NONBLOCK) == -1)
     throw std::runtime_error(std::string("fcntl F_SETFL failed: ") + strerror(errno));
 }
 
-void Socket::bindSocket(int port)
+void Socket::bindSocket(const std::string& host, int port)
 {
   _addr.sin_family = _domain; // Genellikle AF_INET
   _addr.sin_port = htons(port); // Genellikle 8080, portu 80 Olarak deneyelim daha sonra.
 
-  _addr.sin_addr.s_addr = INADDR_ANY; 
-  // Bu sunucuya bağlı tüm ip'lerden atılan istekleri kabul et demektir.
+    // config'te yazan IP'yi kullan
+  if (host == "0.0.0.0" || host.empty())
+      _addr.sin_addr.s_addr = INADDR_ANY;
+  else
+      _addr.sin_addr.s_addr = inet_addr(host.c_str());
+
+
+  // INADDR_ANY = 0.0.0.0 sunucuya bağlı tüm ip'lerden atılan istekleri kabul et demektir.
   // Fiziksel ip, localhost ip, wifi ip gibi farklı ağ girişlerinden gelen
   // istekleri alır. Çünkü 0.0.0.0 = ANY demektir. İstersek bunu sınırlayabilir
   // sadece localhosttan ya da fiziksel ip'den istekleri kabul edebiliriz.
@@ -112,14 +117,18 @@ int Socket::acceptConnection()
   return clientFd;
 }
 
-bool  Socket::isListening() const { return true; } // Override
+bool                Socket::isListening() const { return true; } // Override
 
-int   Socket::getFd() const { return _fd; } // Override
+int                 Socket::getFd() const { return _fd; } // Override
 
-int   Socket::getDomain() const { return _domain; }
+int                 Socket::getDomain() const { return _domain; }
 
-int   Socket::getType() const { return _type; }
+int                 Socket::getType() const { return _type; }
 
-State Socket::getState() const { return _state; }
+State               Socket::getState() const { return _state; }
 
+const ServerConfig* Socket::getServerConfig() const { return _serverConfig; }
 
+void                Socket::setServerConfig(const ServerConfig* config) { _serverConfig = config; }
+
+ 

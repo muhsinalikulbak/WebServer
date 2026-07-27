@@ -9,6 +9,8 @@
 struct ServerConfig
 {
 public:
+    // Bir server {} scope'u içinde birden fazla listen olabiliyor
+    // Bu durumda pair(ip, port) vector'ü oluşturmak gerek sanırım
     std::string                 host;                 // IP Adresi: "127.0.0.1"
     int                         port;                 // Port: 8080
     std::string                 server_name;          // Sunucu İsmi: "example.com"

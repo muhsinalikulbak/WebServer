@@ -22,14 +22,10 @@ private:
     std::set<Socket*>               _listenSockets;
     std::set<Client*>               _clientSockets;
 
-
-    // İstemci haritası: clientFd -> Client*
-
-    // Config nesnesi
     Config                          _config;
     int                             _epollFd;
     
-    std::vector<struct epoll_event> _events; // epoll_wait'in dolduracağı dinamik dizi
+    std::vector<struct epoll_event> _events; // epoll_wait'in dolduracağı vector
     std::time_t                     _lastTimeoutCheck;
 
 public:
@@ -43,6 +39,7 @@ public:
     void    handleClientSend(Client* client, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
     void    deleteClient(Client* client);
     void    checkExpiredSockets();
+    void    registerHandler(EpollHandler* socket);
 
 };
 

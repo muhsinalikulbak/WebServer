@@ -3,6 +3,7 @@
 
 
 #include "EpollHandler.hpp"
+#include "ServerConfig.hpp"
 
 #include <string>
 #include <unistd.h>
@@ -31,11 +32,12 @@ enum ClientState
 class Client : public EpollHandler
 {
 private:
-    int         _clientFd;
-    std::string _readBuffer;   // İstemciden recv ile parça parça okunan ham istek verisi
-    std::string _writeBuffer;  // İleride tarayıcıya göndereceğimiz HTTP Cevabı (Response) burada birikecek
-    std::time_t _lastActivity;
-    ClientState _clientState;
+    int                     _clientFd;
+    std::string             _readBuffer;   // İstemciden recv ile parça parça okunan ham istek verisi
+    std::string             _writeBuffer;  // İleride tarayıcıya göndereceğimiz HTTP Cevabı (Response) burada birikecek
+    std::time_t             _lastActivity;
+    ClientState             _clientState;
+    const ServerConfig*     _serverConfig; // bu socket hangi server bloğuna ait
 
 
 
@@ -53,6 +55,7 @@ public:
     void                setLastActivity(std::time_t time);
     const std::string&  getReadBuffer() const;
     virtual int         getFd() const;
+    void                setServerConfig(const ServerConfig* config);
 
     
     void                clearReadBuffer();
