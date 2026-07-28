@@ -48,13 +48,19 @@ void Server::init(const ConfigParser& config)
 	int port = 0;
 	std::string host; 
 	
-	// Bu flag ileride cgi fork attığında kopyalanan epoll fd'yi oto kapatmasını sağlar
-	_epollFd = epoll_create1(EPOLL_CLOEXEC);  // epoll_create() kullanılacak
+	// Size parametrese tarihsel bir kalıntı
+	// Normalde eskiden bu poll'un kaç adet socket'i yöneteceğini temsil ederdi.
+	// Şimdi bu size socket eklendikteç dinamik olarak artıyor.
+	// O yüzden parametre sadece 0'dan büyük olmalı başka bir işe yaramıyor.
+
+	_epollFd = epoll_create(1);
 	if (_epollFd == -1)
 	{
-		perror("epoll error");
-		throw std::runtime_error("Server init failed: epoll_create1 failed");
+		throw std::runtime_error("Server init failed: epoll_create failed");
 	}
+
+	// Bu flag ileride cgi fork attığında kopyalanan epoll fd'yi oto kapatmasını sağlar
+	fcntl(_epollFd, F_SETFL, EPOLL_CLOEXEC);
 
 	for (size_t i = 0; i < servers.size(); i++)
 	{
@@ -213,7 +219,7 @@ void Server::deleteClient(Client* client)
 	// silebilir
 	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, client->getFd(), NULL) == -1)
 	{
-		perror("error epoll dell");
+		std::cerr << "Epoll dell error : " << strerror(errno) << std::endl;
 	}
 	_clientSockets.erase(client);
 	delete client;
@@ -230,7 +236,7 @@ void Server::run()
 	
 		if (activeEvents == -1)
 		{
-			perror("epoll wait");
+			std::cerr << "Epoll wait error : " << strerror(errno) << std::endl;
 			continue;
 		}
 
@@ -246,7 +252,7 @@ void Server::run()
 
 				if (sock->isListening())
 				{
-					perror("Listening socket error");
+					std::cerr << "Listening socket error : " << strerror(errno) << std::endl;
 					epoll_ctl(_epollFd, EPOLL_CTL_DEL, sock->getFd(), NULL);
 					_listenSockets.erase(static_cast<Socket*> (sock));
 					delete sock;
@@ -306,12 +312,11 @@ void Server::checkExpiredSockets()
 
 		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
 		// Uzun sürerek çok fazla beklemeye yol açabilir.
-		
         if (current->getClientState() == WAITING_FOR_REQUEST &&	 
 				now - current->getLastActivity() > 5)
         {
-            std::cout << "[Timeout] Client Fd " << current->getFd() << " zaman aşımına uğradı, kapatılıyor." << std::endl;
-            deleteClient(current); 
+			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;            
+			deleteClient(current); 
         }
     }
 

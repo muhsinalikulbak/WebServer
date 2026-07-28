@@ -57,7 +57,6 @@ void Client::clearReadBuffer()
     _readBuffer.clear();
 }
 
-
 StreamState Client::receiveData()
 {
     char buffer[4096];
@@ -67,7 +66,7 @@ StreamState Client::receiveData()
 
     if (byte == -1)
     {
-        perror("Recv");
+        std::cerr << "Recv() error : " << strerror(errno) << std::endl;
         return TRANSFER_ERROR;
     }
     else if (byte == 0)
@@ -102,7 +101,7 @@ StreamState Client::sendData()
 
     if (byte == -1)
     {
-        perror("Send");
+        std::cerr << "Send() error : " << strerror(errno) << std::endl;
         return TRANSFER_ERROR;  // Sistem hatası
     }
     else if (byte > 0)

@@ -11,7 +11,9 @@
 #include <sys/socket.h>
 #include <cstdio>
 #include <ctime>
-
+#include <iostream>
+#include <cerrno>
+#include <cstring>
 enum StreamState
 {
     TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)

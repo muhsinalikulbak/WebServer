@@ -33,23 +33,8 @@ private:
     std::vector<ServerConfig>   _servers;       // Ayrıştırılmış sunucu bloklarının listesi
 };
 
-çalışma sıraları sayfanın altından başlıyor inceleyince anlarsın zaten o7
 
-1. Yasaklı fcntl Bayrağı (F_GETFL) Kullanımı
-Hatalı Dosyalar: src/network/Socket.cpp ve src/server/Server.cpp
-Sorun: Kodunda soketleri non-blocking yapmak için önce fcntl(_fd, F_GETFL, 0) ile mevcut bayrakları okuyup, ardından F_SETFL ile O_NONBLOCK ekliyorsun. 
-Ancak proje dökümanı fcntl() kullanımı için çok net bir sınır çiziyor: Sadece F_SETFL, O_NONBLOCK ve FD_CLOEXEC bayraklarına izin verilmiştir. 
-Diğer tüm bayraklar yasaktır.  
-Çözüm: F_GETFL kullanmadan doğrudan fcntl(_fd, F_SETFL, O_NONBLOCK); ataması yapmalısın.
 
-2. İzin Verilmeyen Ağ (Network) Fonksiyonları
-Hatalı Dosya: src/network/Socket.cpp (Satır 55)
-Sorun: inet_ntoa(client_addr.sin_addr) fonksiyonunu kullanmışsın. İzin verilen fonksiyonlar listesinde yalnızca htons, htonl, ntohs ve ntohl bulunur. inet_ntoa bu listede yoktur.  
-Çözüm: Bağlanan istemcinin IP adresini ekrana yazdırmak (loglamak) projenin zorunlu bir parçası değilse, bu kısmı tamamen silebilirsin veya izin verilen bit kaydırma işlemleriyle manuel bir çevirici yazabilirsin.
+    
 
-3. Yasaklı perror Fonksiyonu
-Hatalı Dosyalar: Neredeyse tüm .cpp dosyaları (Server.cpp, Client.cpp, Socket.cpp)Sorun: Hata ayıklama için sıkça perror() çağırmışsın. Ancak perror izin verilen fonksiyonlar listesinde yer almıyor.  Çözüm: İzin verilen strerror ve errno ikilisini kullanmalısın. Kodunun bazı yerlerinde throw std::runtime_error(std::string("...") + strerror(errno)); şeklinde doğru kullanımı zaten yapmışsın. Tüm perror() çağrılarını std::cerr ve strerror(errno) kombinasyonu ile değiştirmelisin.  
 
-4. Yasaklı epoll_create1 KullanımıHatalı Dosya: src/server/Server.cpp (Satır 37)Sorun: epoll_create1(EPOLL_CLOEXEC) fonksiyonunu kullanmışsın. Ancak proje dökümanı epoll ailesinden yalnızca epoll_create, epoll_ctl ve epoll_wait fonksiyonlarına açıkça izin vermiştir.  Çözüm: epoll_create1 yerine epoll_create(1) (veya 1'den büyük herhangi bir boyut) kullanmalısın.
-
-5. Yasaklı time Fonksiyonu (Riskli)Hatalı Dosyalar: src/server/Server.cpp ve src/network/Client.cppSorun: İstemci zaman aşımı (timeout) kontrolleri için time(NULL) kullanıyorsun. Ancak time fonksiyonu izin verilenler listesinde (Bölüm IV) bulunmamaktadır. Moulinette (veya katı bir peer) bunu tespit ederse projeden sıfır almana sebep olabilir.  Çözüm: İzin verilen listeyle doğrudan zamanı ölçmek mümkün değildir. Zaman aşımı mantığını iptal edebilir (proje gereksinimlerinde "timeout" yönetimi açıkça zorunlu tutulmamıştır, sadece sunucunun askıda kalmaması "hang indefinitely" istenir) veya farklı mimari yaklaşımlarla (örneğin epoll_wait içindeki timeout parametresini döngüsel olarak sayarak) bir mekanizma kurabilirsin.  

@@ -105,7 +105,7 @@ int Socket::acceptConnection()
   // Client adresi içine client bilgileri dolar, ip port vs
   if (clientFd == -1)
   {
-    perror("accept");
+    std::cerr << "Accept error : " << strerror(errno) << std::endl; 
   }
   // inet_ntoa (Network to ASCII): Sayısal IP'yi yazıya döker
 
