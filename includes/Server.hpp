@@ -3,7 +3,6 @@
 
 #include "Client.hpp"
 #include "Socket.hpp"
-#include "Config.hpp"
 #include "EpollHandler.hpp"
 
 #include <string>
@@ -13,7 +12,7 @@
 #include <cstring>
 #include <signal.h>
 #include <set>
-
+#include "ConfigParser.hpp"
 
 class Server
 {
@@ -22,7 +21,6 @@ private:
     std::set<Socket*>               _listenSockets;
     std::set<Client*>               _clientSockets;
 
-    Config                          _config;
     int                             _epollFd;
     
     std::vector<struct epoll_event> _events; // epoll_wait'in dolduracağı vector
@@ -32,7 +30,7 @@ public:
     Server(/* args */);
     ~Server();
 
-    void    init(const Config& config); // port numarası alır ve masterSocket'e verir  
+    void    init(const ConfigParser& config); // port numarası alır ve masterSocket'e verir
     void    run();
     void    acceptNewConnection(Socket* masterSocket);
     void    handleClientReceive(Client* client, epoll_event *event);  // EPOLLIN: istemciden veri alma

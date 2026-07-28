@@ -1,76 +1,74 @@
 
 #include "ConfigParser.hpp"
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <stdexcept>
 
-ConfigParser::ConfigParser()
+ConfigParser::ConfigParser(std::string path)
 {
+    this->_configFile = path;
+
+    std::ifstream file(path.c_str());
+    if (!file.is_open())
+        throw std::runtime_error("Dosya acilamadi: " + path);
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
+
+    std::string all_conf = buffer.str();
+    size_t i = 0;
+
+    while (i < all_conf.length())
+    {
+        size_t server_pos = all_conf.find("server", i);
+        if (server_pos == std::string::npos)
+            break;
+
+        size_t start_pos = all_conf.find("{", server_pos);
+        if (start_pos == std::string::npos)
+            throw std::runtime_error("'server' sonrasi '{' bulunamadi: " + path);
+
+        std::string between = all_conf.substr(server_pos + 6, start_pos - (server_pos + 6));
+        bool only_whitespace = between.find_first_not_of(" \t\r\n") == std::string::npos;
+        if (!only_whitespace)
+        {
+            i = server_pos + 6;
+            continue;
+        }
+
+        int depth = 1;
+        size_t j = start_pos + 1;
+        while (j < all_conf.length() && depth > 0)
+        {
+            if (all_conf[j] == '{')
+                depth++;
+            else if (all_conf[j] == '}')
+                depth--;
+            j++;
+        }
+
+        if (depth != 0)
+            throw std::runtime_error("Eslesmeyen '{' bulundu: " + path);
+
+        size_t end_pos = j - 1;
+        std::string server_block = all_conf.substr(start_pos, end_pos - start_pos + 1);
+        _servers.push_back(ServerConfig(server_block));
+
+        i = end_pos + 1;
+    }
+
+    if (_servers.empty())
+        throw std::runtime_error("Config dosyasinda server bloğu bulunamadi: " + path);
 }
 
 ConfigParser::~ConfigParser()
 {
 }
 
-Config ConfigParser::createMockConfig()
+const std::vector<ServerConfig>& ConfigParser::getServers() const
 {
-    Config config;
-
-    // --- SERVER 1 (Port 8080) ---
-    ServerConfig server1;
-    server1.host = "0.0.0.0";
-    server1.port = 8080;
-    server1.server_name = "example.com";
-    server1.client_max_body_size = 10485760; // 10MB    
-
-    server1.error_pages[404] = "/errors/404.html";
-    server1.error_pages[500] = "/errors/500.html";
-
-    // Location: /
-    LocationConfig locRoot;
-    locRoot.path = "/";
-    locRoot.root = "/var/www/html";
-    locRoot.index = "index.html";
-    locRoot.allowed_methods.push_back("GET");
-    locRoot.allowed_methods.push_back("POST");
-    locRoot.autoindex = true;
-    server1.locations.push_back(locRoot);
-
-    // Location: /upload
-    LocationConfig locUpload;
-    locUpload.path = "/upload";
-    locUpload.root = "/var/www/uploads";
-    locUpload.allowed_methods.push_back("POST");
-    locUpload.allowed_methods.push_back("DELETE");
-    locUpload.upload_enable = true;
-    locUpload.upload_store = "/var/www/uploads/files";
-    server1.locations.push_back(locUpload);
-
-    // Location: /cgi-bin
-    LocationConfig locCgi;
-    locCgi.path = "/cgi-bin";
-    locCgi.root = "/var/www/cgi-bin";
-    locCgi.allowed_methods.push_back("GET");
-    locCgi.allowed_methods.push_back("POST");
-    locCgi.cgi_extension[".py"] = "/usr/bin/python3";
-    locCgi.cgi_extension[".php"] = "/usr/bin/php-cgi";
-    server1.locations.push_back(locCgi);
-
-    config.addServer(server1);
-
-    // --- SERVER 2 (Port 9090) ---
-    ServerConfig server2;
-    server2.host = "127.0.0.1";
-    server2.port = 8080;
-    server2.server_name = "test.com";
-    server2.client_max_body_size = 2097152; // 2MB
-
-    LocationConfig locTest;
-    locTest.path = "/";
-    locTest.root = "/var/www/test";
-    locTest.index = "default.html";
-    locTest.allowed_methods.push_back("GET");
-    locTest.autoindex = false;
-    server2.locations.push_back(locTest);
-
-    config.addServer(server2);
-
-    return config;
+    return _servers;
 }

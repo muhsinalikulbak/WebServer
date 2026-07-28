@@ -1,7 +1,7 @@
 NAME = webserver
 
 CXX = c++
-CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -Iincludes
+CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -g -o0 -Iincludes
 
 SRCS =	src/main.cpp \
 		src/network/Socket.cpp \
@@ -12,7 +12,6 @@ SRCS =	src/main.cpp \
 		src/http/ResponseBuilder.cpp \
 		src/http/Router.cpp \
 		src/server/Server.cpp \
-		src/server/Config.cpp \
 		src/server/ConfigParser.cpp \
 		src/server/CgiHandler.cpp \
 		src/server/LocationConfig.cpp \

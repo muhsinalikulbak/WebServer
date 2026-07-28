@@ -42,7 +42,7 @@ Server::~Server()
 		close(_epollFd);
 }
 
-void Server::init(const Config& config)
+void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
 	int port = 0;

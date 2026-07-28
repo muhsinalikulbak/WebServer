@@ -2,15 +2,18 @@
 #ifndef CONFIGPARSER_HPP
 # define CONFIGPARSER_HPP
 
-# include "Config.hpp"
+#include "ServerConfig.hpp"
 
 class ConfigParser
 {
+private:
+    std::string _configFile;
+    std::vector<ServerConfig> _servers;
 public:
-    ConfigParser();
+    ConfigParser(std::string path);
     ~ConfigParser();
 
-    static Config createMockConfig();
+    const std::vector<ServerConfig>& getServers() const;
 };
 
 #endif

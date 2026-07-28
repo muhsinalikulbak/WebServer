@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug WebServer",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/webserver",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "build",
+            "setupCommands": [
+                {
+                    "description": "Pretty Printing",
+                    "text": "-enable-pretty-printing"
+                },
+                {
+                    "text": "set debuginfod enabled off"
+                }
+            ]
+        }
+    ]
+}
