@@ -58,32 +58,36 @@ void Server::init(const ConfigParser& config)
 
 	for (size_t i = 0; i < servers.size(); i++)
 	{
-		port = servers[i].port;
-		host = servers[i].host;
-
-		Socket* sock = new Socket(AF_INET, SOCK_STREAM);
-		
-		try
+		for (size_t j = 0; j < servers[i].listens.size(); j++)
 		{
-			sock->createSocket();
-			sock->bindSocket(host, port);
-			sock->startListening();	
-			sock->setServerConfig(&servers[i]);
-			registerHandler(sock);
-		}
-		catch (const std::exception& e)
-		{
-			std::cerr << e.what() << std::endl;
-			delete sock;
-			continue;
-		}
-		
-		// Dinleme yapacak ip:port aktifleştiriyoruz, dinleyici socket açıyoruz.
-		// Epoll_wait çağrısı sonra master socket gelirse bu bir client'ın bağlantı kurmak istemesidir.
-		// Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
-		// bunu yakalayabileceğiz.
+			host = servers[i].listens[j].first;
+			port = servers[i].listens[j].second;
 
-		_listenSockets.insert(sock);
+			Socket* sock = new Socket(AF_INET, SOCK_STREAM);
+			
+			try
+			{
+				sock->createSocket();
+				sock->bindSocket(host, port);
+				sock->startListening();	
+				sock->setServerConfig(&servers[i]);
+				registerHandler(sock);
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << e.what() << std::endl;
+				delete sock;
+				continue;
+			}
+			
+			// Dinleme yapacak ip:port aktifleştiriyoruz, dinleyici socket açıyoruz.
+			// Epoll_wait çağrısı sonra master socket gelirse bu bir client'ın bağlantı kurmak istemesidir.
+			// Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
+			// bunu yakalayabileceğiz.
+
+			_listenSockets.insert(sock);
+		}
+
 	}
 
 	if (_listenSockets.empty())

@@ -30,6 +30,7 @@ public:
     Server(/* args */);
     ~Server();
 
+    // Bunların static ya da private olma durumlarını değerlendir.
     void    init(const ConfigParser& config); // port numarası alır ve masterSocket'e verir
     void    run();
     void    acceptNewConnection(Socket* masterSocket);
