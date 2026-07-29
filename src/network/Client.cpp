@@ -68,7 +68,7 @@ StreamState Client::receiveData()
 
     if (byte == -1)
     {
-        std::cerr << "Recv() error : " << strerror(errno) << std::endl;
+        perror("Recv() error");
         return TRANSFER_ERROR;
     }
     else if (byte == 0)
@@ -103,7 +103,7 @@ StreamState Client::sendData()
 
     if (byte == -1)
     {
-        std::cerr << "Send() error : " << strerror(errno) << std::endl;
+        perror("Send() error");
         return TRANSFER_ERROR;  // Sistem hatası
     }
     else if (byte > 0)

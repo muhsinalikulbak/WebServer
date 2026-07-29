@@ -2,6 +2,7 @@
 #include "ServerConfig.hpp"
 #include <cstring>
 #include <cerrno>
+#include <cstdio>
 
 Server::Server()
 {
@@ -219,7 +220,7 @@ void Server::deleteClient(Client* client)
 	// silebilir
 	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, client->getFd(), NULL) == -1)
 	{
-		std::cerr << "Epoll dell error : " << strerror(errno) << std::endl;
+		perror("Epoll dell error");
 	}
 	_clientSockets.erase(client);
 	delete client;
@@ -236,7 +237,7 @@ void Server::run()
 	
 		if (activeEvents == -1)
 		{
-			std::cerr << "Epoll wait error : " << strerror(errno) << std::endl;
+			perror("Epoll wait error");
 			continue;
 		}
 
@@ -252,7 +253,7 @@ void Server::run()
 
 				if (sock->isListening())
 				{
-					std::cerr << "Listening socket error : " << strerror(errno) << std::endl;
+					perror("Listening socket error");
 					epoll_ctl(_epollFd, EPOLL_CTL_DEL, sock->getFd(), NULL);
 					_listenSockets.erase(static_cast<Socket*> (sock));
 					delete sock;

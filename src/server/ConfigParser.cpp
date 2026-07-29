@@ -18,7 +18,7 @@ ConfigParser::ConfigParser(std::string path)
 
     std::ifstream file(path.c_str());
     if (!file.is_open())
-        throw std::runtime_error("Dosya acilamadi: " + path);
+        throw std::invalid_argument("Could not open file: " + path);
 
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -35,7 +35,7 @@ ConfigParser::ConfigParser(std::string path)
 
         size_t start_pos = all_conf.find("{", server_pos);
         if (start_pos == std::string::npos)
-            throw std::runtime_error("'server' sonrasi '{' bulunamadi: " + path);
+            throw std::invalid_argument("'{' not found after 'server': " + path);
 
         std::string between = all_conf.substr(server_pos + 6, start_pos - (server_pos + 6));
         bool only_whitespace = between.find_first_not_of(" \t\r\n") == std::string::npos;
@@ -57,7 +57,7 @@ ConfigParser::ConfigParser(std::string path)
         }
 
         if (depth != 0)
-            throw std::runtime_error("Eslesmeyen '{' bulundu: " + path);
+            throw std::invalid_argument("Unmatched '{' found: " + path);
 
         size_t end_pos = j - 1;
         std::string server_block = all_conf.substr(start_pos, end_pos - start_pos + 1);
@@ -67,7 +67,7 @@ ConfigParser::ConfigParser(std::string path)
     }
 
     if (_servers.empty())
-        throw std::runtime_error("Config dosyasinda server bloğu bulunamadi: " + path);
+        throw std::invalid_argument("No server block found in config file: " + path);
 }
 
 ConfigParser::ConfigParser(const ConfigParser& other)
