@@ -9,6 +9,7 @@ Client::Client()
     _writeBuffer = "";
     _lastActivity = std::time(NULL);
     _clientState = CLOSING;
+    _serverConfig = NULL;
 }
 
 Client::Client(int fd)
@@ -18,6 +19,7 @@ Client::Client(int fd)
     _writeBuffer = "";
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
+    _serverConfig = NULL;
 }
 
 

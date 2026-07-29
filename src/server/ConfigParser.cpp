@@ -6,6 +6,12 @@
 #include <vector>
 #include <stdexcept>
 
+ConfigParser::ConfigParser()
+{
+    this->_configFile = "";
+    this->_servers.clear();
+}
+
 ConfigParser::ConfigParser(std::string path)
 {
     this->_configFile = path;
@@ -62,6 +68,21 @@ ConfigParser::ConfigParser(std::string path)
 
     if (_servers.empty())
         throw std::runtime_error("Config dosyasinda server bloğu bulunamadi: " + path);
+}
+
+ConfigParser::ConfigParser(const ConfigParser& other)
+{
+    *this = other;
+}
+
+ConfigParser& ConfigParser::operator=(const ConfigParser& other)
+{
+    if (this != &other)
+    {
+        this->_configFile = other._configFile;
+        this->_servers = other._servers;
+    }
+    return *this;
 }
 
 ConfigParser::~ConfigParser()

@@ -2,7 +2,7 @@
 
 #include <exception>
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <cstring>
 #include <cerrno>
 
@@ -13,6 +13,7 @@ Socket::Socket(int domain, int type)
   _domain = domain;
   _type = type;
   _state = IDLE;
+  _serverConfig = NULL;
 }
 
 Socket::Socket()
@@ -21,6 +22,7 @@ Socket::Socket()
   _domain = AF_INET;   // IPv4
   _type = SOCK_STREAM; // TCP
   _state = IDLE;
+  _serverConfig = NULL;
 }
 
 

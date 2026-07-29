@@ -2,6 +2,7 @@
 #include "ConfigParser.hpp"
 #include <exception>
 #include <iostream>
+#include <csignal>
 
 
 int main(int argc, char** argv) 

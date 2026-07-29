@@ -265,6 +265,15 @@ static void applyServerDirective(ServerConfig& server, const std::vector<std::st
         throw std::runtime_error("Config parse error: bilinmeyen server directive: " + key);
 }
 
+ServerConfig::ServerConfig()
+{
+    listens.clear();
+    server_name = "";
+    client_max_body_size = 1024 * 1024;
+    error_pages.clear();
+    locations.clear();
+}
+
 ServerConfig::ServerConfig(std::string allConf)
 {
     listens.clear();
@@ -297,6 +306,24 @@ ServerConfig::ServerConfig(std::string allConf)
         throw std::runtime_error("Config parse error: server bloğu sonrasi fazla token");
     if (listens.empty())
         throw std::runtime_error("Config parse error: server icinde listen yok");
+}
+
+ServerConfig::ServerConfig(const ServerConfig& other)
+{
+    *this = other;
+}
+
+ServerConfig& ServerConfig::operator=(const ServerConfig& other)
+{
+    if (this != &other)
+    {
+        listens = other.listens;
+        server_name = other.server_name;
+        client_max_body_size = other.client_max_body_size;
+        error_pages = other.error_pages;
+        locations = other.locations;
+    }
+    return *this;
 }
 
 ServerConfig::~ServerConfig()

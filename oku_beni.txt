@@ -34,7 +34,16 @@ private:
 };
 
 
+Subject General Rules:
+Make sure to leverage as many C++ features as possible (e.g., choose <cstring>
+over <string.h>). You are allowed to use C functions, but always prefer their C++
+versions if possible.
+• Any external library and Boost libraries are forbidden
 
-    
+
+perror C fonksiyonu
+time ise std::'den gelen bir fonksiyon ekstra bir kütüphane ile gelen bir fonksiyon değil
+
+
 
 

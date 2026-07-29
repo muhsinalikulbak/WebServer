@@ -15,7 +15,10 @@ public:
     std::map<int, std::string>                  error_pages;          // Hata Sayfaları: [404] = "/errors/404.html"
     std::vector<LocationConfig>                 locations;            // İçindeki Location Blokları
 
+    ServerConfig();
     ServerConfig(std::string allConf);
+    ServerConfig(const ServerConfig& other);
+    ServerConfig& operator=(const ServerConfig& other);
     ~ServerConfig();
 };
 

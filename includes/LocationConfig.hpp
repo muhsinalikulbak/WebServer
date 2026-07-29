@@ -20,6 +20,8 @@ public:
     std::map<std::string, std::string>  cgi_extension;
 
     LocationConfig();
+    LocationConfig(const LocationConfig& other);
+    LocationConfig& operator=(const LocationConfig& other);
     ~LocationConfig();
 };
 

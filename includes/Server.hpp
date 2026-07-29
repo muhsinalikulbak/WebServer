@@ -10,7 +10,7 @@
 #include <sys/epoll.h>
 #include <vector>
 #include <cstring>
-#include <signal.h>
+#include <csignal>
 #include <set>
 #include "ConfigParser.hpp"
 
@@ -26,8 +26,11 @@ private:
     std::vector<struct epoll_event> _events; // epoll_wait'in dolduracağı vector
     std::time_t                     _lastTimeoutCheck;
 
+    Server(const Server& other);
+    Server& operator=(const Server& other);
+
 public:
-    Server(/* args */);
+    Server();
     ~Server();
 
     // Bunların static ya da private olma durumlarını değerlendir.

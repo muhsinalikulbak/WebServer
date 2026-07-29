@@ -41,7 +41,8 @@ private:
     ClientState             _clientState;
     const ServerConfig*     _serverConfig; // bu socket hangi server bloğuna ait
 
-
+    Client(const Client& other);
+    Client& operator=(const Client& other);
 
 public:
 

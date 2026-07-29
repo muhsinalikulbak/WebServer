@@ -35,7 +35,9 @@ private:
     struct sockaddr_in  _addr;
     const ServerConfig* _serverConfig; // bu socket hangi server bloğuna ait
 
- 
+    Socket(const Socket& other);
+    Socket& operator=(const Socket& other);
+
 public:
     Socket();
     Socket(int domain, int type);

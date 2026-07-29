@@ -1,7 +1,7 @@
 NAME = webserver
 
 CXX = c++
-CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -g -o0 -Iincludes
+CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -Iincludes
 
 SRCS =	src/main.cpp \
 		src/network/Socket.cpp \
