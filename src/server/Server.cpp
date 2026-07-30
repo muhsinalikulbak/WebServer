@@ -99,7 +99,7 @@ void Server::init(const ConfigParser& config)
 	if (_listenSockets.empty())
 		throw std::runtime_error("An error occurred while opening the sockets, or no socket was specified.");
 	
-	_events.resize(100); // Burayı dinamik olarak arttırmalı mıyım / artırmalıyım
+	_events.resize(100); // Burayı dinamik olarak arttırmalı mıyım
 }
 
 void Server::acceptNewConnection(Socket* masterSocket)
@@ -240,11 +240,10 @@ void Server::run()
 					}
 				}
 				else
+				{
+					perror("Client socket error");
 					unregisterHandler(static_cast<Client*>(sock));
-				// Burada close(fd) yerine epoll_ctl_del ile silmemizin sebebi cgi sırasında fd miras alınabilir
-				// Ve o process de kapanmadığı için buradaki epoll'dan otomatik olarak silinmeyebilir.
-				// O yüzden close(fd) + epoll_ctl_del 'i ekstra olarak ekliyoruz.
-				
+				}
 			} 
 			else if (_events[i].events & EPOLLIN)
 			{
@@ -331,9 +330,10 @@ void	Server::registerHandler(EpollHandler* socket)
 
 void Server::unregisterHandler(EpollHandler* socket)
 {
-	// Delete ederken epoll_event nesnesine gerek yok sadece close(fd) ile epoll dan
-	// silebilir fakat cgi child prcess'leri fd miras alabilir ve kapanmayabilir.
-	// O yüzden epoll_ctl_del ile silmek daha güvenli olur.
+
+	// Burada close(fd) yerine epoll_ctl_del ile silmemizin sebebi cgi sırasında fd miras alınabilir
+	// Ve o process de kapanmadığı için buradaki epoll'dan otomatik olarak silinmeyebilir.
+	// O yüzden close(fd) + epoll_ctl_del 'i ekstra olarak ekliyoruz.
 
 	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, socket->getFd(), NULL) == -1)
 	{
