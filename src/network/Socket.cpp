@@ -5,7 +5,8 @@
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-
+#include <netdb.h>
+#include <sstream>
 
 Socket::Socket(int domain, int type)
 {
@@ -47,39 +48,51 @@ void Socket::createSocket()
   // Bind etmeden önce, server kapandıktan sonra portu hemen tekrar açabilmek için
   // kullanılır. Yoksa bind adress already uyarısı var ve TIME-WAIT atarak biraz bekletir.
   
-  int opt = 1;
-  if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-    throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
-
+  FdUtils::setReuseAddress(_fd);
+  FdUtils::setNonBlocking(_fd);
+  FdUtils::setCloseOnExec(_fd);
+  
+  
   _state = CREATED;
-
-  // GET_FLAG Kullanmamak büyük problem yaratacak mı bize
-  if (fcntl(_fd, F_SETFL, O_NONBLOCK) == -1)
-    throw std::runtime_error(std::string("fcntl F_SETFL failed: ") + strerror(errno));
 }
+
+
+// INADDR_ANY = 0.0.0.0 sunucuya bağlı tüm ip'lerden atılan istekleri kabul et demektir.
+// Fiziksel ip, localhost ip, wifi ip gibi farklı ağ girişlerinden gelen
+// istekleri alır. Çünkü 0.0.0.0 = ANY demektir. İstersek bunu sınırlayabilir
+// sadece localhosttan ya da fiziksel ip'den istekleri kabul edebiliriz.
+
 
 void Socket::bindSocket(const std::string& host, int port)
 {
-  _addr.sin_family = _domain; // Genellikle AF_INET
-  _addr.sin_port = htons(port); // Genellikle 8080, portu 80 Olarak deneyelim daha sonra.
+    struct addrinfo hints;
+    struct addrinfo* result = NULL;
 
-    // config'te yazan IP'yi kullan
-  if (host == "0.0.0.0" || host.empty())
-      _addr.sin_addr.s_addr = INADDR_ANY;
-  else
-      _addr.sin_addr.s_addr = inet_addr(host.c_str());
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = _domain;     // AF_INET
+    hints.ai_socktype = _type;       // SOCK_STREAM
+    hints.ai_flags    = AI_PASSIVE;  // node NULL olduğunda INADDR_ANY/wildcard ver
 
+    std::ostringstream portStream;
+    portStream << port;
+    std::string portStr = portStream.str();
 
-  // INADDR_ANY = 0.0.0.0 sunucuya bağlı tüm ip'lerden atılan istekleri kabul et demektir.
-  // Fiziksel ip, localhost ip, wifi ip gibi farklı ağ girişlerinden gelen
-  // istekleri alır. Çünkü 0.0.0.0 = ANY demektir. İstersek bunu sınırlayabilir
-  // sadece localhosttan ya da fiziksel ip'den istekleri kabul edebiliriz.
+    // host boşsa veya 0.0.0.0 ise node'u NULL bırak -> AI_PASSIVE ile wildcard bind
+    bool wildcard = (host.empty() || host == "0.0.0.0");
+    const char* node = wildcard ? NULL : host.c_str();
 
-  if (bind(_fd, (sockaddr *)&_addr, sizeof(_addr)) == -1)
-  {
-    throw std::runtime_error(std::string("Socket bind failed: ") + strerror(errno));
-  }
-  _state = BOUND;
+    int ret = getaddrinfo(node, portStr.c_str(), &hints, &result);
+    if (ret != 0)
+        throw std::runtime_error(std::string("getaddrinfo: ") + gai_strerror(ret));
+
+    if (bind(_fd, result->ai_addr, result->ai_addrlen) == -1)
+    {
+        freeaddrinfo(result);
+        throw std::runtime_error(std::string("Socket bind failed: ") + strerror(errno));
+    }
+
+    freeaddrinfo(result);
+    _state = BOUND;
 }
 
 void Socket::startListening()
@@ -95,29 +108,31 @@ void Socket::startListening()
   _state = LISTENING;
 }
 
+// Yeni client ekleneceği zaman çağrılır
+
 int Socket::acceptConnection()
 {
-  sockaddr_in client_addr; // Client bilgilerini geçici olarak tutacak yer
-  socklen_t len = sizeof(client_addr);
+    sockaddr_in client_addr;
+    socklen_t len = sizeof(client_addr);
 
-  // İşletim sistemi client bilgilerini sunucunun üzerine değil, client_addr'ye
-  // yazacak
-  int clientFd = accept(_fd, (sockaddr *)&client_addr, &len);
+    int clientFd = accept(_fd, (sockaddr *)&client_addr, &len);
 
-  // Client adresi içine client bilgileri dolar, ip port vs
-  if (clientFd == -1)
-  {
-    perror("Accept error"); 
-  }
-  // inet_ntoa (Network to ASCII): Sayısal IP'yi yazıya döker
+    if (clientFd != -1)
+    {
+        uint32_t addr = ntohl(client_addr.sin_addr.s_addr);
+        char ipStr[16];
+        std::snprintf(ipStr, sizeof(ipStr), "%u.%u.%u.%u",
+            (addr >> 24) & 0xFF,
+            (addr >> 16) & 0xFF,
+            (addr >> 8)  & 0xFF,
+            addr & 0xFF);
 
-  if (clientFd != -1)
-  {
-    std::cout << "Yeni baglanti: " << inet_ntoa(client_addr.sin_addr) << ":"
-              << ntohs(client_addr.sin_port) << std::endl;
-  }
-  return clientFd;
+        std::cout << "Yeni baglanti: " << ipStr << ":"
+                  << ntohs(client_addr.sin_port) << std::endl;
+    }
+    return clientFd;
 }
+
 
 bool                Socket::isListening() const { return true; } // Override
 

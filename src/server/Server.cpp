@@ -61,7 +61,8 @@ void Server::init(const ConfigParser& config)
 	}
 
 	// Bu flag ileride cgi fork attığında kopyalanan epoll fd'yi oto kapatmasını sağlar
-	fcntl(_epollFd, F_SETFL, EPOLL_CLOEXEC);
+	FdUtils::setCloseOnExec(_epollFd);
+	
 
 	for (size_t i = 0; i < servers.size(); i++)
 	{
@@ -91,8 +92,6 @@ void Server::init(const ConfigParser& config)
 			// Epoll_wait çağrısı sonra master socket gelirse bu bir client'ın bağlantı kurmak istemesidir.
 			// Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
 			// bunu yakalayabileceğiz.
-
-			_listenSockets.insert(sock);
 		}
 
 	}
@@ -105,36 +104,27 @@ void Server::init(const ConfigParser& config)
 
 void Server::acceptNewConnection(Socket* masterSocket)
 {
+	int clientFd = masterSocket->acceptConnection();
+
 	try
 	{
-		int clientFd = masterSocket->acceptConnection();
-
 		if (clientFd == -1)
 		{
 			throw std::runtime_error(std::string("Error accept: ") + strerror(errno));
 		}
 
-		if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1) // fd'yi non blocking yapar
-		{
-			close(clientFd);
-			throw std::runtime_error(std::string("Error fcntl F_SETFL: ") + strerror(errno));
-		}
-
-		int opt = 1;
-		if (setsockopt(clientFd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) // NAGLE ALGORİTMASINI KAPAT
-		{
-			close(clientFd);
-			throw std::runtime_error(std::string("Error setsockopt TCP_NODELAY: ") + strerror(errno));
-		}
+		FdUtils::setNonBlocking(clientFd);
+		FdUtils::setCloseOnExec(clientFd);
+		FdUtils::setTcpNodelay(clientFd);
 
 		Client* client = new Client(clientFd);
 		registerHandler(client);
-
 		client->setServerConfig(masterSocket->getServerConfig());
-		_clientSockets.insert(client);
 	}
 	catch (const std::exception& e)
 	{
+		if (clientFd != -1)
+			close(clientFd);
 		std::cerr << e.what() << std::endl;
 	}
 }
@@ -151,7 +141,7 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 		{
 			// Client bağlantıyı kapattı (EOF) veya hata oluştu
 			client->setClientState(CLOSING);
-			deleteClient(client);
+			unregisterHandler(client);
 		}
 		else if (state == TRANSFER_COMPLETE)
 		{
@@ -175,7 +165,7 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 	catch (const std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
-		deleteClient(client);
+		unregisterHandler(client);
 	}
 }
 
@@ -190,7 +180,7 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 		if (state == TRANSFER_ERROR)
 		{
 			// Gönderim hatası, bağlantıyı kopar
-			deleteClient(client);
+			unregisterHandler(client);
 		}
 		else if (state == TRANSFER_COMPLETE)
 		{
@@ -210,20 +200,8 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 	catch (const std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
-		deleteClient(client);
+		unregisterHandler(client);
 	}
-}
-
-void Server::deleteClient(Client* client)
-{
-	// Delete ederken epoll_event nesnesine gerek yok sadece fd ile epoll dan
-	// silebilir
-	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, client->getFd(), NULL) == -1)
-	{
-		perror("Epoll dell error");
-	}
-	_clientSockets.erase(client);
-	delete client;
 }
 
 void Server::run()
@@ -254,9 +232,7 @@ void Server::run()
 				if (sock->isListening())
 				{
 					perror("Listening socket error");
-					epoll_ctl(_epollFd, EPOLL_CTL_DEL, sock->getFd(), NULL);
-					_listenSockets.erase(static_cast<Socket*> (sock));
-					delete sock;
+					unregisterHandler(sock);
 
 					if (_listenSockets.empty())
 					{
@@ -264,7 +240,7 @@ void Server::run()
 					}
 				}
 				else
-					deleteClient(static_cast<Client*>(sock));
+					unregisterHandler(static_cast<Client*>(sock));
 				// Burada close(fd) yerine epoll_ctl_del ile silmemizin sebebi cgi sırasında fd miras alınabilir
 				// Ve o process de kapanmadığı için buradaki epoll'dan otomatik olarak silinmeyebilir.
 				// O yüzden close(fd) + epoll_ctl_del 'i ekstra olarak ekliyoruz.
@@ -317,7 +293,7 @@ void Server::checkExpiredSockets()
 				now - current->getLastActivity() > 5)
         {
 			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;            
-			deleteClient(current); 
+			unregisterHandler(current); 
         }
     }
 
@@ -342,4 +318,35 @@ void	Server::registerHandler(EpollHandler* socket)
 		delete socket;
 		throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
 	}
+
+	if (socket->isListening())
+	{
+		_listenSockets.insert(static_cast<Socket*> (socket));
+	}
+	else
+	{
+		_clientSockets.insert(static_cast<Client*> (socket));
+	}
+}
+
+void Server::unregisterHandler(EpollHandler* socket)
+{
+	// Delete ederken epoll_event nesnesine gerek yok sadece close(fd) ile epoll dan
+	// silebilir fakat cgi child prcess'leri fd miras alabilir ve kapanmayabilir.
+	// O yüzden epoll_ctl_del ile silmek daha güvenli olur.
+
+	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, socket->getFd(), NULL) == -1)
+	{
+		perror("Epoll dell error");
+	}
+
+	if (socket->isListening())
+	{
+		_listenSockets.erase(static_cast<Socket*> (socket));
+	}
+	else
+	{
+		_clientSockets.erase(static_cast<Client*> (socket));
+	}
+	delete socket;
 }

@@ -4,6 +4,7 @@
 
 #include "EpollHandler.hpp"
 #include "ServerConfig.hpp"
+#include "FdUtils.hpp"
 
 #include <sys/socket.h>
 #include <string>
@@ -12,7 +13,6 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
-#include <fcntl.h>
 
 
 enum State

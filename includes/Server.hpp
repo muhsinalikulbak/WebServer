@@ -30,9 +30,9 @@ private:
     void    acceptNewConnection(Socket* masterSocket);
     void    handleClientReceive(Client* client, epoll_event *event);  // EPOLLIN: istemciden veri alma
     void    handleClientSend(Client* client, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
-    void    deleteClient(Client* client);
     void    checkExpiredSockets();
     void    registerHandler(EpollHandler* socket);
+    void    unregisterHandler(EpollHandler* socket);
     
 public:
 

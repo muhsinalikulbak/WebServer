@@ -15,8 +15,8 @@ SRCS =	src/main.cpp \
 		src/server/ConfigParser.cpp \
 		src/server/CgiHandler.cpp \
 		src/server/LocationConfig.cpp \
-		src/server/ServerConfig.cpp  
-
+		src/server/ServerConfig.cpp  \
+		src/utils/FdUtils.cpp  \
 
 OBJS_DIR = obj
 OBJS = $(SRCS:%.cpp=$(OBJS_DIR)/%.o)

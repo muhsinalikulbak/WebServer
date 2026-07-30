@@ -1,7 +1,11 @@
-#ifndef CGIHANDLER_HPP
-#define CGIHANDLER_HPP
+#ifndef CGI_HANDLER_CPP
+#define CGI_HANDLER_CPP
 
+#include "EpollHandler.hpp"
 
+class CgiHandler : public EpollHandler
+{
 
+};
 
-#endif // CGIHANDLER_HPP
+#endif  
