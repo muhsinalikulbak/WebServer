@@ -105,27 +105,39 @@ void Server::init(const ConfigParser& config)
 void Server::acceptNewConnection(Socket* masterSocket)
 {
 	int clientFd = masterSocket->acceptConnection();
+	Client* client = NULL;
 
+	if (clientFd == -1)
+	{
+		std::cerr << "Error accept: " << strerror(errno) << std::endl;
+		return;
+	}
+	
 	try
 	{
-		if (clientFd == -1)
-		{
-			throw std::runtime_error(std::string("Error accept: ") + strerror(errno));
-		}
-
 		FdUtils::setNonBlocking(clientFd);
 		FdUtils::setCloseOnExec(clientFd);
 		FdUtils::setTcpNodelay(clientFd);
 
-		Client* client = new Client(clientFd);
-		registerHandler(client);
+		client = new Client(clientFd);
 		client->setServerConfig(masterSocket->getServerConfig());
+		registerHandler(client);
 	}
 	catch (const std::exception& e)
 	{
-		if (clientFd != -1)
-			close(clientFd);
 		std::cerr << e.what() << std::endl;
+		
+		// Client NULL değilse fd'ye sahiptir ve direk delete ile hem nesneyi hem de fd'yi kapatırız
+		// Destructor'daki close(_fd) ile
+
+		if (client)
+			delete client;
+		else
+			close(clientFd);   
+		
+		// Ama eğer Client NULL ise demek ki new Client(clientFd) satırına gelmeden 
+		// catch'e düşmüştür yani nesne oluşmamıştır
+		// Ama clientFd oluşmuştur o yüzden sadece clientFd close edilir
 	}
 }
 
@@ -314,7 +326,6 @@ void	Server::registerHandler(EpollHandler* socket)
 
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, socket->getFd(), &event) == -1)
 	{
-		delete socket;
 		throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
 	}
 
