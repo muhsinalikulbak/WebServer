@@ -254,7 +254,7 @@ void Server::run()
 				else
 				{
 					perror("Client socket error");
-					unregisterHandler(static_cast<Client*>(sock));
+					unregisterHandler(sock);
 				}
 			} 
 			else if (_events[i].events & EPOLLIN)
@@ -301,7 +301,7 @@ void Server::checkExpiredSockets()
 		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
 		// Uzun sürerek çok fazla beklemeye yol açabilir.
         if (current->getClientState() == WAITING_FOR_REQUEST &&	 
-				now - current->getLastActivity() > 5)
+				now - current->getLastActivity() > 3)
         {
 			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;            
 			unregisterHandler(current); 

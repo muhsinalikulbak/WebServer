@@ -7,14 +7,13 @@
 
 int main(int argc, char** argv) 
 {
-	std::string configPath = "webserver.conf"; //  Config dosyası isim kontrolü yapılabilir mi, conf'la mı bitiyor vs.
-
+	
 	if (argc != 2)
 	{
 		std::cerr << "Usage: ./webserver [config_file]" << std::endl;
 		return 1;
 	}
-	configPath = argv[1];
+	std::string configPath = argv[1];
 	
 	signal(SIGPIPE, SIG_IGN);
 
