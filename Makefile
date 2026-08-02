@@ -13,10 +13,13 @@ SRCS =	src/main.cpp \
 		src/http/Router.cpp \
 		src/server/Server.cpp \
 		src/server/ConfigParser.cpp \
-		src/server/CgiHandler.cpp \
 		src/server/LocationConfig.cpp \
 		src/server/ServerConfig.cpp  \
 		src/utils/FdUtils.cpp  \
+		src/cgi/CgiExecutor.cpp  \
+		src/cgi/CgiHandler.cpp \
+
+		
 
 OBJS_DIR = obj
 OBJS = $(SRCS:%.cpp=$(OBJS_DIR)/%.o)

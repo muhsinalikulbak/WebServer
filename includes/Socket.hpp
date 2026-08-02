@@ -29,10 +29,10 @@ class Socket : public EpollHandler
 {
 private:
     int                 _fd;
-    int                 _domain;   // AF_INET
-    int                 _type;     // SOCK_STREAM
     State               _state;
     struct sockaddr_in  _addr;
+    std::string         _host;
+    int                 _port;
     const ServerConfig* _serverConfig; // bu socket hangi server bloğuna ait
 
     Socket(const Socket& other);
@@ -40,20 +40,20 @@ private:
 
 public:
     Socket();
-    Socket(int domain, int type);
+    Socket(const std::string& host, int port);
     ~Socket();
 
 
-    virtual bool        isListening() const;
+    virtual HandlerType getType() const;
 
     int                 acceptConnection();
     void                createSocket();
     void                startListening();
-    void                bindSocket(const std::string& host, int port);
+    void                bindSocket();
 
     virtual int         getFd() const;
-    int                 getDomain() const;
-    int                 getType() const;
+    const std::string&  getHost() const;
+    int                 getPort() const;
     State               getState() const;
     const ServerConfig* getServerConfig() const;
     void                setServerConfig(const ServerConfig* config);

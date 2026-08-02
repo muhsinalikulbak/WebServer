@@ -71,12 +71,12 @@ void Server::init(const ConfigParser& config)
 			host = servers[i].listens[j].first;
 			port = servers[i].listens[j].second;
 
-			Socket* sock = new Socket(AF_INET, SOCK_STREAM);
+			Socket* sock = new Socket(host, port);
 			
 			try
 			{
 				sock->createSocket();
-				sock->bindSocket(host, port);
+				sock->bindSocket();
 				sock->startListening();	
 				sock->setServerConfig(&servers[i]);
 				registerHandler(sock);
@@ -240,8 +240,9 @@ void Server::run()
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
 				// Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set
 				// edilir.)
+				// BU if else ler ayrı fonksiyonu alınabilir
 
-				if (sock->isListening())
+				if (sock->getType() == HANDLER_LISTEN)
 				{
 					perror("Listening socket error");
 					unregisterHandler(sock);
@@ -251,7 +252,7 @@ void Server::run()
 						throw std::runtime_error("Fatal: All listening sockets closed, server is shutting down.");
 					}
 				}
-				else
+				else if (sock->getType() == HANDLER_CLIENT)
 				{
 					perror("Client socket error");
 					unregisterHandler(sock);
@@ -259,12 +260,12 @@ void Server::run()
 			} 
 			else if (_events[i].events & EPOLLIN)
 			{
-				if (sock->isListening())
+				if (sock->getType() == HANDLER_LISTEN)
 				{
 					// Yeni client'i epoll'a ekliyoruz.
 					acceptNewConnection(static_cast<Socket*> (sock));
 				}
-				else
+				else if (sock->getType() == HANDLER_CLIENT)
 				{
 					// Var olan client'dan request gelmiş
 					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
@@ -301,7 +302,7 @@ void Server::checkExpiredSockets()
 		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
 		// Uzun sürerek çok fazla beklemeye yol açabilir.
         if (current->getClientState() == WAITING_FOR_REQUEST &&	 
-				now - current->getLastActivity() > 3)
+				now - current->getLastActivity() > 4)
         {
 			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;            
 			unregisterHandler(current); 
@@ -329,11 +330,11 @@ void	Server::registerHandler(EpollHandler* socket)
 		throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
 	}
 
-	if (socket->isListening())
+	if (socket->getType() == HANDLER_LISTEN)
 	{
 		_listenSockets.insert(static_cast<Socket*> (socket));
 	}
-	else
+	else if (socket->getType() == HANDLER_CLIENT)
 	{
 		_clientSockets.insert(static_cast<Client*> (socket));
 	}
@@ -351,11 +352,11 @@ void Server::unregisterHandler(EpollHandler* socket)
 		perror("Epoll dell error");
 	}
 
-	if (socket->isListening())
+	if (socket->getType() == HANDLER_LISTEN)
 	{
 		_listenSockets.erase(static_cast<Socket*> (socket));
 	}
-	else
+	else if (socket->getType() == HANDLER_CLIENT)
 	{
 		_clientSockets.erase(static_cast<Client*> (socket));
 	}

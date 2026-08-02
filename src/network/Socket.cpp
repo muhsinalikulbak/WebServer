@@ -8,21 +8,22 @@
 #include <netdb.h>
 #include <sstream>
 
-Socket::Socket(int domain, int type)
+Socket::Socket(const std::string& host, int port)
 {
   _fd = -1;
-  _domain = domain;
-  _type = type;
+
   _state = IDLE;
+  _host = host;
+  _port = port;
   _serverConfig = NULL;
 }
 
 Socket::Socket()
 {
   _fd = -1;
-  _domain = AF_INET;   // IPv4
-  _type = SOCK_STREAM; // TCP
   _state = IDLE;
+  _host = "";
+  _port = 0;
   _serverConfig = NULL;
 }
 
@@ -37,7 +38,7 @@ Socket::~Socket()
 
 void Socket::createSocket()
 {
-  _fd = socket(_domain, _type, 0);
+  _fd = socket(AF_INET, SOCK_STREAM, 0);
 
   if (_fd == -1)
   {
@@ -63,23 +64,23 @@ void Socket::createSocket()
 // sadece localhosttan ya da fiziksel ip'den istekleri kabul edebiliriz.
 
 
-void Socket::bindSocket(const std::string& host, int port)
+void Socket::bindSocket()
 {
     struct addrinfo hints;
     struct addrinfo* result = NULL;
 
     std::memset(&hints, 0, sizeof(hints));
-    hints.ai_family   = _domain;     // AF_INET
-    hints.ai_socktype = _type;       // SOCK_STREAM
+    hints.ai_family   = AF_INET;     // AF_INET
+    hints.ai_socktype = SOCK_STREAM;       // SOCK_STREAM
     hints.ai_flags    = AI_PASSIVE;  // node NULL olduğunda INADDR_ANY/wildcard ver
 
     std::ostringstream portStream;
-    portStream << port;
+    portStream << _port;
     std::string portStr = portStream.str();
 
     // host boşsa veya 0.0.0.0 ise node'u NULL bırak -> AI_PASSIVE ile wildcard bind
-    bool wildcard = (host.empty() || host == "0.0.0.0");
-    const char* node = wildcard ? NULL : host.c_str();
+    bool wildcard = (_host.empty() || _host == "0.0.0.0");
+    const char* node = wildcard ? NULL : _host.c_str();
 
     int ret = getaddrinfo(node, portStr.c_str(), &hints, &result);
     if (ret != 0)
@@ -134,13 +135,14 @@ int Socket::acceptConnection()
 }
 
 
-bool                Socket::isListening() const { return true; } // Override
+HandlerType         Socket::getType() const { return HANDLER_LISTEN; } // Override
 
-int                 Socket::getFd() const { return _fd; } // Override
+int                 Socket::getFd() const { return _fd; }               // Override
 
-int                 Socket::getDomain() const { return _domain; }
+const std::string&  Socket::getHost() const { return _host; }
 
-int                 Socket::getType() const { return _type; }
+int                 Socket::getPort() const { return _port; }
+
 
 State               Socket::getState() const { return _state; }
 

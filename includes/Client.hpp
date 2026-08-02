@@ -4,6 +4,7 @@
 
 #include "EpollHandler.hpp"
 #include "ServerConfig.hpp"
+#include "CgiHandler.hpp"
 
 #include <string>
 #include <unistd.h>
@@ -14,6 +15,7 @@
 #include <iostream>
 #include <cerrno>
 #include <cstring>
+
 enum StreamState
 {
     TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)
@@ -40,7 +42,8 @@ private:
     std::time_t             _lastActivity;
     ClientState             _clientState;
     const ServerConfig*     _serverConfig; // bu socket hangi server bloğuna ait
-
+    CgiHandler*             _activeCgi; // NULL ise cgi yok
+    
     Client(const Client& other);
     Client& operator=(const Client& other);
 
@@ -50,7 +53,7 @@ public:
     ~Client();
     Client();
 
-    virtual bool        isListening() const;
+    virtual HandlerType getType() const;
 
     ClientState         getClientState() const;
     void                setClientState(ClientState state);

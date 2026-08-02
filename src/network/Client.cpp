@@ -10,6 +10,7 @@ Client::Client()
     _lastActivity = std::time(NULL);
     _clientState = CLOSING;
     _serverConfig = NULL;
+    _activeCgi = NULL;
 }
 
 Client::Client(int fd)
@@ -20,6 +21,7 @@ Client::Client(int fd)
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
     _serverConfig = NULL;
+    _activeCgi = NULL;
 }
 
 
@@ -45,7 +47,7 @@ void                Client::setClientState(ClientState state) { _clientState = s
 
 int                 Client::getFd() const { return _clientFd; } // Override
 
-bool                Client::isListening() const { return false; } // Override
+HandlerType         Client::getType() const { return HANDLER_CLIENT; } // Override
 
 void                Client::setServerConfig(const ServerConfig* config) {_serverConfig = config; }
 
