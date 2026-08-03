@@ -20,12 +20,12 @@ Server::~Server()
 	{
 		Client* temp = (*client);
 		client++;
-		
+
 		// fd close() yapıldığında otomatik olarak epoll'dan delete edilir
 		// O yüzden ekstra epoll_ctl_del yazmaya gerek yoktur
 		delete temp;
 	}
-	
+
 	while (sock != _listenSockets.end())
 	{
 		// epoll_ctl(_epollFd, EPOLL_CTL_DEL, (*sock)->getFd(), NULL);
@@ -47,8 +47,8 @@ void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
 	int port = 0;
-	std::string host; 
-	
+	std::string host;
+
 	// Size parametrese tarihsel bir kalıntı
 	// Normalde eskiden bu poll'un kaç adet socket'i yöneteceğini temsil ederdi.
 	// Şimdi bu size socket eklendikteç dinamik olarak artıyor.
@@ -62,22 +62,23 @@ void Server::init(const ConfigParser& config)
 
 	// Bu flag ileride cgi fork attığında kopyalanan epoll fd'yi oto kapatmasını sağlar
 	FdUtils::setCloseOnExec(_epollFd);
-	
+
 
 	for (size_t i = 0; i < servers.size(); i++)
 	{
-		for (size_t j = 0; j < servers[i].listens.size(); j++)
+        std::set<std::pair<std::string, int> >::const_iterator ip;
+		for (ip = servers[i].listens.begin(); ip != servers[i].listens.end(); ++ip)
 		{
-			host = servers[i].listens[j].first;
-			port = servers[i].listens[j].second;
+			host = ip->first;
+			port = ip->second;
 
 			Socket* sock = new Socket(host, port);
-			
+
 			try
 			{
 				sock->createSocket();
 				sock->bindSocket();
-				sock->startListening();	
+				sock->startListening();
 				sock->setServerConfig(&servers[i]);
 				registerHandler(sock);
 			}
@@ -87,7 +88,7 @@ void Server::init(const ConfigParser& config)
 				delete sock;
 				continue;
 			}
-			
+
 			// Dinleme yapacak ip:port aktifleştiriyoruz, dinleyici socket açıyoruz.
 			// Epoll_wait çağrısı sonra master socket gelirse bu bir client'ın bağlantı kurmak istemesidir.
 			// Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
@@ -98,7 +99,7 @@ void Server::init(const ConfigParser& config)
 
 	if (_listenSockets.empty())
 		throw std::runtime_error("An error occurred while opening the sockets, or no socket was specified.");
-	
+
 	_events.resize(100); // Burayı dinamik olarak arttırmalı mıyım
 }
 
@@ -112,7 +113,7 @@ void Server::acceptNewConnection(Socket* masterSocket)
 		std::cerr << "Error accept: " << strerror(errno) << std::endl;
 		return;
 	}
-	
+
 	try
 	{
 		FdUtils::setNonBlocking(clientFd);
@@ -126,16 +127,16 @@ void Server::acceptNewConnection(Socket* masterSocket)
 	catch (const std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
-		
+
 		// Client NULL değilse fd'ye sahiptir ve direk delete ile hem nesneyi hem de fd'yi kapatırız
 		// Destructor'daki close(_fd) ile
 
 		if (client)
 			delete client;
 		else
-			close(clientFd);   
-		
-		// Ama eğer Client NULL ise demek ki new Client(clientFd) satırına gelmeden 
+			close(clientFd);
+
+		// Ama eğer Client NULL ise demek ki new Client(clientFd) satırına gelmeden
 		// catch'e düşmüştür yani nesne oluşmamıştır
 		// Ama clientFd oluşmuştur o yüzden sadece clientFd close edilir
 	}
@@ -224,7 +225,7 @@ void Server::run()
 	{
 
 		int activeEvents = epoll_wait(_epollFd, &_events[0], _events.size(), 1000);
-	
+
 		if (activeEvents == -1)
 		{
 			perror("Epoll wait error");
@@ -257,7 +258,7 @@ void Server::run()
 					perror("Client socket error");
 					unregisterHandler(sock);
 				}
-			} 
+			}
 			else if (_events[i].events & EPOLLIN)
 			{
 				if (sock->getType() == HANDLER_LISTEN)
@@ -270,7 +271,7 @@ void Server::run()
 					// Var olan client'dan request gelmiş
 					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
 				}
-			} 
+			}
 			else if (_events[i].events & EPOLLOUT)
 			{
 				handleClientSend(static_cast<Client*> (sock), &_events[i]);
@@ -301,11 +302,11 @@ void Server::checkExpiredSockets()
 
 		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
 		// Uzun sürerek çok fazla beklemeye yol açabilir.
-        if (current->getClientState() == WAITING_FOR_REQUEST &&	 
+        if (current->getClientState() == WAITING_FOR_REQUEST &&
 				now - current->getLastActivity() > 4)
         {
-			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;            
-			unregisterHandler(current); 
+			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;
+			unregisterHandler(current);
         }
     }
 
@@ -319,10 +320,10 @@ void	Server::registerHandler(EpollHandler* socket)
 	std::memset(&event, 0, sizeof(event));
 
 	event.data.ptr = socket;
-	event.events = EPOLLIN; 
+	event.events = EPOLLIN;
 
-	
-	// Pool'a eklenecek soket dinleyen socket'de olabilir, 
+
+	// Pool'a eklenecek soket dinleyen socket'de olabilir,
 	// Dinleyen bir socket'in client için açtığı socket'de olabilir.
 
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, socket->getFd(), &event) == -1)
