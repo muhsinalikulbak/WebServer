@@ -66,11 +66,11 @@ void Server::init(const ConfigParser& config)
 
 	for (size_t i = 0; i < servers.size(); i++)
 	{
-        std::set<std::pair<std::string, int> >::const_iterator ip;
-		for (ip = servers[i].listens.begin(); ip != servers[i].listens.end(); ++ip)
+        std::set<std::pair<std::string, int> >::const_iterator it;
+		for (it = servers[i].listens.begin(); it != servers[i].listens.end(); ++it)
 		{
-			host = ip->first;
-			port = ip->second;
+			host = it->first;
+			port = it->second;
 
 			Socket* sock = new Socket(host, port);
 

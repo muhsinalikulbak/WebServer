@@ -3,8 +3,6 @@
 
 #include <string>
 #include <map>
-#include <iostream>
-#include <sstream>
 
 class HttpRequest 
 {
@@ -14,24 +12,26 @@ private:
     std::string _version;
     std::map<std::string, std::string> _headers;
     std::string _body;
-    bool _isValid;
-
-    void parseRequestLine(const std::string& line);
-    void parseHeaderLine(const std::string& line);
-    void trimString(std::string& str);
 
 public:
     HttpRequest();
     ~HttpRequest();
 
-    bool                parse(const std::string& rawData);
+    // Parser tarafından doldurulur
+    void setMethod(const std::string& method);
+    void setUri(const std::string& uri);
+    void setVersion(const std::string& version);
+    void setHeader(const std::string& key, const std::string& value);
+    void appendBody(const char* data, size_t len);
+    void clear(); // keep-alive'da bir sonraki request için resetlemek adına
 
+    // Handler/CGI tarafı okur
     const std::string&  getMethod() const;
     const std::string&  getUri() const;
     const std::string&  getVersion() const;
     const std::string&  getBody() const;
     std::string         getHeader(const std::string& key) const;
-    bool                isValid() const;
+    bool                hasHeader(const std::string& key) const;
 };
 
 #endif
