@@ -16,13 +16,11 @@ static std::string toLowerCopy(const std::string& s)
     // C++'DE string StringBuilder gibi dinamik çalışır
     // O yüzden arka plandaki reallocation'ları azalatmak için kapasiteyi elle size()
     // Kadar verip realloc yapmadan yola devam ediyoruz.
-
     out.reserve(s.size());
 
     for (size_t i = 0; i < s.size(); ++i)
     {
-        char c = s[i];
-        out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+        out.push_back(static_cast<char>(std::tolower(s[i])));
     }
     return out;
 }
@@ -42,25 +40,25 @@ HttpRequest::~HttpRequest()
 
 void HttpRequest::setMethod(const std::string& method)
 {
-    _method = method;
+    _method = toLowerCopy(method);
 }
 
 
 void HttpRequest::setUri(const std::string& uri)
 {
-    _uri = uri;
+    _uri = toLowerCopy(uri);
 }
 
 
 void HttpRequest::setVersion(const std::string& version)
 {
-    _version = version;
+    _version = toLowerCopy(version);
 }
 
 
 void HttpRequest::setHeader(const std::string& key, const std::string& value)
 {
-    _headers[key] = value; // aynı key varsa üzerine yazar
+    _headers[toLowerCopy(key)] = value; // aynı key varsa üzerine yazar
 }
 
 
@@ -109,7 +107,7 @@ const std::string& HttpRequest::getBody() const
 
 std::string HttpRequest::getHeader(const std::string& key) const
 {
-    std::map<std::string, std::string>::const_iterator it = _headers.find(key);
+    std::map<std::string, std::string>::const_iterator it = _headers.find(toLowerCopy(key));
 
     if (it != _headers.end())
         return it->second;
@@ -122,6 +120,6 @@ std::string HttpRequest::getHeader(const std::string& key) const
 
 bool HttpRequest::hasHeader(const std::string& key) const
 {
-    return _headers.find(toLowerCopy(key)) != _headers.end();   
+    return _headers.find(toLowerCopy(key)) != _headers.end();
 }
 
