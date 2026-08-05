@@ -35,3 +35,12 @@ public:
 };
 
 #endif
+
+
+// GET /index.html HTTP/1.1              <-- 1. Satır: Method, URI, Version
+// Host: localhost:8080                 <--|
+// User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
+// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir.
+// Content-Length: 15                   <--|
+
+// {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)

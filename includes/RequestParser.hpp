@@ -1,13 +1,14 @@
-#ifndef HTTPREQUESTPARSER_HPP
-#define HTTPREQUESTPARSER_HPP
+#ifndef REQUESTPARSER_HPP
+#define REQUESTPARSER_HPP
 
 #include <string>
 #include "HttpRequest.hpp"
 
-class HttpRequestParser 
+class RequestParser 
 {
 public:
-    enum State {
+    enum State 
+    {
         REQUEST_LINE,
         HEADERS,
         BODY,
@@ -23,20 +24,20 @@ private:
 
     size_t          _contentLength;
     size_t          _bodyBytesRead;
+    bool            _isChunked;    // Transfer-Encoding: chunked tespiti için (şimdilik sadece işaret)
     // chunked encoding kullanacaksan ayrı state/counter'lar da gerekecek
 
-    bool extractLine(std::string& line);            // buffer'dan \r\n'e kadar bir satır çeker, tüketir
+    bool extractLine(std::string& line);          // buffer'dan \r\n'e kadar bir satır çeker, tüketir
     void processRequestLine(const std::string& line);
     void processHeaderLine(const std::string& line);
     void trimString(std::string& str);
 
 public:
-    HttpRequestParser();
-    ~HttpRequestParser();
+    RequestParser();
+    ~RequestParser();
 
     // recv() sonrası çağrılır, kalan state'e göre devam eder
-    State feed(const char* data, size_t len);
-
+    State       feed(const char* data, size_t len);
     State       getState() const;
     bool        isComplete() const;
     bool        hasError() const;
@@ -46,3 +47,5 @@ public:
 };
 
 #endif
+
+
