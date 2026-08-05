@@ -34,6 +34,13 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
             if (!extractLine(line))
                 break;
             
+            if (line.empty())
+            {
+
+            }
+            else
+                processHeaderLine(line);
+
             // 2. Boş satır görünce body var mı kontrol et -> state = BODY yap
         }
         else if (_state == BODY)
@@ -51,13 +58,13 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
 
 bool RequestParser::extractLine(std::string& line)
 {
-    std::size_t pos = line.find("\r\n");
+    std::size_t pos = _buffer.find("\r\n");
 
     if (pos == std::string::npos)
         return false;
 
     // İlgili satırı line'a alıyoruz
-    line = _buffer.substr(0, pos);
+    line = _buffer.substr(0, pos);      
     
     // Satırı aldıktan sonra buffer'dan o satırı siliyoruz.
     _buffer.erase(0, pos + 2);
@@ -75,8 +82,34 @@ void RequestParser::processRequestLine(const std::string& line)
     _request.setVersion(requestLine[2]);
 }
 
-// void processHeaderLine(const std::string& line);
-// void trimString(std::string& str);
+void RequestParser::processHeaderLine(const std::string& line)
+{
+    size_t colonPos = line.find(':');
+    if (colonPos != std::string::npos)
+    {
+        std::string key = line.substr(0, colonPos);
+        std::string value = line.substr(colonPos + 1);
+
+        trimString(key);
+        trimString(value);
+    
+        _request.setHeader(key, value);
+    }
+}
+
+void RequestParser::trimString(std::string& str)
+{
+    size_t start = 0;
+    size_t end = str.size() - 1;
+
+    while (str[start] && str[start] == ' ')
+        start++;
+    
+    while (str[start] && str[end] && str[end] == ' ')
+        end--;
+    
+    str = str.substr(start, end - start + 1);
+}
 
 
 
