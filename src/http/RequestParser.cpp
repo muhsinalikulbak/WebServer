@@ -26,16 +26,17 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
             if (!extractLine(line))
                 break;
 
-            // 1. extractLine ile ilk satırı çek
-            // 2. processRequestLine çağır
-            // 3. state = HEADERS yap
+            processRequestLine(line);
+            _state = HEADERS;
         }
         else if (_state == HEADERS) 
         {
-            // 1. Satır satır header'ları oku
+            if (!extractLine(line))
+                break;
+            
             // 2. Boş satır görünce body var mı kontrol et -> state = BODY yap
         }
-        else if (_state == BODY) 
+        else if (_state == BODY)
         {
             _request.appendBody(data, len);
             _buffer.erase(0);
@@ -54,8 +55,11 @@ bool RequestParser::extractLine(std::string& line)
 
     if (pos == std::string::npos)
         return false;
-    
+
+    // İlgili satırı line'a alıyoruz
     line = _buffer.substr(0, pos);
+    
+    // Satırı aldıktan sonra buffer'dan o satırı siliyoruz.
     _buffer.erase(0, pos + 2);
 
     return true;
@@ -64,11 +68,46 @@ bool RequestParser::extractLine(std::string& line)
 
 void RequestParser::processRequestLine(const std::string& line)
 {
-
+    std::vector<std::string> requestLine = split(line, ' ');
+    
+    _request.setMethod(requestLine[0]);
+    _request.setUri(requestLine[1]);
+    _request.setVersion(requestLine[2]);
 }
 
 // void processHeaderLine(const std::string& line);
 // void trimString(std::string& str);
+
+
+
+
+// GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
+// Host: localhost:8080                 <--|
+// User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
+// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir.
+// Content-Length: 15                   <--|
+
+// {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)
+
+
+
+
+std::vector<std::string> RequestParser::split(const std::string& str, char delimiter) 
+{
+    std::vector<std::string> tokens;
+    size_t start = 0;
+    size_t end = str.find(delimiter);
+    
+    while (end != std::string::npos) 
+    {
+        tokens.push_back(str.substr(start, end - start));
+        start = end + 1;
+        end = str.find(delimiter, start);
+    }
+    
+    tokens.push_back(str.substr(start));
+    return tokens;
+}
 
 
 

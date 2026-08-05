@@ -2,6 +2,7 @@
 #define REQUESTPARSER_HPP
 
 #include <string>
+#include <vector>
 #include "HttpRequest.hpp"
 
 class RequestParser 
@@ -31,6 +32,9 @@ private:
     void processRequestLine(const std::string& line);
     void processHeaderLine(const std::string& line);
     void trimString(std::string& str);
+    std::vector<std::string> split(const std::string& str, char delimiter);
+
+
 
 public:
     RequestParser();
