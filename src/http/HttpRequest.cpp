@@ -63,6 +63,9 @@ void HttpRequest::setHeader(const std::string& key, const std::string& value)
 
 
 // Parçaları (chunk) verileri alıp _body'e ekleriz.
+// Eğer request tarafında state BODY ya da CHUNKED_BODY ise
+// Request bu fonksiyonu çağırarak body'i buradaki buffer'da toplar
+
 void HttpRequest::appendBody(const char* data, size_t len)
 {
     _body.append(data, len);

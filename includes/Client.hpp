@@ -41,8 +41,8 @@ private:
     std::string             _writeBuffer;  // İleride tarayıcıya göndereceğimiz HTTP Cevabı (Response) burada birikecek
     std::time_t             _lastActivity;
     ClientState             _clientState;
-    const ServerConfig*     _serverConfig; // bu socket hangi server bloğuna ait
-    CgiHandler*             _activeCgi; // NULL ise cgi yok
+    const ServerConfig*     _serverConfig;  // bu client hangi server bloğuna ait
+    CgiHandler*             _activeCgi;     // NULL ise cgi yok
     
     Client(const Client& other);
     Client& operator=(const Client& other);

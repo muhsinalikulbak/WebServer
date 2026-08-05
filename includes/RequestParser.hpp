@@ -37,11 +37,11 @@ public:
     ~RequestParser();
 
     // recv() sonrası çağrılır, kalan state'e göre devam eder
-    State       feed(const char* data, size_t len);
-    State       getState() const;
-    bool        isComplete() const;
-    bool        hasError() const;
-    HttpRequest& getRequest();
+    State           feed(const char* data, size_t len);
+    State           getState() const;
+    bool            isComplete() const;
+    bool            hasError() const;
+    HttpRequest&    getRequest();
 
     void reset(); // keep-alive: bir sonraki request için parser'ı sıfırla
 };
