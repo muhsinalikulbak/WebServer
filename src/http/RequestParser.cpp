@@ -29,24 +29,33 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
             processRequestLine(line);
             _state = HEADERS;
         }
-        else if (_state == HEADERS) 
+        else if (_state == HEADERS)
         {
             if (!extractLine(line))
                 break;
             
             if (line.empty())
             {
+                if (_request.hasHeader("content-length"))
+                {
+                    _contentLength = std::strtoul(_request.getHeader("content-length").c_str(), NULL, 10);
 
+                    if (_contentLength > 0)
+                        _state = BODY;
+                    else
+                        _state = COMPLETE;
+                }
+                else
+                    _state = COMPLETE;
             }
             else
                 processHeaderLine(line);
-
-            // 2. Boş satır görünce body var mı kontrol et -> state = BODY yap
         }
         else if (_state == BODY)
         {
             _request.appendBody(data, len);
             _buffer.erase(0);
+
             // 1. _buffer'daki veriyi appendBody yap
             // 2. Boyut tamamlandıysa state = COMPLETE yap
         }
@@ -77,14 +86,22 @@ void RequestParser::processRequestLine(const std::string& line)
 {
     std::vector<std::string> requestLine = split(line, ' ');
     
-    _request.setMethod(requestLine[0]);
-    _request.setUri(requestLine[1]);
-    _request.setVersion(requestLine[2]);
+    if (requestLine.size() == 3)
+    {
+        _request.setMethod(requestLine[0]);
+        _request.setUri(requestLine[1]);
+        _request.setVersion(requestLine[2]);
+    }
+    else
+    {
+        _state = ERROR;
+    }
 }
 
 void RequestParser::processHeaderLine(const std::string& line)
 {
     size_t colonPos = line.find(':');
+    
     if (colonPos != std::string::npos)
     {
         std::string key = line.substr(0, colonPos);
@@ -97,6 +114,7 @@ void RequestParser::processHeaderLine(const std::string& line)
     }
 }
 
+// Kontrol et
 void RequestParser::trimString(std::string& str)
 {
     size_t start = 0;
