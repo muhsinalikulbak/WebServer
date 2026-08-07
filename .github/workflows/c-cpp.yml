@@ -1,0 +1,70 @@
+name: Make and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  make-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential netcat-openbsd
+
+    - name: Build (make)
+      run: make
+
+    - name: Start webserv
+      run: |
+        chmod +x ./tester ./cgi_tester
+
+        ./webserv config/default.conf > server_output.txt 2>&1 &
+        echo $! > server.pid
+
+        echo "Waiting for webserv to start on port 8080..."
+        for i in {1..10}; do
+          if nc -z localhost 8080; then
+            echo "webserv is up and listening on port 8080."
+            exit 0
+          fi
+          sleep 1
+        done
+
+        echo "::error::webserv did not start listening on port 8080 within 10 seconds."
+        echo "----- server_output.txt -----"
+        cat server_output.txt || true
+        exit 1
+
+    - name: Run tester
+      run: |
+        ./tester http://localhost:8080 > tester_output.txt 2>&1
+        TEST_EXIT_CODE=$?
+        cat tester_output.txt
+        exit $TEST_EXIT_CODE
+
+    - name: Stop webserv
+      if: always()
+      run: |
+        if [ -f server.pid ]; then
+          kill "$(cat server.pid)" 2>/dev/null || true
+        fi
+
+    - name: Upload debug artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: webserv-test-logs
+        path: |
+          server_output.txt
+          tester_output.txt
+        if-no-files-found: ignore
+        retention-days: 1

@@ -46,7 +46,7 @@ void HttpRequest::setMethod(const std::string& method)
 
 void HttpRequest::setUri(const std::string& uri)
 {
-    _uri = toLowerCopy(uri);
+    _uri = uri;
 }
 
 
@@ -66,9 +66,9 @@ void HttpRequest::setHeader(const std::string& key, const std::string& value)
 // Eğer request tarafında state BODY ya da CHUNKED_BODY ise
 // Request bu fonksiyonu çağırarak body'i buradaki buffer'da toplar
 
-void HttpRequest::appendBody(const char* data, size_t len)
+void HttpRequest::appendBody(const std::string& data)
 {
-    _body.append(data, len);
+    _body.append(data);
 }
 
 

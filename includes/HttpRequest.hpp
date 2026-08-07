@@ -22,7 +22,7 @@ public:
     void setUri(const std::string& uri);
     void setVersion(const std::string& version);
     void setHeader(const std::string& key, const std::string& value);
-    void appendBody(const char* data, size_t len);
+    void appendBody(const std::string& data);
     void clear(); // keep-alive'da bir sonraki request için resetlemek adına
 
     // Handler/CGI tarafı okur

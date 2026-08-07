@@ -53,11 +53,12 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
         }
         else if (_state == BODY)
         {
-            _request.appendBody(data, len);
+            _request.appendBody(_buffer);
+            _bodyBytesRead += _buffer.size();
             _buffer.erase(0);
 
-            // 1. _buffer'daki veriyi appendBody yap
-            // 2. Boyut tamamlandıysa state = COMPLETE yap
+            if (_bodyBytesRead == _contentLength)
+                _state = COMPLETE;
         }
     }
     return _state;
@@ -117,13 +118,16 @@ void RequestParser::processHeaderLine(const std::string& line)
 // Kontrol et
 void RequestParser::trimString(std::string& str)
 {
+    if (str.empty())
+        return;
+
     size_t start = 0;
     size_t end = str.size() - 1;
 
-    while (str[start] && str[start] == ' ')
+    while (str[start] && std::isspace(str[start]))
         start++;
     
-    while (str[start] && str[end] && str[end] == ' ')
+    while (str[start] && str[end] && std::isspace(str[start]))
         end--;
     
     str = str.substr(start, end - start + 1);
@@ -139,7 +143,6 @@ void RequestParser::trimString(std::string& str)
 // Content-Length: 15                   <--|
 
 // {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)
-
 
 
 
@@ -161,42 +164,34 @@ std::vector<std::string> RequestParser::split(const std::string& str, char delim
 }
 
 
+RequestParser::State RequestParser::getState() const
+{
+    return _state;
+}
 
 
+bool            RequestParser::isComplete() const
+{
+    return _state == COMPLETE;
+}
 
+bool            RequestParser::hasError() const
+{
+    return _state == ERROR;
+}
 
-// std::string::find(const std::string& str)
-// Ne yapar: String içinde aradığın parçanın (örneğin "\r\n" veya boşluk " ") index'ini (konumunu) döner.
+HttpRequest&    RequestParser::getRequest()
+{
+    return _request;
+}
 
-// Nerede kullanacaksın: Satır sonunu veya Key: Value arasındaki : karakterini bulmak için. Bulamazsa std::string::npos döner.
-
-// std::string::substr(size_t pos, size_t count)
-
-// Ne yapar: Belirtilen pos index'inden başlayarak count kadar karakteri kesip yeni bir string olarak verir.
-
-// Nerede kullanacaksın: GET /index.html HTTP/1.1 içinden GET kısmını cımbızla çekmek için.
-
-// std::string::erase(size_t pos, size_t count)
-
-// Ne yapar: String'in belirtilen kısmını siler/tüketir.
-
-// Nerede kullanacaksın: _buffer içinden işlediğin satırı silip atmak için.
-
-// B. Format Dönüştürme & Temizlik (Helper'lar İçin)
-// std::istringstream (veya std::string::find ile boşluk ayırma)
-
-// Ne yapar: Bir string'i tıpkı cin gibi boşluklara göre kelime kelime okumanı sağlar (<sstream> kütüphanesindedir).
-
-// Nerede kullanacaksın: processRequestLine içinde 3 kelimeyi (GET, /, HTTP/1.1) kolayca ayırmak için.
-
-// std::atoi veya std::strtoul (C++98)
-
-// Ne yapar: "1024" gibi string olan sayıları size_t / int tipine çevirir.
-
-// Nerede kullanacaksın: Header'daki Content-Length: 15 değerindeki "15" string'ini sayıya çevirmek için.
-
-// std::isspace / std::cctype
-
-// Ne yapar: Bir karakterin boşluk, tab (\t), newline (\r, \n) olup olmadığını kontrol eder.
-
-// Nerede kullanacaksın: trimString fonksiyonunda Key: Value ayırırken baştaki ve sondaki gereksiz boşlukları temizlemek için.
+void RequestParser::reset()
+{
+    _state = REQUEST_LINE;
+    _buffer.erase(0);
+    _contentLength = 0;
+    _bodyBytesRead = 0;
+    _isChunked = false;
+    _request.clear();
+} 
+// keep-alive: bir sonraki request için parser'ı sıfırla
