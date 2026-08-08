@@ -47,6 +47,4 @@ namespace FdUtils
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
             throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
     }
-
-
 }

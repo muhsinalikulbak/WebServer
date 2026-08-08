@@ -5,7 +5,7 @@
 // HttpRequestParser implementasyonu
 
 RequestParser::RequestParser()
-    : _state(REQUEST_LINE), _buffer(), _request(), _contentLength(0), _bodyBytesRead(0), _isChunked(false)
+    : _state(REQUEST_LINE), _buffer(), _request(), _contentLength(0), _bodyBytesRead(0), _isChunked(false), _chunkedState(SIZE)
 {
 }
 
@@ -27,6 +27,7 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
 
             if (!extractLine(line))
                 break;
+
             processRequestLine(line);
             _state = HEADERS;
         }
@@ -39,14 +40,12 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
 
             if (line.empty())
             {
-                // Check body
-
-                // İki header'ın olmasına karşı kontrol
                 if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
                 {
                     _state = ERROR;
                     break;
                 }
+
                 if (_request.hasHeader("transfer-encoding") && 
                     _request.getHeader("transfer-encoding") == "chunked")
                 {
@@ -55,12 +54,10 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
                 }
                 else if (_request.hasHeader("content-length"))
                 {
-                    if (!checkContentLength(_request.getHeader("content-length"), _contentLength))
-                    {
+                    if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
+                        _state = _contentLength > 0 ? BODY : COMPLETE;
+                    else
                         _state = ERROR;
-                        break;
-                    }
-                    _state = _contentLength > 0 ? BODY : COMPLETE;
                 }
                 else
                     _state = COMPLETE;
@@ -70,19 +67,22 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
         }
         else if (_state == BODY)
         {
-            // Body sonrası gelen request'i almamak için 
-
-            size_t remaining = _contentLength - _bodyBytesRead;
-            size_t size = std::min(_buffer.size(), remaining);
-            _bodyBytesRead += size;
-
-            _request.appendBody(_buffer.substr(0, size));
-            _buffer.erase(0, size);
+            bodyRemaining();
 
             if (_bodyBytesRead == _contentLength)
                 _state = COMPLETE;
             else
                 break;
+        }
+        else if (_state == CHUNKED_BODY)
+        {
+            std::string line;
+            if (!extractLine(line))
+                break;
+            
+            chunkedBodyRemaining(line);
+            
+            
         }
     }
     return _state;
@@ -163,7 +163,7 @@ void RequestParser::trimString(std::string& str)
 // GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
 // Host: localhost:8080                 <--|
 // User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
-// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir.
+// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir. // Content type olmalı mı 
 // Content-Length: 15                   <--|
 
 // {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)
@@ -188,31 +188,20 @@ std::vector<std::string> RequestParser::split(const std::string& str, char delim
 }
 
 
-RequestParser::State RequestParser::getState() const
-{
-    return _state;
-}
+RequestParser::State RequestParser::getState() const { return _state; }
+
+HttpRequest&    RequestParser::getRequest() { return _request; }
+
+bool            RequestParser::isComplete() const { return _state == COMPLETE; }
+
+bool            RequestParser::hasError() const { return _state == ERROR; }
 
 
-bool            RequestParser::isComplete() const
-{
-    return _state == COMPLETE;
-}
-
-bool            RequestParser::hasError() const
-{
-    return _state == ERROR;
-}
-
-HttpRequest&    RequestParser::getRequest()
-{
-    return _request;
-}
 
 void RequestParser::reset()
 {
     _state = REQUEST_LINE;
-    _buffer.erase(0);
+    _buffer.erase(0); // Burada erase etmeli miyim
     _contentLength = 0;
     _bodyBytesRead = 0;
     _isChunked = false;
@@ -227,7 +216,7 @@ void RequestParser::reset()
 // aynı zamanda negatif sayıları da unsigned'a çevirir.
 // O yüzden digit check + endptr kontrolü yapılır
 
-bool RequestParser::checkContentLength(const std::string& value, size_t& out)
+bool RequestParser::checkContentLength(const std::string& value, size_t& out, int base)
 {
     if (value.empty())
         return false;
@@ -239,11 +228,38 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out)
     }
 
     char* endptr;
-    unsigned long result = std::strtoul(value.c_str(), &endptr, 10);
+    unsigned long result = std::strtoul(value.c_str(), &endptr, base);
 
     if (*endptr != '\0')   // strtoul tamamını tüketmediyse
         return false;
 
     out = static_cast<size_t>(result);
     return true;
+}
+
+void RequestParser::chunkedBodyRemaining(const std::string& line)
+{
+    if (_chunkedState == SIZE)
+    {
+        if (checkContentLength(line, _contentLength, 16))
+            _chunkedState = DATA;
+        else
+            _state = ERROR;
+    } // abcd\r\nselam  4
+    else
+    {
+        _request.appendBody();
+        _chunkedState = SIZE;
+    }
+}
+
+
+void RequestParser::bodyRemaining()
+{
+    size_t remaining = _contentLength - _bodyBytesRead;
+    size_t size = std::min(_buffer.size(), remaining);
+    _bodyBytesRead += size;
+
+    _request.appendBody(_buffer.substr(0, size));
+    _buffer.erase(0, size);
 }

@@ -20,10 +20,17 @@ public:
         ERROR
     };
 
+    enum ChunkedState
+    {
+        SIZE,
+        DATA
+    };
+
 private:
     State           _state;
     std::string     _buffer;       // henüz işlenmemiş ham byte'lar
     HttpRequest     _request;      // inşa edilmekte olan request
+    ChunkedState    _chunkedState;
 
     size_t          _contentLength;
     size_t          _bodyBytesRead;
@@ -34,7 +41,9 @@ private:
     void processRequestLine(const std::string& line);
     void processHeaderLine(const std::string& line);
     void trimString(std::string& str);
-    bool checkContentLength(const std::string& value, size_t& out);
+    bool checkContentLength(const std::string& value, size_t& out, int base);
+    void bodyRemaining();
+    void chunkedBodyRemaining(const std::string& line);
     std::vector<std::string> split(const std::string& str, char delimiter);
 
 
