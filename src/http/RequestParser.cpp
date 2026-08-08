@@ -1,5 +1,6 @@
 #include "RequestParser.hpp"
-#include <cstdlib> // strtoul
+#include <cstdlib>
+
 
 // HttpRequestParser implementasyonu
 
@@ -19,31 +20,47 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
 
     while (_state != COMPLETE && _state != ERROR)
     {
-        std::string line;
 
         if (_state == REQUEST_LINE) 
         {
+            std::string line;
+
             if (!extractLine(line))
                 break;
-
             processRequestLine(line);
             _state = HEADERS;
         }
         else if (_state == HEADERS)
-        {
+        {   
+            std::string line;
+            
             if (!extractLine(line))
                 break;
-            
+
             if (line.empty())
             {
-                if (_request.hasHeader("content-length"))
-                {
-                    _contentLength = std::strtoul(_request.getHeader("content-length").c_str(), NULL, 10);
+                // Check body
 
-                    if (_contentLength > 0)
-                        _state = BODY;
-                    else
-                        _state = COMPLETE;
+                // İki header'ın olmasına karşı kontrol
+                if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
+                {
+                    _state = ERROR;
+                    break;
+                }
+                if (_request.hasHeader("transfer-encoding") && 
+                    _request.getHeader("transfer-encoding") == "chunked")
+                {
+                    _isChunked = true;
+                    _state = CHUNKED_BODY;
+                }
+                else if (_request.hasHeader("content-length"))
+                {
+                    if (!checkContentLength(_request.getHeader("content-length"), _contentLength))
+                    {
+                        _state = ERROR;
+                        break;
+                    }
+                    _state = _contentLength > 0 ? BODY : COMPLETE;
                 }
                 else
                     _state = COMPLETE;
@@ -53,12 +70,19 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
         }
         else if (_state == BODY)
         {
-            _request.appendBody(_buffer);
-            _bodyBytesRead += _buffer.size();
-            _buffer.erase(0);
+            // Body sonrası gelen request'i almamak için 
+
+            size_t remaining = _contentLength - _bodyBytesRead;
+            size_t size = std::min(_buffer.size(), remaining);
+            _bodyBytesRead += size;
+
+            _request.appendBody(_buffer.substr(0, size));
+            _buffer.erase(0, size);
 
             if (_bodyBytesRead == _contentLength)
                 _state = COMPLETE;
+            else
+                break;
         }
     }
     return _state;
@@ -127,7 +151,7 @@ void RequestParser::trimString(std::string& str)
     while (str[start] && std::isspace(str[start]))
         start++;
     
-    while (str[start] && str[end] && std::isspace(str[start]))
+    while (str[start] && str[end] && std::isspace(str[end]))
         end--;
     
     str = str.substr(start, end - start + 1);
@@ -195,3 +219,31 @@ void RequestParser::reset()
     _request.clear();
 } 
 // keep-alive: bir sonraki request için parser'ı sıfırla
+
+
+
+// digit check + endptr kontrolü olmasının sebebi
+// stroul "   123" gibi baştaki boşlukları da kabul eder
+// aynı zamanda negatif sayıları da unsigned'a çevirir.
+// O yüzden digit check + endptr kontrolü yapılır
+
+bool RequestParser::checkContentLength(const std::string& value, size_t& out)
+{
+    if (value.empty())
+        return false;
+
+    for (size_t i = 0; i < value.size(); ++i)
+    {
+        if (!std::isdigit(static_cast<unsigned char>(value[i])))
+            return false;
+    }
+
+    char* endptr;
+    unsigned long result = std::strtoul(value.c_str(), &endptr, 10);
+
+    if (*endptr != '\0')   // strtoul tamamını tüketmediyse
+        return false;
+
+    out = static_cast<size_t>(result);
+    return true;
+}

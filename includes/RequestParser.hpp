@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
+
 #include "HttpRequest.hpp"
 
 class RequestParser 
@@ -32,6 +34,7 @@ private:
     void processRequestLine(const std::string& line);
     void processHeaderLine(const std::string& line);
     void trimString(std::string& str);
+    bool checkContentLength(const std::string& value, size_t& out);
     std::vector<std::string> split(const std::string& str, char delimiter);
 
 
