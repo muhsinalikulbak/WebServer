@@ -33,6 +33,7 @@ private:
     ChunkedState    _chunkedState;
 
     size_t          _contentLength;
+    size_t          _chunkLength;
     size_t          _bodyBytesRead;
     bool            _isChunked;    // Transfer-Encoding: chunked tespiti için (şimdilik sadece işaret)
     // chunked encoding kullanacaksan ayrı state/counter'lar da gerekecek
@@ -43,7 +44,7 @@ private:
     void trimString(std::string& str);
     bool checkContentLength(const std::string& value, size_t& out, int base);
     void bodyRemaining();
-    void chunkedBodyRemaining(const std::string& line);
+    bool chunkedBodyRemaining();
     std::vector<std::string> split(const std::string& str, char delimiter);
 
 

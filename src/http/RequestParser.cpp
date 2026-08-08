@@ -5,7 +5,7 @@
 // HttpRequestParser implementasyonu
 
 RequestParser::RequestParser()
-    : _state(REQUEST_LINE), _buffer(), _request(), _contentLength(0), _bodyBytesRead(0), _isChunked(false), _chunkedState(SIZE)
+    : _state(REQUEST_LINE), _buffer(), _request(), _chunkedState(SIZE),  _contentLength(0),  _chunkLength(0), _bodyBytesRead(0), _isChunked(false)
 {
 }
 
@@ -76,13 +76,8 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
         }
         else if (_state == CHUNKED_BODY)
         {
-            std::string line;
-            if (!extractLine(line))
+            if (!chunkedBodyRemaining())
                 break;
-            
-            chunkedBodyRemaining(line);
-            
-            
         }
     }
     return _state;
@@ -201,10 +196,11 @@ bool            RequestParser::hasError() const { return _state == ERROR; }
 void RequestParser::reset()
 {
     _state = REQUEST_LINE;
-    _buffer.erase(0); // Burada erase etmeli miyim
     _contentLength = 0;
     _bodyBytesRead = 0;
     _isChunked = false;
+    _chunkedState = SIZE;
+    _chunkLength = 0;
     _request.clear();
 } 
 // keep-alive: bir sonraki request için parser'ı sıfırla
@@ -220,10 +216,16 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
 {
     if (value.empty())
         return false;
+    char ch;
 
     for (size_t i = 0; i < value.size(); ++i)
     {
-        if (!std::isdigit(static_cast<unsigned char>(value[i])))
+        ch = static_cast<unsigned char>(value[i]);
+
+        if (!std::isxdigit(ch) && base == 16)
+            return false;
+        
+        if (!std::isdigit(ch) && base == 10)
             return false;
     }
 
@@ -237,20 +239,37 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
     return true;
 }
 
-void RequestParser::chunkedBodyRemaining(const std::string& line)
+bool RequestParser::chunkedBodyRemaining()
 {
     if (_chunkedState == SIZE)
     {
-        if (checkContentLength(line, _contentLength, 16))
+        std::string size;
+
+        if (!extractLine(size))
+            return false;
+        
+        if (checkContentLength(size, _chunkLength, 16))
             _chunkedState = DATA;
         else
             _state = ERROR;
-    } // abcd\r\nselam  4
+    }
     else
     {
-        _request.appendBody();
-        _chunkedState = SIZE;
+        size_t remaining = _chunkLength - _bodyBytesRead;
+        size_t size = std::min(remaining, _buffer.size());
+        
+        _bodyBytesRead += size;
+        _request.appendBody(_buffer.substr(0, size));
+        _buffer.erase(0, size);
+
+        if (_bodyBytesRead == _chunkLength)
+        {
+            _bodyBytesRead = 0;
+            _chunkLength = 0;
+            _chunkedState = SIZE;
+        }
     }
+    return true;
 }
 
 
