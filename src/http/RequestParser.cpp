@@ -99,7 +99,7 @@ bool RequestParser::extractLine(std::string& line)
     _buffer.erase(0, pos + 2);
 
     return true;
-}          
+}
 
 
 void RequestParser::processRequestLine(const std::string& line)
@@ -158,7 +158,7 @@ void RequestParser::trimString(std::string& str)
 // GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
 // Host: localhost:8080                 <--|
 // User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
-// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir. // Content type olmalı mı 
+// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir. // Content type olmalı mı
 // Content-Length: 15                   <--|
 
 // {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)
@@ -249,12 +249,14 @@ bool RequestParser::chunkedBodyRemaining()
             return false;
         
         if (checkContentLength(size, _chunkLength, 16))
-            _chunkedState = DATA;
+            _chunkedState = _chunkLength == 0 ? TRAILER : DATA;
         else
             _state = ERROR;
     }
-    else
+    else if (_chunkedState == DATA)
     {
+        // 0\r\n
+
         size_t remaining = _chunkLength - _bodyBytesRead;
         size_t size = std::min(remaining, _buffer.size());
         
@@ -264,11 +266,31 @@ bool RequestParser::chunkedBodyRemaining()
 
         if (_bodyBytesRead == _chunkLength)
         {
-            _bodyBytesRead = 0;
-            _chunkLength = 0;
+            if (_buffer.size() < 2)
+                return false;
+            
+            if (_buffer[0] != '\r' || _buffer[1] != '\n')
+            {
+                _state = ERROR;
+                return false;
+            }
+            
+            _buffer.erase(0, 2);
             _chunkedState = SIZE;
         }
     }
+    else
+    {
+        std::string trailer;
+
+        if (!extractLine(trailer))
+            return false;
+        
+            // size kısmında 0\r\n  '0' kısmı silindi ve
+            // Burada \r\n kısmı da silinerek complete edildi
+        _state = trailer.empty() ? COMPLETE : ERROR;
+    }
+
     return true;
 }
 

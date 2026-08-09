@@ -30,7 +30,7 @@ static std::string toLowerCopy(const std::string& s)
 // Ve garbage value riski ortadan kalkar.
 
 HttpRequest::HttpRequest()
-    : _method(), _uri(), _version(), _headers(), _body()
+    : _method(), _uri(), _version(), _contentType(), _headers(), _body()
 {
 }
 
@@ -105,6 +105,10 @@ const std::string& HttpRequest::getVersion() const
 const std::string& HttpRequest::getBody() const
 {
     return _body;
+}
+const std::string&  HttpRequest::getContentType() const
+{
+    return _contentType;
 }
 
 

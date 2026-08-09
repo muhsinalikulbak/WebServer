@@ -10,6 +10,7 @@ private:
     std::string _method;
     std::string _uri;
     std::string _version;
+    std::string _contentType;
     std::map<std::string, std::string> _headers;
     std::string _body;
 
@@ -30,6 +31,7 @@ public:
     const std::string&  getUri() const;
     const std::string&  getVersion() const;
     const std::string&  getBody() const;
+    const std::string&  getContentType() const;
     std::string         getHeader(const std::string& key) const;
     bool                hasHeader(const std::string& key) const;
 };

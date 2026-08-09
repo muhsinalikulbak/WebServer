@@ -23,7 +23,8 @@ public:
     enum ChunkedState
     {
         SIZE,
-        DATA
+        DATA,
+        TRAILER // 0\r\n bitişi işaret eder
     };
 
 private:
