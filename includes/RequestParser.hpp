@@ -46,6 +46,7 @@ private:
     bool checkContentLength(const std::string& value, size_t& out, int base);
     void bodyRemaining();
     bool chunkedBodyRemaining();
+    void checkAfterHeader();
     std::vector<std::string> split(const std::string& str, char delimiter);
 
 

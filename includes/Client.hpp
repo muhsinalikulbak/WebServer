@@ -5,6 +5,7 @@
 #include "EpollHandler.hpp"
 #include "ServerConfig.hpp"
 #include "CgiHandler.hpp"
+#include "RequestParser.hpp"
 
 #include <string>
 #include <unistd.h>
@@ -43,6 +44,7 @@ private:
     ClientState             _clientState;
     const ServerConfig*     _serverConfig;  // bu client hangi server bloğuna ait
     CgiHandler*             _activeCgi;     // NULL ise cgi yok
+    RequestParser           _parser;
     
     Client(const Client& other);
     Client& operator=(const Client& other);

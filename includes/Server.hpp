@@ -18,8 +18,11 @@ class Server
 {
 private:
 
+    // Setleri set<EpollHandler*> olarak ayarlayabilirim
+    // Bu sayede kodda  bazı yerlerdeki static_cast<T> lere ihtiyacımız kalmaz.
     std::set<Socket*>               _listenSockets;
     std::set<Client*>               _clientSockets;
+
     std::vector<struct epoll_event> _events;            // epoll_wait'in dolduracağı vector
     std::time_t                     _lastTimeoutCheck;
     int                             _epollFd;

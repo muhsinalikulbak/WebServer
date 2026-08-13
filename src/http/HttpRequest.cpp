@@ -16,6 +16,7 @@ static std::string toLowerCopy(const std::string& s)
     // C++'DE string StringBuilder gibi dinamik çalışır
     // O yüzden arka plandaki reallocation'ları azalatmak için kapasiteyi elle size()
     // Kadar verip realloc yapmadan yola devam ediyoruz.
+
     out.reserve(s.size());
 
     for (size_t i = 0; i < s.size(); ++i)
@@ -30,7 +31,7 @@ static std::string toLowerCopy(const std::string& s)
 // Ve garbage value riski ortadan kalkar.
 
 HttpRequest::HttpRequest()
-    : _method(), _uri(), _version(), _contentType(), _headers(), _body()
+    : _method(), _uri(), _version(), _headers(), _body()
 {
 }
 
@@ -105,10 +106,6 @@ const std::string& HttpRequest::getVersion() const
 const std::string& HttpRequest::getBody() const
 {
     return _body;
-}
-const std::string&  HttpRequest::getContentType() const
-{
-    return _contentType;
 }
 
 

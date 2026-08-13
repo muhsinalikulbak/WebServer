@@ -1,5 +1,6 @@
 #include "RequestParser.hpp"
 #include <cstdlib>
+#include <cerrno>
 
 
 // HttpRequestParser implementasyonu
@@ -29,39 +30,21 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
                 break;
 
             processRequestLine(line);
+
+            if (_state == ERROR)    // Bad Request
+                break;
+            
             _state = HEADERS;
         }
         else if (_state == HEADERS)
-        {   
+        {
             std::string line;
             
             if (!extractLine(line))
                 break;
 
             if (line.empty())
-            {
-                if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
-                {
-                    _state = ERROR;
-                    break;
-                }
-
-                if (_request.hasHeader("transfer-encoding") && 
-                    _request.getHeader("transfer-encoding") == "chunked")
-                {
-                    _isChunked = true;
-                    _state = CHUNKED_BODY;
-                }
-                else if (_request.hasHeader("content-length"))
-                {
-                    if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
-                        _state = _contentLength > 0 ? BODY : COMPLETE;
-                    else
-                        _state = ERROR;
-                }
-                else
-                    _state = COMPLETE;
-            }
+                checkAfterHeader();
             else
                 processHeaderLine(line);
         }
@@ -81,6 +64,36 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
         }
     }
     return _state;
+}
+
+
+void RequestParser::checkAfterHeader()
+{
+    if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
+    {
+        _state = ERROR;
+        return;
+    }
+
+    if (_request.hasHeader("transfer-encoding"))
+    {
+        if (_request.getHeader("transfer-encoding") != "chunked") // chunked case sensitivty olmayabilir
+            _state = ERROR;
+        else
+        {
+            _isChunked = true;
+            _state = CHUNKED_BODY;
+        }
+    }
+    else if (_request.hasHeader("content-length"))
+    {
+        if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
+            _state = _contentLength > 0 ? BODY : COMPLETE;
+        else
+            _state = ERROR;
+    }
+    else
+        _state = COMPLETE;
 }
 
 // buffer'dan \r\n'e kadar bir satır çeker, tüketir
@@ -232,7 +245,7 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
     char* endptr;
     unsigned long result = std::strtoul(value.c_str(), &endptr, base);
 
-    if (*endptr != '\0')   // strtoul tamamını tüketmediyse
+    if (*endptr != '\0' || errno == ERANGE)   // strtoul tamamını tüketmediyse
         return false;
 
     out = static_cast<size_t>(result);
@@ -285,9 +298,14 @@ bool RequestParser::chunkedBodyRemaining()
 
         if (!extractLine(trailer))
             return false;
-        
-            // size kısmında 0\r\n  '0' kısmı silindi ve
-            // Burada \r\n kısmı da silinerek complete edildi
+
+        // size kısmında 0\r\n  '0' kısmı silindi ve
+        // Burada \r\n kısmı da silinerek complete edildi
+
+        //0\r\n
+        // X-Checksum: abc123\r\n  // Burası extension ve burayı reddediyoruz.
+        // \r\n
+
         _state = trailer.empty() ? COMPLETE : ERROR;
     }
 
@@ -297,10 +315,17 @@ bool RequestParser::chunkedBodyRemaining()
 
 void RequestParser::bodyRemaining()
 {
-    size_t remaining = _contentLength - _bodyBytesRead;
+    // mer\r\nGET
+    // Buffer size = 8
+    // content-length = 3
+    // Bytes-read ilk başta = 0
+
+
+    size_t remaining = _contentLength - _bodyBytesRead; // Burası ne kadar okudum ne kadar kaldı
     size_t size = std::min(_buffer.size(), remaining);
     _bodyBytesRead += size;
 
     _request.appendBody(_buffer.substr(0, size));
     _buffer.erase(0, size);
 }
+
