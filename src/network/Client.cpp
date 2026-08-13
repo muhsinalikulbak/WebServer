@@ -5,8 +5,6 @@
 Client::Client()
 {
     _clientFd = -1;
-    _readBuffer = "";
-    _writeBuffer = "";
     _lastActivity = std::time(NULL);
     _clientState = CLOSING;
     _serverConfig = NULL;
@@ -16,8 +14,6 @@ Client::Client()
 Client::Client(int fd)
 {
     _clientFd = fd;
-    _readBuffer = "";
-    _writeBuffer = "";
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
     _serverConfig = NULL;
@@ -35,7 +31,6 @@ Client::~Client()
 
 /**** GETTER SETTER ****/
 
-const std::string&  Client::getReadBuffer() const { return _readBuffer; }
 
 std::time_t         Client::getLastActivity() const { return _lastActivity; }
 
@@ -56,13 +51,12 @@ void                Client::setServerConfig(const ServerConfig* config) {_server
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
 
-void Client::clearReadBuffer()
-{
-    _readBuffer.clear();
-}
+// Veriyi client alacak, parser'a verecek.
+// Parser veri çekmemeli recv() yapmamalı
 
 StreamState Client::receiveData()
 {
+    RequestParser::State state;
     char buffer[4096];
     int byte = 0;
 
@@ -79,29 +73,32 @@ StreamState Client::receiveData()
         // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
         // Bir client tek bir istek gönderip kendini kapatırsa totalda 4 işlem olur
         // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
-        // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 4- TCP fin paketi (kapanma) isteği recv   
+        // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 
+        // 4- TCP fin paketi (kapanma) isteği recv   
     }
     else
     {
-        _readBuffer.append(buffer, byte);
+        state = _parser.feed(buffer, byte);
     }
-    
-    if (_readBuffer.find("\r\n\r\n") != std::string::npos)
-    {
-        // Veri okundu ve istek tamamen alındı
+
+    if (state == RequestParser::ERROR)
+        return REQUEST_ERROR;
+    else if (state == RequestParser::COMPLETE)
         return TRANSFER_COMPLETE;
-    }
-    // Hala alınacak veri var
+
     return TRANSFER_INCOMPLETE;
 }
 
 StreamState Client::sendData()
 {
-    if (_writeBuffer.empty())
-        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    // if (_writeBuffer.empty())
+    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
     // _writeBuffer içindeki veriyi istemciye gönderiyoruz
-    int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
+
+    // int byte = send(_clientFd, buffer, buffer.size(), 0);
+
+    int byte = send(_clientFd, "response buffer gelecek", 24, 0);
 
     if (byte == -1)
     {
@@ -111,29 +108,15 @@ StreamState Client::sendData()
     else if (byte > 0)
     {
         // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
-        _writeBuffer.erase(0, byte);
+        // _writeBuffer.erase(0, byte);
     }
 
     // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
-    if (_writeBuffer.empty())
-        return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    // if (_writeBuffer.empty())
+    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
     return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
-void    Client::appendToWriteBuffer(const std::string& responseChunk)
-{
-    _writeBuffer.append(responseChunk);
 
-    // Burada bir akış söz konusudur. Yani bir response gönderilirken 
-    // O esnada bir request gelip response üretilip bu writebuffer'ın kuyruğuna eklenmelidir.
-    // Diğer türlü = eşitleme o an gönderilen response'u siler.
-
-    // örneğin merhaba\r\n\r\ response'u varken
-    // Sonra selam response'U geldiğinde durum > merhaba\r\n\r\selam\r\n\r\ olur ,
-    // Send data 0. indexten veri gönderir merhaba'dan devam eder.
-
-    // Client'a farklı requestlerin response'ları tek bir string üzerinde birleştirilip gönderilmesi sorun değildir.
-    // Client tarafında HTTP 1.1 protokolü bunu kendi içinde halleder. 
-}
-
+void Client::resetParser() { _parser.reset(); }

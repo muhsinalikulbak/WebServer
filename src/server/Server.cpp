@@ -156,13 +156,23 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 			client->setClientState(CLOSING);
 			unregisterHandler(client);
 		}
+		else if (state == REQUEST_ERROR)
+		{
+			// Bad Request response dön
+			// Sonra bağlantıyı kapat, epoll'dan çıkar
+			// Bu aşama nasıl olacak, response tamamlandıktan sonra
+			// Bad Request flag'i olmalı ki response ulaştıktan sonra
+			// Bağlantıyı kapatabilelim
+		}
 		else if (state == TRANSFER_COMPLETE)
 		{
 			// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
 			client->setClientState(PROCESSING_REQUEST);
-
-			std::string dummyResponse = "HTTP/1.1 200 OK\r\nContent-Length: 14\r\nConnection: keep-alive\r\n\r\nHello World!!\n";
-			client->appendToWriteBuffer(dummyResponse);
+			
+			// Burada _parser.getRequest() ve serverconfig response builder'a verilecek.
+			// Response üretilecek
+			// Client'ın response nesnesine aktarılacak
+			client->resetParser();
 
 			event->events = EPOLLOUT;
 
@@ -171,8 +181,6 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 				throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
 			}
 
-			// Buradan emin miyiz ?
-			client->clearReadBuffer();
 		}
 	}
 	catch (const std::exception& e)

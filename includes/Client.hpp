@@ -22,7 +22,8 @@ enum StreamState
     TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)
     PEER_CLOSED,            // Uzak taraf bağlantıyı kapattı (EOF)
     TRANSFER_INCOMPLETE,    // Okuma/Yazma işlemi tamamlanmadı
-    TRANSFER_COMPLETE       // Okuma/Yazma işlemi tamamlandı
+    TRANSFER_COMPLETE,       // Okuma/Yazma işlemi tamamlandı
+    REQUEST_ERROR
 };
 
 enum ClientState
@@ -38,8 +39,6 @@ class Client : public EpollHandler
 {
 private:
     int                     _clientFd;
-    std::string             _readBuffer;   // İstemciden recv ile parça parça okunan ham istek verisi
-    std::string             _writeBuffer;  // İleride tarayıcıya göndereceğimiz HTTP Cevabı (Response) burada birikecek
     std::time_t             _lastActivity;
     ClientState             _clientState;
     const ServerConfig*     _serverConfig;  // bu client hangi server bloğuna ait
@@ -58,16 +57,13 @@ public:
     virtual HandlerType getType() const;
 
     ClientState         getClientState() const;
+    void                resetParser();
     void                setClientState(ClientState state);
     std::time_t         getLastActivity() const;
     void                setLastActivity(std::time_t time);
-    const std::string&  getReadBuffer() const;
     virtual int         getFd() const;
     void                setServerConfig(const ServerConfig* config);
 
-    
-    void                clearReadBuffer();
-    void                appendToWriteBuffer(const std::string& responseChunk);
 
     // Ağ operasyonları
     StreamState         receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
