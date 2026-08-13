@@ -9,7 +9,7 @@
 // getHeader ve hasHeader fonksiyonlarında case-insensitive arama yapıyoruz.
 
 // Dosya-düzeyinde yardımcı: verilen string'in küçük harf kopyasını döner
-static std::string toLowerCopy(const std::string& s)
+std::string HttpRequest::toLowerCopy(const std::string& s)
 {
     std::string out;
 

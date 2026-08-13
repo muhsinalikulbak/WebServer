@@ -77,7 +77,7 @@ void RequestParser::checkAfterHeader()
 
     if (_request.hasHeader("transfer-encoding"))
     {
-        if (_request.getHeader("transfer-encoding") != "chunked") // chunked case sensitivty olmayabilir
+        if (HttpRequest::toLowerCopy(_request.getHeader("transfer-encoding")) != "chunked") // chunked case sensitivty olmayabilir
             _state = ERROR;
         else
         {

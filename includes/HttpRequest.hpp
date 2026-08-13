@@ -24,6 +24,8 @@ public:
     void setHeader(const std::string& key, const std::string& value);
     void appendBody(const std::string& data);
     void clear(); // keep-alive'da bir sonraki request için resetlemek adına
+    static std::string toLowerCopy(const std::string& s);
+
 
     // Handler/CGI tarafı okur
     const std::string&  getMethod() const;
