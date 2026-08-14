@@ -46,6 +46,7 @@ HandlerType         Client::getType() const { return HANDLER_CLIENT; } // Overri
 
 void                Client::setServerConfig(const ServerConfig* config) {_serverConfig = config; }
 
+bool                Client::isBadRequest() { return _parser.hasError(); }
 
 
 /**** READ WRITE / HELPER FUNCTIONS ****/

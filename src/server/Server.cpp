@@ -1,5 +1,7 @@
 #include "Server.hpp"
 #include "ServerConfig.hpp"
+#include "RequestParser.hpp"
+
 #include <cstring>
 #include <cerrno>
 #include <cstdio>
@@ -205,6 +207,12 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 		}
 		else if (state == TRANSFER_COMPLETE)
 		{
+			if (client->isBadRequest()) // Bad request response dönülmüş şimdi kapatılacak.
+			{
+				unregisterHandler(client);
+				return;
+			}
+
 			client->setLastActivity(std::time(NULL));
 			client->setClientState(WAITING_FOR_REQUEST);
 			client->resetParser();
@@ -218,12 +226,15 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 				//  bunu ayrı bir fonksiyona çıkarman iyi olur, kod tekrarını önler)
 				// Epollout olarak kalıcak, çünkü bir response'umuz daha var.
 			}
-
-			event->events = EPOLLIN;
-			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
+			else
 			{
-				throw std::runtime_error(std::string("Error modifying back to EPOLLIN: ") + strerror(errno));
+				event->events = EPOLLIN;
+				if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
+				{
+					throw std::runtime_error(std::string("Error modifying back to EPOLLIN: ") + strerror(errno));
+				}
 			}
+
 		}
 	}
 	catch (const std::exception& e)
