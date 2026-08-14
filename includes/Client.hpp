@@ -48,24 +48,27 @@ private:
     Client(const Client& other);
     Client& operator=(const Client& other);
 
+    StreamState         processParserState(RequestParser::State state);
+
+
 public:
 
     Client(int fd);
     ~Client();
     Client();
 
-    virtual HandlerType getType() const;
+    virtual HandlerType getType() const; // OVERRIDE
+    virtual int         getFd() const;  // OVERRIDE
 
     ClientState         getClientState() const;
-    void                resetParser();
-    void                setClientState(ClientState state);
     std::time_t         getLastActivity() const;
+    void                setClientState(ClientState state);
     void                setLastActivity(std::time_t time);
-    virtual int         getFd() const;
     void                setServerConfig(const ServerConfig* config);
+    void                resetParser();
 
 
-    // Ağ operasyonları
+    StreamState         drainBuffer();
     StreamState         receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
     StreamState         sendData();           // Send() çağrısını yapacak fonksiyon
 };

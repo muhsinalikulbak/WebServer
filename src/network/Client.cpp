@@ -50,43 +50,44 @@ void                Client::setServerConfig(const ServerConfig* config) {_server
 
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
-
-// Veriyi client alacak, parser'a verecek.
-// Parser veri çekmemeli recv() yapmamalı
-
-StreamState Client::receiveData()
+StreamState Client::processParserState(RequestParser::State state)
 {
-    RequestParser::State state;
-    char buffer[4096];
-    int byte = 0;
-
-    byte = recv(_clientFd, buffer, 4096, 0);
-
-    if (byte == -1)
-    {
-        perror("Recv() error");
-        return TRANSFER_ERROR;
-    }
-    else if (byte == 0)
-    {
-        return PEER_CLOSED;  
-        // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
-        // Bir client tek bir istek gönderip kendini kapatırsa totalda 4 işlem olur
-        // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
-        // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 
-        // 4- TCP fin paketi (kapanma) isteği recv   
-    }
-    else
-    {
-        state = _parser.feed(buffer, byte);
-    }
-
     if (state == RequestParser::ERROR)
         return REQUEST_ERROR;
     else if (state == RequestParser::COMPLETE)
         return TRANSFER_COMPLETE;
-
     return TRANSFER_INCOMPLETE;
+}
+
+StreamState Client::receiveData()
+{
+    char buffer[4096];
+    int byte = recv(_clientFd, buffer, 4096, 0);
+
+    if (byte == -1) 
+    { 
+        perror("Recv() error"); 
+        return TRANSFER_ERROR; 
+    }
+
+    if (byte == 0)
+    {
+        // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
+        // Bir client tek bir istek gönderip kendini kapatırsa totalda 4 işlem olur
+        // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
+        // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 
+        // 4- TCP fin paketi (kapanma) isteği recv
+        return PEER_CLOSED;
+    }
+
+    RequestParser::State state = _parser.feed(buffer, byte);
+    return processParserState(state);
+}
+
+StreamState Client::drainBuffer()
+{
+    RequestParser::State state = _parser.feed(NULL, 0);  // recv yok, sadece kalan buffer'ı işler
+    return processParserState(state);
 }
 
 StreamState Client::sendData()

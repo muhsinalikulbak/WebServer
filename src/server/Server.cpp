@@ -168,11 +168,12 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 		{
 			// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
 			client->setClientState(PROCESSING_REQUEST);
+			// Request Validation yapılacak.  Geçerse response'a gidecek
+			// Geçemezse bad request dönülecek.
 			
 			// Burada _parser.getRequest() ve serverconfig response builder'a verilecek.
 			// Response üretilecek
 			// Client'ın response nesnesine aktarılacak
-			client->resetParser();
 
 			event->events = EPOLLOUT;
 
@@ -200,17 +201,24 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 
 		if (state == TRANSFER_ERROR)
 		{
-			// Gönderim hatası, bağlantıyı kopar
 			unregisterHandler(client);
 		}
 		else if (state == TRANSFER_COMPLETE)
 		{
 			client->setLastActivity(std::time(NULL));
 			client->setClientState(WAITING_FOR_REQUEST);
+			client->resetParser();
+			
+			StreamState state = client->drainBuffer();
 
-			// Response başarıyla tamamen gönderildi!
-			// Keep-Alive aktif olduğu için soketi kapatmıyoruz, yeni istekler için
-			// tekrar EPOLLIN moduna alıyoruz.
+			if (state == TRANSFER_COMPLETE)
+			{
+				// ikinci request zaten hazır, response üretim akışına gir
+				// (handleClientReceive'deki TRANSFER_COMPLETE dalıyla aynı işi yap —
+				//  bunu ayrı bir fonksiyona çıkarman iyi olur, kod tekrarını önler)
+				// Epollout olarak kalıcak, çünkü bir response'umuz daha var.
+			}
+
 			event->events = EPOLLIN;
 			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
 			{
