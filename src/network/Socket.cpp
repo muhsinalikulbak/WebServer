@@ -12,7 +12,7 @@ Socket::Socket(const std::string& host, int port, const ServerConfig& config) : 
 {
   _fd = -1;
 
-  _state = IDLE;
+  _state = Socket::IDLE;
   _host = host;
   _port = port;
 }
@@ -44,7 +44,7 @@ void Socket::createSocket()
   FdUtils::setCloseOnExec(_fd);
   
   
-  _state = CREATED;
+  _state = Socket::CREATED;
 }
 
 
@@ -83,7 +83,7 @@ void Socket::bindSocket()
     }
 
     freeaddrinfo(result);
-    _state = BOUND;
+    _state = Socket::BOUND;
 }
 
 void Socket::startListening()
@@ -96,7 +96,7 @@ void Socket::startListening()
   {
     throw std::runtime_error(std::string("Socket listen failed: ") + strerror(errno));
   }
-  _state = LISTENING;
+  _state = Socket::LISTENING;
 }
 
 // Yeni client ekleneceği zaman çağrılır
@@ -125,15 +125,15 @@ int Socket::acceptConnection()
 }
 
 
-HandlerType         Socket::getType() const { return HANDLER_LISTEN; } // Override
+EpollHandler::HandlerType Socket::getType() const { return EpollHandler::HANDLER_LISTEN; } // Override
 
-int                 Socket::getFd() const { return _fd; }               // Override
+int                       Socket::getFd() const { return _fd; }               // Override
 
-const std::string&  Socket::getHost() const { return _host; }
+const std::string&        Socket::getHost() const { return _host; }
 
-int                 Socket::getPort() const { return _port; }
+int                       Socket::getPort() const { return _port; }
 
-State               Socket::getState() const { return _state; }
+Socket::State             Socket::getState() const { return _state; }
 
 const ServerConfig& Socket::getServerConfig() const { return _serverConfig; }
 

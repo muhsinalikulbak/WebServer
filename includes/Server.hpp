@@ -36,7 +36,7 @@ private:
     void    checkExpiredSockets();
     void    registerHandler(EpollHandler* socket);
     void    unregisterHandler(EpollHandler* socket);
-    void    handleParsedRequest(Client* client, epoll_event* event, StreamState state);
+    void    handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state);
 
     
 public:

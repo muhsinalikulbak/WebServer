@@ -146,14 +146,14 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 {
 	try
 	{
-		StreamState state = client->receiveData();
+		Client::StreamState state = client->receiveData();
 
-		client->setClientState(READING_REQUEST);
+		client->setClientState(Client::READING_REQUEST);
 
-		if (state == TRANSFER_ERROR || state == PEER_CLOSED)
+		if (state == Client::TRANSFER_ERROR || state == Client::PEER_CLOSED)
 		{
 			// Client bağlantıyı kapattı (EOF) veya hata oluştu
-			client->setClientState(CLOSING);
+			client->setClientState(Client::CLOSING);
 			unregisterHandler(client);
 		}
 		else
@@ -170,15 +170,15 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 {
 	try
 	{
-		StreamState state = client->sendData();
+		Client::StreamState state = client->sendData();
 
-		client->setClientState(SENDING_RESPONSE);
+		client->setClientState(Client::SENDING_RESPONSE);
 
-		if (state == TRANSFER_ERROR)
+		if (state == Client::TRANSFER_ERROR)
 		{
 			unregisterHandler(client);
 		}
-		else if (state == TRANSFER_COMPLETE)
+		else if (state == Client::TRANSFER_COMPLETE)
 		{
 			if (client->isBadRequest()) // Bad request response dönülmüş şimdi kapatılacak.
 			{
@@ -187,12 +187,12 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 			}
 
 			client->setLastActivity(std::time(NULL));
-			client->setClientState(WAITING_FOR_REQUEST);
+			client->setClientState(Client::WAITING_FOR_REQUEST);
 			client->resetParser();
 			
-			StreamState drainState = client->drainBuffer();
+			Client::StreamState drainState = client->drainBuffer();
 
-			if (drainState == TRANSFER_INCOMPLETE)
+			if (drainState == Client::TRANSFER_INCOMPLETE)
 			{
 				event->events = EPOLLIN;
 				if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
@@ -211,9 +211,9 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 	}
 }
 
-void Server::handleParsedRequest(Client* client, epoll_event* event, StreamState state)
+void Server::handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state)
 {
-    if (state == REQUEST_ERROR)
+    if (state == Client::REQUEST_ERROR)
     {
         // 400 response üret, _writeBuffer'a koy
 		event->events = EPOLLOUT;
@@ -223,9 +223,9 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, StreamState
 			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
 		}
     }
-    else if (state == TRANSFER_COMPLETE)
+    else if (state == Client::TRANSFER_COMPLETE)
     {
-        client->setClientState(PROCESSING_REQUEST);
+        client->setClientState(Client::PROCESSING_REQUEST);
         // normal response üret
 		event->events = EPOLLOUT;
 
@@ -262,7 +262,7 @@ void Server::run()
 				// Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set
 				// edilir.)
 
-				if (sock->getType() == HANDLER_LISTEN)
+				if (sock->getType() == EpollHandler::HANDLER_LISTEN)
 				{
 					perror("Listening socket error");
 					unregisterHandler(sock);
@@ -272,7 +272,7 @@ void Server::run()
 						throw std::runtime_error("Fatal: All listening sockets closed, server is shutting down.");
 					}
 				}
-				else if (sock->getType() == HANDLER_CLIENT)
+				else if (sock->getType() == EpollHandler::HANDLER_CLIENT)
 				{
 					perror("Client socket error");
 					unregisterHandler(sock);
@@ -280,12 +280,12 @@ void Server::run()
 			}
 			else if (_events[i].events & EPOLLIN)
 			{
-				if (sock->getType() == HANDLER_LISTEN)
+				if (sock->getType() == EpollHandler::HANDLER_LISTEN)
 				{
 					// Yeni client'i epoll'a ekliyoruz.
 					acceptNewConnection(static_cast<Socket*> (sock));
 				}
-				else if (sock->getType() == HANDLER_CLIENT)
+				else if (sock->getType() == EpollHandler::HANDLER_CLIENT)
 				{
 					// Var olan client'dan request gelmiş
 					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
@@ -321,7 +321,7 @@ void Server::checkExpiredSockets()
 
 		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
 		// Uzun sürerek çok fazla beklemeye yol açabilir.
-        if (current->getClientState() == WAITING_FOR_REQUEST &&
+        if (current->getClientState() == Client::WAITING_FOR_REQUEST &&
 				now - current->getLastActivity() > 4)
         {
 			std::cerr << "[Timeout] Client fd " << current->getFd() << " timed out (keep-alive), closing connection." << std::endl;
@@ -350,11 +350,11 @@ void	Server::registerHandler(EpollHandler* socket)
 		throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
 	}
 
-	if (socket->getType() == HANDLER_LISTEN)
+	if (socket->getType() == EpollHandler::HANDLER_LISTEN)
 	{
 		_listenSockets.insert(static_cast<Socket*> (socket));
 	}
-	else if (socket->getType() == HANDLER_CLIENT)
+	else if (socket->getType() == EpollHandler::HANDLER_CLIENT)
 	{
 		_clientSockets.insert(static_cast<Client*> (socket));
 	}
@@ -373,11 +373,11 @@ void Server::unregisterHandler(EpollHandler* socket)
 		perror("Epoll dell error");
 	}
 
-	if (socket->getType() == HANDLER_LISTEN)
+	if (socket->getType() == EpollHandler::HANDLER_LISTEN)
 	{
 		_listenSockets.erase(static_cast<Socket*> (socket));
 	}
-	else if (socket->getType() == HANDLER_CLIENT)
+	else if (socket->getType() == EpollHandler::HANDLER_CLIENT)
 	{
 		_clientSockets.erase(static_cast<Client*> (socket));
 	}

@@ -5,7 +5,7 @@ Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _par
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
-    _clientState = WAITING_FOR_REQUEST;
+    _clientState = Client::WAITING_FOR_REQUEST;
     _activeCgi = NULL;
 }
 
@@ -21,35 +21,35 @@ Client::~Client()
 /**** GETTER SETTER ****/
 
 
-std::time_t         Client::getLastActivity() const { return _lastActivity; }
+std::time_t               Client::getLastActivity() const { return _lastActivity; }
 
-ClientState         Client::getClientState() const { return _clientState; }
+Client::ClientState       Client::getClientState() const { return _clientState; }
 
-void                Client::setLastActivity(std::time_t time) { _lastActivity = time; }
+void                      Client::setLastActivity(std::time_t time) { _lastActivity = time; }
 
-void                Client::setClientState(ClientState state) { _clientState = state; }
+void                      Client::setClientState(Client::ClientState state) { _clientState = state; }
 
-int                 Client::getFd() const { return _clientFd; } // Override
+int                       Client::getFd() const { return _clientFd; } // Override
 
-HandlerType         Client::getType() const { return HANDLER_CLIENT; } // Override
+EpollHandler::HandlerType Client::getType() const { return EpollHandler::HANDLER_CLIENT; } // Override
 
-const ServerConfig& Client::getServerConfig() const { return _serverConfig; }
+const ServerConfig&       Client::getServerConfig() const { return _serverConfig; }
 
-bool                Client::isBadRequest() const { return _parser.hasError(); }
+bool                      Client::isBadRequest() const { return _parser.hasError(); }
 
 
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
-StreamState Client::processParserState(RequestParser::State state)
+Client::StreamState Client::processParserState(RequestParser::State state)
 {
     if (state == RequestParser::ERROR)
-        return REQUEST_ERROR;
+        return Client::REQUEST_ERROR;
     else if (state == RequestParser::COMPLETE)
-        return TRANSFER_COMPLETE;
-    return TRANSFER_INCOMPLETE;
+        return Client::TRANSFER_COMPLETE;
+    return Client::TRANSFER_INCOMPLETE;
 }
 
-StreamState Client::receiveData()
+Client::StreamState Client::receiveData()
 {
     char buffer[4096];
     int byte = recv(_clientFd, buffer, 4096, 0);
@@ -57,7 +57,7 @@ StreamState Client::receiveData()
     if (byte == -1) 
     { 
         perror("Recv() error"); 
-        return TRANSFER_ERROR; 
+        return Client::TRANSFER_ERROR; 
     }
 
     if (byte == 0)
@@ -67,23 +67,23 @@ StreamState Client::receiveData()
         // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
         // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 
         // 4- TCP fin paketi (kapanma) isteği recv
-        return PEER_CLOSED;
+        return Client::PEER_CLOSED;
     }
 
     RequestParser::State state = _parser.feed(buffer, byte);
     return processParserState(state);
 }
 
-StreamState Client::drainBuffer()
+Client::StreamState Client::drainBuffer()
 {
     RequestParser::State state = _parser.feed(NULL, 0);  // recv yok, sadece kalan buffer'ı işler
     return processParserState(state);
 }
 
-StreamState Client::sendData()
+Client::StreamState Client::sendData()
 {
     // if (_writeBuffer.empty())
-    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    //     return Client::TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
     // _writeBuffer içindeki veriyi istemciye gönderiyoruz
 
@@ -94,7 +94,7 @@ StreamState Client::sendData()
     if (byte == -1)
     {
         perror("Send() error");
-        return TRANSFER_ERROR;  // Sistem hatası
+        return Client::TRANSFER_ERROR;  // Sistem hatası
     }
     else if (byte > 0)
     {
@@ -104,9 +104,9 @@ StreamState Client::sendData()
 
     // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
     // if (_writeBuffer.empty())
-    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    //     return Client::TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
-    return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
+    return Client::TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
 

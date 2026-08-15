@@ -60,6 +60,23 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 
 ---
 
+### 8. Enum Tanımlarının Sınıf İçi (Class-Scoped) Yapıya Taşınması ve Kapsamlandırılması
+* **İhtiyaç:** Projedeki enum'ların global alanda tanımlı kalması ve yalın (bare/unscoped) şekilde kullanılması önlenerek tip güvenliği ve okunabilirlik artırıldı.
+* **Yapılan Değişiklikler:**
+  - `HandlerType` enum'u `EpollHandler` sınıfının `public:` alanına taşındı.
+  - `State` enum'u `Socket` sınıfının `public:` alanına taşındı.
+  - `StreamState` ve `ClientState` enum'ları `Client` sınıfının `public:` alanına taşındı.
+  - Kod genelindeki tüm enum kullanımları `SınıfAdı::DEĞER` (örn. `EpollHandler::HANDLER_LISTEN`, `Socket::IDLE`, `Client::WAITING_FOR_REQUEST`, `RequestParser::REQUEST_LINE` vb.) şeklinde tam kapsamlı (scoped) hale getirildi.
+
+---
+
+### 9. `std::` Prefix Tutarlılığı ve Standart Uyum
+* **İhtiyaç:** 42 kuralına uygun olarak `using namespace std;` kullanılmamakta ve tüm standart kütüphane bileşenlerine açıkça `std::` prefix'i uygulanmaktadır.
+* **Yapılan Değişiklikler:**
+  - `std::vector`, `std::string`, `std::map`, `std::set`, `std::pair`, `std::time_t`, `std::time`, `std::min`, `std::isspace`, `std::isdigit`, `std::isxdigit`, `std::strtoul`, `std::strtol`, `std::memset` ve `std::snprintf` kullanımlarının `std::` öneki taşıdığı tüm dosyalarda doğrulandı ve eksiksizleştirildi.
+
+---
+
 ## 📊 Özet Değişiklik Tablosu
 
 | Modül / Dosya | İyileştirme / Fix | Açıklama |
@@ -71,6 +88,8 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 | `ServerConfig.hpp/.cpp` | Private `init()` Metodu | Varsayılan ilklendirmeler tek bir değişkende toplanarak DRY ilkesine uyuldu. |
 | `ServerConfig.cpp` | Blok içi `listen` Kontrolü | Aynı server bloğunda tekrar eden `listen` direktifleri engellendi. |
 | Tüm Modüller | `lowerCamelCase` Refactoring | Struct alanları ve parser yerel değişkenleri `lowerCamelCase` yapıldı. |
+| Tüm Modüller | Class-Scoped Enums | Tüm enum'lar ilgili sınıfın `public:` bölümüne taşındı ve `SınıfAdı::DEĞER` yapıldı. |
+| Tüm Modüller | `std::` Prefix Tutarlılığı | Tüm standart kütüphane tipleri ve fonksiyonlarında `std::` prefix'i tam ve tutarlı hale getirildi. |
 
 ---
 

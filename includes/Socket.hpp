@@ -15,18 +15,19 @@
 #include <netinet/tcp.h>
 
 
-enum State
-{
-    IDLE,
-    CREATED,
-    BOUND,
-    LISTENING,
-    CONNECTED,
-    CLOSED
-};
-
 class Socket : public EpollHandler
 {
+public:
+    enum State
+    {
+        IDLE,
+        CREATED,
+        BOUND,
+        LISTENING,
+        CONNECTED,
+        CLOSED
+    };
+
 private:
     int                 _fd;
     State               _state;
@@ -43,8 +44,7 @@ public:
     Socket(const std::string& host, int port, const ServerConfig& config);
     ~Socket();
 
-
-    virtual HandlerType getType() const;
+    virtual EpollHandler::HandlerType getType() const;
 
     int                 acceptConnection();
     void                createSocket();
@@ -56,7 +56,6 @@ public:
     int                 getPort() const;
     State               getState() const;
     const ServerConfig& getServerConfig() const;
-
 };
 
 

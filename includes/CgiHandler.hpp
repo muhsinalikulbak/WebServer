@@ -61,7 +61,7 @@ class CgiHandler : public EpollHandler
 
 		// Primary fd olarak stdout pipe'ını döneriz (response okuma tarafı asıl akışı yönetir)
 		int          getFd() const;
-		HandlerType  getType() const;
+		EpollHandler::HandlerType  getType() const;
 
 		/**** PID ****/
 

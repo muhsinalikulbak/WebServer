@@ -17,26 +17,27 @@
 #include <cerrno>
 #include <cstring>
 
-enum StreamState
-{
-    TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)
-    PEER_CLOSED,            // Uzak taraf bağlantıyı kapattı (EOF)
-    TRANSFER_INCOMPLETE,    // Okuma/Yazma işlemi tamamlanmadı
-    TRANSFER_COMPLETE,       // Okuma/Yazma işlemi tamamlandı
-    REQUEST_ERROR
-};
-
-enum ClientState
-{
-    READING_REQUEST,
-    PROCESSING_REQUEST,
-    SENDING_RESPONSE,
-    WAITING_FOR_REQUEST,
-    CLOSING
-};
-
 class Client : public EpollHandler
 {
+public:
+    enum StreamState
+    {
+        TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)
+        PEER_CLOSED,            // Uzak taraf bağlantıyı kapattı (EOF)
+        TRANSFER_INCOMPLETE,    // Okuma/Yazma işlemi tamamlanmadı
+        TRANSFER_COMPLETE,      // Okuma/Yazma işlemi tamamlandı
+        REQUEST_ERROR
+    };
+
+    enum ClientState
+    {
+        READING_REQUEST,
+        PROCESSING_REQUEST,
+        SENDING_RESPONSE,
+        WAITING_FOR_REQUEST,
+        CLOSING
+    };
+
 private:
     int                     _clientFd;
     std::time_t             _lastActivity;
@@ -50,14 +51,13 @@ private:
 
     StreamState         processParserState(RequestParser::State state);
 
-
 public:
 
     Client(int fd, const ServerConfig& config);
     ~Client();
     Client();
 
-    virtual HandlerType getType() const; // OVERRIDE
+    virtual EpollHandler::HandlerType getType() const; // OVERRIDE
     virtual int         getFd() const;  // OVERRIDE
 
     ClientState         getClientState() const;
