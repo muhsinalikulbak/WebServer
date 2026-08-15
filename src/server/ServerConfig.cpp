@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <sstream>
 #include <stdexcept>
+#include <cerrno>
+#include <climits>
 
 static std::vector<std::string> tokenizeConfig(const std::string &conf)
 {
@@ -75,9 +77,10 @@ static int parsePositiveInt(const std::string &token,
                             const std::string &field)
 {
   char *end = NULL;
+  errno = 0;
   long value = std::strtol(token.c_str(), &end, 10);
 
-  if (*end != '\0' || value < 0 || value > 65535)
+  if (token.empty() || *end != '\0' || errno == ERANGE || value < 0 || value > 65535)
     throw std::invalid_argument("Config parse error: invalid " + field + ": " +
                                 token);
   return static_cast<int>(value);
@@ -106,10 +109,16 @@ static size_t parseBodySize(const std::string &token)
   }
 
   char *end = NULL;
+  errno = 0;
   unsigned long value = std::strtoul(number.c_str(), &end, 10);
-  if (number.empty() || *end != '\0')
+  if (number.empty() || *end != '\0' || errno == ERANGE)
     throw std::invalid_argument(
         "Config parse error: invalid client_max_body_size: " + token);
+
+  if (multiplier > 1 && value > (ULONG_MAX / multiplier))
+    throw std::invalid_argument(
+        "Config parse error: client_max_body_size too large: " + token);
+
   return static_cast<size_t>(value) * multiplier;
 }
 

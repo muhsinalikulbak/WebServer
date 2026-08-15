@@ -95,12 +95,31 @@ ConfigParser::ConfigParser(std::string path)
 
         int depth = 1;
         size_t j = startPos + 1;
+        bool inQuote = false;
+        char quote = '\0';
+
         while (j < allConf.length() && depth > 0)
         {
-            if (allConf[j] == '{')
+            char c = allConf[j];
+
+            if (inQuote)
+            {
+                if (c == quote)
+                {
+                    inQuote = false;
+                    quote = '\0';
+                }
+            }
+            else if (c == '"' || c == '\'')
+            {
+                inQuote = true;
+                quote = c;
+            }
+            else if (c == '{')
                 depth++;
-            else if (allConf[j] == '}')
+            else if (c == '}')
                 depth--;
+
             j++;
         }
 

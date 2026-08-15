@@ -77,6 +77,23 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 
 ---
 
+### 10. `parseBodySize` Integer Overflow ve `errno` Kontrolü (Bug 1 Fix)
+* **Sorun:** `parseBodySize` fonksiyonunda `std::strtoul` çağrısı `errno = ERANGE` durumunu kontrol etmiyordu. Aşırı büyük `client_max_body_size` girdilerinde değer `ULONG_MAX`'e yuvarlanıyor ve `multiplier` ile çarpıldığında overflow / wrap-around oluşabiliyordu.
+* **Yapılan Çözüm:**
+  - `<cerrno>` ve `<climits>` başlık dosyaları `ServerConfig.cpp` dosyasına eklendi.
+  - `std::strtoul` öncesi `errno = 0` yapıldı ve çağrı sonrası `errno == ERANGE` kontrolü eklendi.
+  - Multiplier ile çarpım öncesinde `value > (ULONG_MAX / multiplier)` taşma kontrolü eklendi. Taşma tespit edilirse `std::invalid_argument` hatası fırlatılıyor.
+
+---
+
+### 11. Quote-Aware Server Block Brace Counting (Bug 2 Fix)
+* **Sorun:** `ConfigParser::ConfigParser(std::string path)` içindeki süslü parantez (`{/}`) sayan döngü tırnak (`"` veya `'`) ifadelerini dikkate almıyordu. Tırnak içine yazılmış `{` veya `}` karakterleri blok derinliğini yanlış hesaplayarak server bloğu sınırının bozulmasına yol açabiliyordu.
+* **Yapılan Çözüm:**
+  - Döngüye `inQuote` ve `quote` takibi eklendi.
+  - Tırnak içerisindeki `{` ve `}` karakterlerinin derinlik (`depth`) hesabına dahil edilmesi engellendi.
+
+---
+
 ## 📊 Özet Değişiklik Tablosu
 
 | Modül / Dosya | İyileştirme / Fix | Açıklama |
@@ -90,6 +107,8 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 | Tüm Modüller | `lowerCamelCase` Refactoring | Struct alanları ve parser yerel değişkenleri `lowerCamelCase` yapıldı. |
 | Tüm Modüller | Class-Scoped Enums | Tüm enum'lar ilgili sınıfın `public:` bölümüne taşındı ve `SınıfAdı::DEĞER` yapıldı. |
 | Tüm Modüller | `std::` Prefix Tutarlılığı | Tüm standart kütüphane tipleri ve fonksiyonlarında `std::` prefix'i tam ve tutarlı hale getirildi. |
+| `ServerConfig.cpp` | Overflow & `errno` Fix | `parseBodySize` ve `parsePositiveInt` içinde `ERANGE` ve overflow engellendi. |
+| `ConfigParser.cpp` | Quote-Aware Brace Matching | Süslü parantez sayımına tırnak takibi eklenerek blok sınır tespiti düzeltildi. |
 
 ---
 
