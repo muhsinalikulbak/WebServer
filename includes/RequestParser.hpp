@@ -33,10 +33,15 @@ private:
     HttpRequest     _request;      // inşa edilmekte olan request
     ChunkedState    _chunkedState;
 
+    const   size_t  _maxBodySize;   // Bayt Cinsinden Limit: 10485760 (10M)
+    const   size_t  _maxHeaderCount;
+    size_t          _headerCount;
     size_t          _contentLength;
     size_t          _chunkLength;
     size_t          _bodyBytesRead;
-    bool            _isChunked;    // Transfer-Encoding: chunked tespiti için (şimdilik sadece işaret)
+    bool            _isChunked;    
+    
+    // Transfer-Encoding: chunked tespiti için (şimdilik sadece işaret)
     // chunked encoding kullanacaksan ayrı state/counter'lar da gerekecek
 
     bool extractLine(std::string& line);          // buffer'dan \r\n'e kadar bir satır çeker, tüketir
@@ -52,7 +57,7 @@ private:
 
 
 public:
-    RequestParser();
+    RequestParser(size_t maxBodySize);
     ~RequestParser();
 
     // recv() sonrası çağrılır, kalan state'e göre devam eder

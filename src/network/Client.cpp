@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 
-Client::Client(int fd, const ServerConfig& config) : _serverConfig(config)
+Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.client_max_body_size)
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);

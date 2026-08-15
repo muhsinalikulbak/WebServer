@@ -64,7 +64,6 @@ public:
     std::time_t         getLastActivity() const;
     void                setClientState(ClientState state);
     void                setLastActivity(std::time_t time);
-    void                setServerConfig(const ServerConfig* config);
     const ServerConfig& getServerConfig() const;
     bool                isBadRequest() const;
     void                resetParser();

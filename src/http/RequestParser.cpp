@@ -5,9 +5,15 @@
 
 // HttpRequestParser implementasyonu
 
-RequestParser::RequestParser()
-    : _state(REQUEST_LINE), _buffer(), _request(), _chunkedState(SIZE),  _contentLength(0),  _chunkLength(0), _bodyBytesRead(0), _isChunked(false)
+RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
 {
+    _state = REQUEST_LINE;
+    _chunkedState = SIZE;
+    _contentLength = 0;
+    _chunkLength = 0;
+    _bodyBytesRead = 0;
+    _headerCount = 0;
+    _isChunked = false;
 }
 
 RequestParser::~RequestParser()
@@ -46,7 +52,12 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
             if (line.empty())
                 checkAfterHeader();
             else
-                processHeaderLine(line);
+            {
+                if (++_headerCount > _maxHeaderCount)
+                    _state = ERROR;
+                else
+                    processHeaderLine(line);
+            }
         }
         else if (_state == BODY)
         {
@@ -89,8 +100,10 @@ void RequestParser::checkAfterHeader()
     {
         if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
         {
-            // if (_contentLength > )
-            _state = _contentLength > 0 ? BODY : COMPLETE;
+            if (_contentLength > _maxBodySize)
+                _state = ERROR;
+            else
+                _state = _contentLength > 0 ? BODY : COMPLETE;
         }
         else
             _state = ERROR;
@@ -220,8 +233,9 @@ void RequestParser::reset()
     _isChunked = false;
     _chunkedState = SIZE;
     _chunkLength = 0;
+    _headerCount = 0;
     _request.clear();
-} 
+}
 // keep-alive: bir sonraki request için parser'ı sıfırla
 
 
