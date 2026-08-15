@@ -8,23 +8,13 @@
 #include <netdb.h>
 #include <sstream>
 
-Socket::Socket(const std::string& host, int port)
+Socket::Socket(const std::string& host, int port, const ServerConfig& config) : _serverConfig(config)
 {
   _fd = -1;
 
   _state = IDLE;
   _host = host;
   _port = port;
-  _serverConfig = NULL;
-}
-
-Socket::Socket()
-{
-  _fd = -1;
-  _state = IDLE;
-  _host = "";
-  _port = 0;
-  _serverConfig = NULL;
 }
 
 
@@ -146,8 +136,7 @@ int                 Socket::getPort() const { return _port; }
 
 State               Socket::getState() const { return _state; }
 
-const ServerConfig* Socket::getServerConfig() const { return _serverConfig; }
+const ServerConfig& Socket::getServerConfig() const { return _serverConfig; }
 
-void                Socket::setServerConfig(const ServerConfig* config) { _serverConfig = config; }
 
  

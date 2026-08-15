@@ -65,7 +65,6 @@ void Server::init(const ConfigParser& config)
 	// Bu flag ileride cgi fork attığında kopyalanan epoll fd'yi oto kapatmasını sağlar
 	FdUtils::setCloseOnExec(_epollFd);
 
-
 	for (size_t i = 0; i < servers.size(); i++)
 	{
         std::set<std::pair<std::string, int> >::const_iterator it;
@@ -74,14 +73,14 @@ void Server::init(const ConfigParser& config)
 			host = it->first;
 			port = it->second;
 
-			Socket* sock = new Socket(host, port);
+			// Bu serverconfig'de bulunan listen listesindeki her ip:port s,]'yi baz alacak
+			Socket* sock = new Socket(host, port, servers[i]);
 
 			try
 			{
 				sock->createSocket();
 				sock->bindSocket();
 				sock->startListening();
-				sock->setServerConfig(&servers[i]);
 				registerHandler(sock);
 			}
 			catch (const std::exception& e)
@@ -122,8 +121,7 @@ void Server::acceptNewConnection(Socket* masterSocket)
 		FdUtils::setCloseOnExec(clientFd);
 		FdUtils::setTcpNodelay(clientFd);
 
-		client = new Client(clientFd);
-		client->setServerConfig(masterSocket->getServerConfig());
+		client = new Client(clientFd, masterSocket->getServerConfig());
 		registerHandler(client);
 	}
 	catch (const std::exception& e)

@@ -33,14 +33,14 @@ private:
     struct sockaddr_in  _addr;
     std::string         _host;
     int                 _port;
-    const ServerConfig* _serverConfig; // bu socket hangi server bloğuna ait
+    const ServerConfig& _serverConfig; // bu socket hangi server bloğuna ait
 
     Socket(const Socket& other);
     Socket& operator=(const Socket& other);
 
 public:
     Socket();
-    Socket(const std::string& host, int port);
+    Socket(const std::string& host, int port, const ServerConfig& config);
     ~Socket();
 
 
@@ -55,8 +55,7 @@ public:
     const std::string&  getHost() const;
     int                 getPort() const;
     State               getState() const;
-    const ServerConfig* getServerConfig() const;
-    void                setServerConfig(const ServerConfig* config);
+    const ServerConfig& getServerConfig() const;
 
 };
 

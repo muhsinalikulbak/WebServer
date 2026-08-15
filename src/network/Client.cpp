@@ -1,22 +1,11 @@
 #include "Client.hpp"
 
-/**** CANONIC FORM ****/
 
-Client::Client()
-{
-    _clientFd = -1;
-    _lastActivity = std::time(NULL);
-    _clientState = CLOSING;
-    _serverConfig = NULL;
-    _activeCgi = NULL;
-}
-
-Client::Client(int fd)
+Client::Client(int fd, const ServerConfig& config) : _serverConfig(config)
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
-    _serverConfig = NULL;
     _activeCgi = NULL;
 }
 
@@ -44,9 +33,9 @@ int                 Client::getFd() const { return _clientFd; } // Override
 
 HandlerType         Client::getType() const { return HANDLER_CLIENT; } // Override
 
-void                Client::setServerConfig(const ServerConfig* config) {_serverConfig = config; }
+const ServerConfig& Client::getServerConfig() const { return _serverConfig; }
 
-bool                Client::isBadRequest() { return _parser.hasError(); }
+bool                Client::isBadRequest() const { return _parser.hasError(); }
 
 
 /**** READ WRITE / HELPER FUNCTIONS ****/

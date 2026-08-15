@@ -41,7 +41,7 @@ private:
     int                     _clientFd;
     std::time_t             _lastActivity;
     ClientState             _clientState;
-    const ServerConfig*     _serverConfig;  // bu client hangi server bloğuna ait
+    const ServerConfig&     _serverConfig;  // bu client hangi server bloğuna ait
     CgiHandler*             _activeCgi;     // NULL ise cgi yok
     RequestParser           _parser;
     
@@ -53,7 +53,7 @@ private:
 
 public:
 
-    Client(int fd);
+    Client(int fd, const ServerConfig& config);
     ~Client();
     Client();
 
@@ -65,7 +65,8 @@ public:
     void                setClientState(ClientState state);
     void                setLastActivity(std::time_t time);
     void                setServerConfig(const ServerConfig* config);
-    bool                isBadRequest();
+    const ServerConfig& getServerConfig() const;
+    bool                isBadRequest() const;
     void                resetParser();
 
 

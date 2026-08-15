@@ -77,7 +77,7 @@ void RequestParser::checkAfterHeader()
 
     if (_request.hasHeader("transfer-encoding"))
     {
-        if (HttpRequest::toLowerCopy(_request.getHeader("transfer-encoding")) != "chunked") // chunked case sensitivty olmayabilir
+        if (HttpRequest::toLowerCopy(_request.getHeader("transfer-encoding")) != "chunked")
             _state = ERROR;
         else
         {
@@ -88,7 +88,10 @@ void RequestParser::checkAfterHeader()
     else if (_request.hasHeader("content-length"))
     {
         if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
+        {
+            // if (_contentLength > )
             _state = _contentLength > 0 ? BODY : COMPLETE;
+        }
         else
             _state = ERROR;
     }
@@ -167,6 +170,9 @@ void RequestParser::trimString(std::string& str)
 
 
 
+// Connection ve Transfer-Encoding value'ları case insensitive 
+// Yani gele değerleri lowercase yapıp karşılaştırma yapabilirim
+// "chunked", "keep-alive", "close" vs.
 
 // GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
 // Host: localhost:8080                 <--|
