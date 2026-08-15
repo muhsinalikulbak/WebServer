@@ -50,6 +50,16 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 
 ---
 
+### 7. Değişken ve Struct Alanlarının `lowerCamelCase` Standardına Dönüştürülmesi
+* **İhtiyaç:** Proje genelindeki `lowerCamelCase` isimlendirme kuralına uyum sağlamak amacıyla `ServerConfig` ve `LocationConfig` struct alanları ile parser içi yerel değişken isimleri güncellendi.
+* **Değiştirilen Struct Alanları:**
+  - `ServerConfig`: `serverName`, `clientMaxBodySize`, `errorPages`
+  - `LocationConfig`: `allowedMethods`, `returnCode`, `returnUrl`, `uploadEnable`, `uploadStore`, `cgiExtension`
+* **Yerel Değişkenler:** `inQuote`, `portText`, `onlyWhitespace`, `resultSet`, `startPos`, `endPos`, `serverPos`, `serverBlock`, `parsedSet`, `globalListens` vb.
+* **Kritik Not:** Konfigürasyon dosyasındaki (`.conf`) direktif isimleri (`client_max_body_size`, `server_name`, `allow_methods`, `upload_enable` vb.) değiştirilmemiş, sadece C++ tarafındaki değişken ve alan isimleri güncellenmiştir.
+
+---
+
 ## 📊 Özet Değişiklik Tablosu
 
 | Modül / Dosya | İyileştirme / Fix | Açıklama |
@@ -60,6 +70,7 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 | `ServerConfig.hpp/.cpp` | `const std::string&` | Constructor parametresindeki gereksiz string kopyalama kaldırıldı. |
 | `ServerConfig.hpp/.cpp` | Private `init()` Metodu | Varsayılan ilklendirmeler tek bir değişkende toplanarak DRY ilkesine uyuldu. |
 | `ServerConfig.cpp` | Blok içi `listen` Kontrolü | Aynı server bloğunda tekrar eden `listen` direktifleri engellendi. |
+| Tüm Modüller | `lowerCamelCase` Refactoring | Struct alanları ve parser yerel değişkenleri `lowerCamelCase` yapıldı. |
 
 ---
 

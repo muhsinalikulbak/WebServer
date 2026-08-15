@@ -11,14 +11,14 @@
 static std::string stripComments(const std::string &conf)
 {
     std::string result;
-    bool in_quote = false;
+    bool inQuote = false;
     char quote = '\0';
 
     for (size_t i = 0; i < conf.length(); i++)
     {
         char c = conf[i];
 
-        if (!in_quote && c == '#')
+        if (!inQuote && c == '#')
         {
             while (i < conf.length() && conf[i] != '\n')
                 i++;
@@ -26,11 +26,11 @@ static std::string stripComments(const std::string &conf)
                 result += '\n';
             continue;
         }
-        if (in_quote)
+        if (inQuote)
         {
             if (c == quote)
             {
-                in_quote = false;
+                inQuote = false;
                 quote = '\0';
             }
             result += c;
@@ -38,7 +38,7 @@ static std::string stripComments(const std::string &conf)
         }
         if (c == '"' || c == '\'')
         {
-            in_quote = true;
+            inQuote = true;
             quote = c;
             result += c;
         }
@@ -66,40 +66,40 @@ ConfigParser::ConfigParser(std::string path)
     buffer << file.rdbuf();
     file.close();
 
-    std::string all_conf = stripComments(buffer.str());
+    std::string allConf = stripComments(buffer.str());
     size_t i = 0;
 
-    while (i < all_conf.length())
+    while (i < allConf.length())
     {
-        size_t server_pos = all_conf.find("server", i);
-        if (server_pos == std::string::npos)
+        size_t serverPos = allConf.find("server", i);
+        if (serverPos == std::string::npos)
             break;
 
-        if (server_pos > 0 && !std::isspace(static_cast<unsigned char>(all_conf[server_pos - 1])))
+        if (serverPos > 0 && !std::isspace(static_cast<unsigned char>(allConf[serverPos - 1])))
         {
-            i = server_pos + 6;
+            i = serverPos + 6;
             continue;
         }
 
-        size_t start_pos = all_conf.find("{", server_pos);
-        if (start_pos == std::string::npos)
+        size_t startPos = allConf.find("{", serverPos);
+        if (startPos == std::string::npos)
             throw std::invalid_argument("'{' not found after 'server': " + path);
 
-        std::string between = all_conf.substr(server_pos + 6, start_pos - (server_pos + 6));
-        bool only_whitespace = between.find_first_not_of(" \t\r\n") == std::string::npos;
-        if (!only_whitespace)
+        std::string between = allConf.substr(serverPos + 6, startPos - (serverPos + 6));
+        bool onlyWhitespace = between.find_first_not_of(" \t\r\n") == std::string::npos;
+        if (!onlyWhitespace)
         {
-            i = server_pos + 6;
+            i = serverPos + 6;
             continue;
         }
 
         int depth = 1;
-        size_t j = start_pos + 1;
-        while (j < all_conf.length() && depth > 0)
+        size_t j = startPos + 1;
+        while (j < allConf.length() && depth > 0)
         {
-            if (all_conf[j] == '{')
+            if (allConf[j] == '{')
                 depth++;
-            else if (all_conf[j] == '}')
+            else if (allConf[j] == '}')
                 depth--;
             j++;
         }
@@ -107,23 +107,23 @@ ConfigParser::ConfigParser(std::string path)
         if (depth != 0)
             throw std::invalid_argument("Unmatched '{' found: " + path);
 
-        size_t end_pos = j - 1;
-        std::string server_block = all_conf.substr(start_pos, end_pos - start_pos + 1);
-        _servers.push_back(ServerConfig(server_block));
+        size_t endPos = j - 1;
+        std::string serverBlock = allConf.substr(startPos, endPos - startPos + 1);
+        _servers.push_back(ServerConfig(serverBlock));
 
-        i = end_pos + 1;
+        i = endPos + 1;
     }
 
     if (_servers.empty())
         throw std::invalid_argument("No server block found in config file: " + path);
 
-    std::set<std::pair<std::string, int> > global_listens;
+    std::set<std::pair<std::string, int> > globalListens;
     for (size_t s = 0; s < _servers.size(); ++s)
     {
         const std::set<std::pair<std::string, int> > &listens = _servers[s].listens;
         for (std::set<std::pair<std::string, int> >::const_iterator it = listens.begin(); it != listens.end(); ++it)
         {
-            if (!global_listens.insert(*it).second)
+            if (!globalListens.insert(*it).second)
             {
                 std::stringstream ss;
                 ss << "Config parse error: duplicate listen " << it->first << ":" << it->second << " across server blocks";

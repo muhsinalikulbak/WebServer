@@ -6,10 +6,10 @@ LocationConfig::LocationConfig()
     root = "";
     index = "index.html";
     autoindex = false;
-    return_url = "";
-    return_code = 0;
-    upload_enable = false;
-    upload_store = "";
+    returnUrl = "";
+    returnCode = 0;
+    uploadEnable = false;
+    uploadStore = "";
 }
 
 LocationConfig::LocationConfig(const LocationConfig& other)
@@ -24,13 +24,13 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other)
         path = other.path;
         root = other.root;
         index = other.index;
-        allowed_methods = other.allowed_methods;
+        allowedMethods = other.allowedMethods;
         autoindex = other.autoindex;
-        return_url = other.return_url;
-        return_code = other.return_code;
-        upload_enable = other.upload_enable;
-        upload_store = other.upload_store;
-        cgi_extension = other.cgi_extension;
+        returnUrl = other.returnUrl;
+        returnCode = other.returnCode;
+        uploadEnable = other.uploadEnable;
+        uploadStore = other.uploadStore;
+        cgiExtension = other.cgiExtension;
     }
     return *this;
 }

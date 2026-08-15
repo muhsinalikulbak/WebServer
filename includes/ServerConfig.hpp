@@ -19,9 +19,9 @@ public:
   // Bu set içerisindeki her ip:port aşağıdaki bilgileri baz alacaklar.
   // Yani her ip:port config verilerine kendi içerisinde sahiptir.
 
-  std::string                 server_name;                       // Sunucu İsmi: "example.com"
-  size_t                      client_max_body_size;             // Bayt Cinsinden Limit: 10485760 (10M)
-  std::map<int, std::string>  error_pages;                     // Hata Sayfaları: [404] = "/errors/404.html"
+  std::string                 serverName;                        // Sunucu İsmi: "example.com"
+  size_t                      clientMaxBodySize;                // Bayt Cinsinden Limit: 10485760 (10M)
+  std::map<int, std::string>  errorPages;                      // Hata Sayfaları: [404] = "/errors/404.html"
   std::vector<LocationConfig> locations;                      // İçindeki Location Blokları
 
   ServerConfig();

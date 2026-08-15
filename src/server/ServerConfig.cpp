@@ -8,26 +8,26 @@ static std::vector<std::string> tokenizeConfig(const std::string &conf)
 {
   std::vector<std::string> tokens;
   std::string current;
-  bool in_quote = false;
+  bool inQuote = false;
   char quote = '\0';
 
   for (size_t i = 0; i < conf.length(); i++)
   {
     char c = conf[i];
 
-    if (!in_quote && c == '#')
+    if (!inQuote && c == '#')
     {
       while (i < conf.length() && conf[i] != '\n')
         i++;
       continue;
     }
-    if (in_quote)
+    if (inQuote)
     {
       if (c == quote)
       {
         tokens.push_back(current);
         current.clear();
-        in_quote = false;
+        inQuote = false;
         quote = '\0';
       }
       else
@@ -41,7 +41,7 @@ static std::vector<std::string> tokenizeConfig(const std::string &conf)
         tokens.push_back(current);
         current.clear();
       }
-      in_quote = true;
+      inQuote = true;
       quote = c;
     }
     else if (std::isspace(static_cast<unsigned char>(c)))
@@ -64,7 +64,7 @@ static std::vector<std::string> tokenizeConfig(const std::string &conf)
     else
       current += c;
   }
-  if (in_quote)
+  if (inQuote)
     throw std::invalid_argument("Config parse error: unclosed quote");
   if (!current.empty())
     tokens.push_back(current);
@@ -137,21 +137,21 @@ static std::set<std::pair<std::string, int> > parseListen(const std::string &val
 {
   size_t colon = value.rfind(':');
   std::string host = "0.0.0.0";
-  std::string port_text = value;
+  std::string portText = value;
 
   if (colon != std::string::npos)
   {
     host = value.substr(0, colon);
-    port_text = value.substr(colon + 1);
+    portText = value.substr(colon + 1);
   }
 
-  if (host.empty() || port_text.empty())
+  if (host.empty() || portText.empty())
     throw std::invalid_argument("Config parse error: invalid listen: " + value);
 
-  std::set<std::pair<std::string, int> > result_set;
-  result_set.insert(std::make_pair(host, parsePositiveInt(port_text, "port")));
+  std::set<std::pair<std::string, int> > resultSet;
+  resultSet.insert(std::make_pair(host, parsePositiveInt(portText, "port")));
 
-  return result_set;
+  return resultSet;
 }
 
 static bool parseOnOff(const std::string &value, const std::string &field)
@@ -176,7 +176,7 @@ static void applyLocationDirective(LocationConfig &location,
     if (directive.size() < 2)
       throw std::invalid_argument(
           "Config parse error: allow_methods requires at least one method");
-    location.allowed_methods.assign(directive.begin() + 1, directive.end());
+    location.allowedMethods.assign(directive.begin() + 1, directive.end());
   }
   else if (key == "root")
   {
@@ -204,29 +204,29 @@ static void applyLocationDirective(LocationConfig &location,
     if (directive.size() != 3)
       throw std::invalid_argument(
           "Config parse error: return requires code and url");
-    location.return_code = parsePositiveInt(directive[1], "return code");
-    location.return_url = directive[2];
+    location.returnCode = parsePositiveInt(directive[1], "return code");
+    location.returnUrl = directive[2];
   }
   else if (key == "upload_enable")
   {
     if (directive.size() != 2)
       throw std::invalid_argument(
           "Config parse error: upload_enable expects a single value");
-    location.upload_enable = parseOnOff(directive[1], "upload_enable");
+    location.uploadEnable = parseOnOff(directive[1], "upload_enable");
   }
   else if (key == "upload_store")
   {
     if (directive.size() != 2)
       throw std::invalid_argument(
           "Config parse error: upload_store expects a single value");
-    location.upload_store = directive[1];
+    location.uploadStore = directive[1];
   }
   else if (key == "cgi_ext")
   {
     if (directive.size() != 3)
       throw std::invalid_argument(
           "Config parse error: cgi_ext requires extension and executable");
-    location.cgi_extension[directive[1]] = directive[2];
+    location.cgiExtension[directive[1]] = directive[2];
   }
   else
     throw std::invalid_argument(
@@ -270,9 +270,9 @@ static void applyServerDirective(ServerConfig &server, const std::vector<std::st
       throw std::invalid_argument(
           "Config parse error: listen expects a single value");
 
-    std::set<std::pair<std::string, int> > parsed_set = parseListen(directive[1]);
-    for (std::set<std::pair<std::string, int> >::const_iterator it = parsed_set.begin();
-         it != parsed_set.end(); ++it)
+    std::set<std::pair<std::string, int> > parsedSet = parseListen(directive[1]);
+    for (std::set<std::pair<std::string, int> >::const_iterator it = parsedSet.begin();
+         it != parsedSet.end(); ++it)
     {
       if (server.listens.find(*it) != server.listens.end())
       {
@@ -288,21 +288,21 @@ static void applyServerDirective(ServerConfig &server, const std::vector<std::st
     if (directive.size() < 2)
       throw std::invalid_argument(
           "Config parse error: server_name expects value");
-    server.server_name = directive[1];
+    server.serverName = directive[1];
   }
   else if (key == "client_max_body_size")
   {
     if (directive.size() != 2)
       throw std::invalid_argument(
           "Config parse error: client_max_body_size expects a single value");
-    server.client_max_body_size = parseBodySize(directive[1]);
+    server.clientMaxBodySize = parseBodySize(directive[1]);
   }
   else if (key == "error_page")
   {
     if (directive.size() != 3)
       throw std::invalid_argument(
           "Config parse error: error_page requires code and path");
-    server.error_pages[parsePositiveInt(directive[1], "error_page code")] =
+    server.errorPages[parsePositiveInt(directive[1], "error_page code")] =
         directive[2];
   }
   else
@@ -313,9 +313,9 @@ static void applyServerDirective(ServerConfig &server, const std::vector<std::st
 void ServerConfig::init()
 {
   listens.clear();
-  server_name = "";
-  client_max_body_size = 1024 * 1024;
-  error_pages.clear();
+  serverName = "";
+  clientMaxBodySize = 1024 * 1024;
+  errorPages.clear();
   locations.clear();
 }
 
@@ -365,9 +365,9 @@ ServerConfig &ServerConfig::operator=(const ServerConfig &other)
   if (this != &other)
   {
     listens = other.listens;
-    server_name = other.server_name;
-    client_max_body_size = other.client_max_body_size;
-    error_pages = other.error_pages;
+    serverName = other.serverName;
+    clientMaxBodySize = other.clientMaxBodySize;
+    errorPages = other.errorPages;
     locations = other.locations;
   }
   return *this;

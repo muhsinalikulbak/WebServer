@@ -11,13 +11,13 @@ public:
     std::string                         path;
     std::string                         root;
     std::string                         index;
-    std::vector<std::string>            allowed_methods;
+    std::vector<std::string>            allowedMethods;
     bool                                autoindex;
-    std::string                         return_url;
-    int                                 return_code;
-    bool                                upload_enable;
-    std::string                         upload_store;
-    std::map<std::string, std::string>  cgi_extension;
+    std::string                         returnUrl;
+    int                                 returnCode;
+    bool                                uploadEnable;
+    std::string                         uploadStore;
+    std::map<std::string, std::string>  cgiExtension;
 
     LocationConfig();
     LocationConfig(const LocationConfig& other);
