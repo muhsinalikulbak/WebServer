@@ -158,33 +158,8 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 			client->setClientState(CLOSING);
 			unregisterHandler(client);
 		}
-		else if (state == REQUEST_ERROR)
-		{
-			// Bad Request response dön
-			// Sonra bağlantıyı kapat, epoll'dan çıkar
-			// Bu aşama nasıl olacak, response tamamlandıktan sonra
-			// Bad Request flag'i olmalı ki response ulaştıktan sonra
-			// Bağlantıyı kapatabilelim
-		}
-		else if (state == TRANSFER_COMPLETE)
-		{
-			// Burası tekrar read'e düşebilir  / Chunked veya body okuması gerekebilir
-			client->setClientState(PROCESSING_REQUEST);
-			// Request Validation yapılacak.  Geçerse response'a gidecek
-			// Geçemezse bad request dönülecek.
-			
-			// Burada _parser.getRequest() ve serverconfig response builder'a verilecek.
-			// Response üretilecek
-			// Client'ın response nesnesine aktarılacak
-
-			event->events = EPOLLOUT;
-
-			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
-			{
-				throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
-			}
-
-		}
+		else
+			handleParsedRequest(client, event, state);
 	}
 	catch (const std::exception& e)
 	{
@@ -217,16 +192,9 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 			client->setClientState(WAITING_FOR_REQUEST);
 			client->resetParser();
 			
-			StreamState state = client->drainBuffer();
+			StreamState drainState = client->drainBuffer();
 
-			if (state == TRANSFER_COMPLETE)
-			{
-				// ikinci request zaten hazır, response üretim akışına gir
-				// (handleClientReceive'deki TRANSFER_COMPLETE dalıyla aynı işi yap —
-				//  bunu ayrı bir fonksiyona çıkarman iyi olur, kod tekrarını önler)
-				// Epollout olarak kalıcak, çünkü bir response'umuz daha var.
-			}
-			else
+			if (drainState == TRANSFER_INCOMPLETE)
 			{
 				event->events = EPOLLIN;
 				if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
@@ -234,7 +202,8 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 					throw std::runtime_error(std::string("Error modifying back to EPOLLIN: ") + strerror(errno));
 				}
 			}
-
+			else
+				handleParsedRequest(client, event, drainState);
 		}
 	}
 	catch (const std::exception& e)
@@ -242,6 +211,32 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 		std::cerr << e.what() << std::endl;
 		unregisterHandler(client);
 	}
+}
+
+void Server::handleParsedRequest(Client* client, epoll_event* event, StreamState state)
+{
+    if (state == REQUEST_ERROR)
+    {
+        // 400 response üret, _writeBuffer'a koy
+		event->events = EPOLLOUT;
+
+		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
+		{
+			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+		}
+    }
+    else if (state == TRANSFER_COMPLETE)
+    {
+        client->setClientState(PROCESSING_REQUEST);
+        // normal response üret
+		event->events = EPOLLOUT;
+
+		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
+		{
+			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+		}
+    }
+    // TRANSFER_INCOMPLETE ise hiçbir şey yapma, mevcut event ayarı (EPOLLIN) kalsın
 }
 
 void Server::run()
