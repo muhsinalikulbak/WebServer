@@ -5,6 +5,48 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cctype>
+#include <set>
+
+static std::string stripComments(const std::string &conf)
+{
+    std::string result;
+    bool in_quote = false;
+    char quote = '\0';
+
+    for (size_t i = 0; i < conf.length(); i++)
+    {
+        char c = conf[i];
+
+        if (!in_quote && c == '#')
+        {
+            while (i < conf.length() && conf[i] != '\n')
+                i++;
+            if (i < conf.length() && conf[i] == '\n')
+                result += '\n';
+            continue;
+        }
+        if (in_quote)
+        {
+            if (c == quote)
+            {
+                in_quote = false;
+                quote = '\0';
+            }
+            result += c;
+            continue;
+        }
+        if (c == '"' || c == '\'')
+        {
+            in_quote = true;
+            quote = c;
+            result += c;
+        }
+        else
+            result += c;
+    }
+    return result;
+}
 
 ConfigParser::ConfigParser()
 {
@@ -24,7 +66,7 @@ ConfigParser::ConfigParser(std::string path)
     buffer << file.rdbuf();
     file.close();
 
-    std::string all_conf = buffer.str();
+    std::string all_conf = stripComments(buffer.str());
     size_t i = 0;
 
     while (i < all_conf.length())
@@ -32,6 +74,12 @@ ConfigParser::ConfigParser(std::string path)
         size_t server_pos = all_conf.find("server", i);
         if (server_pos == std::string::npos)
             break;
+
+        if (server_pos > 0 && !std::isspace(static_cast<unsigned char>(all_conf[server_pos - 1])))
+        {
+            i = server_pos + 6;
+            continue;
+        }
 
         size_t start_pos = all_conf.find("{", server_pos);
         if (start_pos == std::string::npos)
@@ -68,6 +116,21 @@ ConfigParser::ConfigParser(std::string path)
 
     if (_servers.empty())
         throw std::invalid_argument("No server block found in config file: " + path);
+
+    std::set<std::pair<std::string, int> > global_listens;
+    for (size_t s = 0; s < _servers.size(); ++s)
+    {
+        const std::set<std::pair<std::string, int> > &listens = _servers[s].listens;
+        for (std::set<std::pair<std::string, int> >::const_iterator it = listens.begin(); it != listens.end(); ++it)
+        {
+            if (!global_listens.insert(*it).second)
+            {
+                std::stringstream ss;
+                ss << "Config parse error: duplicate listen " << it->first << ":" << it->second << " across server blocks";
+                throw std::invalid_argument(ss.str());
+            }
+        }
+    }
 }
 
 ConfigParser::ConfigParser(const ConfigParser& other)

@@ -133,7 +133,6 @@ const std::string&  Socket::getHost() const { return _host; }
 
 int                 Socket::getPort() const { return _port; }
 
-
 State               Socket::getState() const { return _state; }
 
 const ServerConfig& Socket::getServerConfig() const { return _serverConfig; }

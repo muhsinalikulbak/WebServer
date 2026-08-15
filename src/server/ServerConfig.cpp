@@ -270,9 +270,18 @@ static void applyServerDirective(ServerConfig &server, const std::vector<std::st
       throw std::invalid_argument(
           "Config parse error: listen expects a single value");
 
-    // parseListen'den gelen set'in elemanlarını ana listens setimize ekliyoruz
     std::set<std::pair<std::string, int> > parsed_set = parseListen(directive[1]);
-    server.listens.insert(parsed_set.begin(), parsed_set.end());
+    for (std::set<std::pair<std::string, int> >::const_iterator it = parsed_set.begin();
+         it != parsed_set.end(); ++it)
+    {
+      if (server.listens.find(*it) != server.listens.end())
+      {
+        std::stringstream ss;
+        ss << "Config parse error: duplicate listen " << it->first << ":" << it->second << " in same server block";
+        throw std::invalid_argument(ss.str());
+      }
+      server.listens.insert(*it);
+    }
   }
   else if (key == "server_name")
   {
@@ -301,7 +310,7 @@ static void applyServerDirective(ServerConfig &server, const std::vector<std::st
         "Config parse error: unknown server directive: " + key);
 }
 
-ServerConfig::ServerConfig()
+void ServerConfig::init()
 {
   listens.clear();
   server_name = "";
@@ -310,13 +319,14 @@ ServerConfig::ServerConfig()
   locations.clear();
 }
 
-ServerConfig::ServerConfig(std::string allConf)
+ServerConfig::ServerConfig()
 {
-  listens.clear();
-  server_name = "";
-  client_max_body_size = 1024 * 1024;
-  error_pages.clear();
-  locations.clear();
+  init();
+}
+
+ServerConfig::ServerConfig(const std::string &allConf)
+{
+  init();
 
   std::vector<std::string> tokens = tokenizeConfig(allConf);
   size_t i = 0;

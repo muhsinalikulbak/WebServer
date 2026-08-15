@@ -9,6 +9,9 @@
 
 struct ServerConfig 
 {
+private:
+  void init();
+
 public:
   std::set<std::pair<std::string, int> > listens; 
   
@@ -22,7 +25,7 @@ public:
   std::vector<LocationConfig> locations;                      // İçindeki Location Blokları
 
   ServerConfig();
-  ServerConfig(std::string allConf);
+  ServerConfig(const std::string &allConf);
   ServerConfig(const ServerConfig &other);
   ServerConfig &operator=(const ServerConfig &other);
   ~ServerConfig();

@@ -48,8 +48,8 @@ Server::~Server()
 void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
-	int port = 0;
 	std::string host;
+	int 		port = 0;
 
 	// Size parametrese tarihsel bir kalıntı
 	// Normalde eskiden bu poll'un kaç adet socket'i yöneteceğini temsil ederdi.
@@ -261,7 +261,6 @@ void Server::run()
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
 				// Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set
 				// edilir.)
-				// BU if else ler ayrı fonksiyonu alınabilir
 
 				if (sock->getType() == HANDLER_LISTEN)
 				{

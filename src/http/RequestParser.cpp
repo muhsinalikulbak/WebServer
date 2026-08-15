@@ -184,7 +184,7 @@ void RequestParser::trimString(std::string& str)
 
 
 // Connection ve Transfer-Encoding value'ları case insensitive 
-// Yani gele değerleri lowercase yapıp karşılaştırma yapabilirim
+// Yani gelen değerleri lowercase yapıp karşılaştırma yapabilirim
 // "chunked", "keep-alive", "close" vs.
 
 // GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
@@ -321,6 +321,7 @@ bool RequestParser::chunkedBodyRemaining()
 
         // size kısmında 0\r\n  '0' kısmı silindi ve
         // Burada \r\n kısmı da silinerek complete edildi
+        // Örnek 3\r\n sel\r\n 0\r\n \r\n
 
         //0\r\n
         // X-Checksum: abc123\r\n  // Burası extension ve burayı reddediyoruz.

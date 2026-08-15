@@ -34,7 +34,7 @@ private:
     ChunkedState    _chunkedState;
 
     const   size_t  _maxBodySize;   // Bayt Cinsinden Limit: 10485760 (10M)
-    const   size_t  _maxHeaderCount;
+    const   size_t  _maxHeaderCount; // This is a deliberate constant; it doesn't come from the config.
     size_t          _headerCount;
     size_t          _contentLength;
     size_t          _chunkLength;
