@@ -109,6 +109,7 @@ Yapılan tüm değişiklikler **C++98** standartlarına tam uyumlu olup `-Wall -
 | Tüm Modüller | `std::` Prefix Tutarlılığı | Tüm standart kütüphane tipleri ve fonksiyonlarında `std::` prefix'i tam ve tutarlı hale getirildi. |
 | `ServerConfig.cpp` | Overflow & `errno` Fix | `parseBodySize` ve `parsePositiveInt` içinde `ERANGE` ve overflow engellendi. |
 | `ConfigParser.cpp` | Quote-Aware Brace Matching | Süslü parantez sayımına tırnak takibi eklenerek blok sınır tespiti düzeltildi. |
+| `FdUtils` / `Socket.cpp` | `SO_REUSEPORT` Desteği | Wildcard ve spesifik IP çakışmalarının kernel seviyesinde bağlanabilmesi sağlandı. |
 
 ---
 

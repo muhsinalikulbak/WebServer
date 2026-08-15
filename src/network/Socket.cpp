@@ -40,6 +40,7 @@ void Socket::createSocket()
   // kullanılır. Yoksa bind adress already uyarısı var ve TIME-WAIT atarak biraz bekletir.
   
   FdUtils::setReuseAddress(_fd);
+  FdUtils::setReusePort(_fd);
   FdUtils::setNonBlocking(_fd);
   FdUtils::setCloseOnExec(_fd);
   

@@ -8,6 +8,7 @@ namespace FdUtils
     void setCloseOnExec(int fd);
     void setTcpNodelay(int fd);
     void setReuseAddress(int fd);
+    void setReusePort(int fd);
 }
 
 #endif
