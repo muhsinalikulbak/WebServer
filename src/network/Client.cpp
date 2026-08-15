@@ -5,7 +5,7 @@ Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _par
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
-    _clientState = Client::WAITING_FOR_REQUEST;
+    _clientState = WAITING_FOR_REQUEST;
     _activeCgi = NULL;
 }
 
@@ -43,10 +43,10 @@ bool                      Client::isBadRequest() const { return _parser.hasError
 Client::StreamState Client::processParserState(RequestParser::State state)
 {
     if (state == RequestParser::ERROR)
-        return Client::REQUEST_ERROR;
+        return REQUEST_ERROR;
     else if (state == RequestParser::COMPLETE)
-        return Client::TRANSFER_COMPLETE;
-    return Client::TRANSFER_INCOMPLETE;
+        return TRANSFER_COMPLETE;
+    return TRANSFER_INCOMPLETE;
 }
 
 Client::StreamState Client::receiveData()
@@ -57,7 +57,7 @@ Client::StreamState Client::receiveData()
     if (byte == -1) 
     { 
         perror("Recv() error"); 
-        return Client::TRANSFER_ERROR; 
+        return TRANSFER_ERROR; 
     }
 
     if (byte == 0)
@@ -67,7 +67,7 @@ Client::StreamState Client::receiveData()
         // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
         // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 
         // 4- TCP fin paketi (kapanma) isteği recv
-        return Client::PEER_CLOSED;
+        return PEER_CLOSED;
     }
 
     RequestParser::State state = _parser.feed(buffer, byte);
@@ -83,7 +83,7 @@ Client::StreamState Client::drainBuffer()
 Client::StreamState Client::sendData()
 {
     // if (_writeBuffer.empty())
-    //     return Client::TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
     // _writeBuffer içindeki veriyi istemciye gönderiyoruz
 
@@ -94,7 +94,7 @@ Client::StreamState Client::sendData()
     if (byte == -1)
     {
         perror("Send() error");
-        return Client::TRANSFER_ERROR;  // Sistem hatası
+        return TRANSFER_ERROR;  // Sistem hatası
     }
     else if (byte > 0)
     {
@@ -104,9 +104,9 @@ Client::StreamState Client::sendData()
 
     // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
     // if (_writeBuffer.empty())
-    //     return Client::TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
 
-    return Client::TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
+    return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
 

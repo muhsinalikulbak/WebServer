@@ -12,7 +12,7 @@ Socket::Socket(const std::string& host, int port, const ServerConfig& config) : 
 {
   _fd = -1;
 
-  _state = Socket::IDLE;
+  _state = IDLE;
   _host = host;
   _port = port;
 }
@@ -45,7 +45,7 @@ void Socket::createSocket()
   FdUtils::setCloseOnExec(_fd);
   
   
-  _state = Socket::CREATED;
+  _state = CREATED;
 }
 
 
@@ -84,7 +84,7 @@ void Socket::bindSocket()
     }
 
     freeaddrinfo(result);
-    _state = Socket::BOUND;
+    _state = BOUND;
 }
 
 void Socket::startListening()
@@ -97,7 +97,7 @@ void Socket::startListening()
   {
     throw std::runtime_error(std::string("Socket listen failed: ") + strerror(errno));
   }
-  _state = Socket::LISTENING;
+  _state = LISTENING;
 }
 
 // Yeni client ekleneceği zaman çağrılır

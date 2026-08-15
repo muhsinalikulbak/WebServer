@@ -7,8 +7,8 @@
 
 RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
 {
-    _state = RequestParser::REQUEST_LINE;
-    _chunkedState = RequestParser::SIZE;
+    _state = REQUEST_LINE;
+    _chunkedState = SIZE;
     _contentLength = 0;
     _chunkLength = 0;
     _bodyBytesRead = 0;
@@ -25,10 +25,10 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
 {
     _buffer.append(data, len); // Gelen veriyi depola
 
-    while (_state != RequestParser::COMPLETE && _state != RequestParser::ERROR)
+    while (_state != COMPLETE && _state != ERROR)
     {
 
-        if (_state == RequestParser::REQUEST_LINE) 
+        if (_state == REQUEST_LINE) 
         {
             std::string line;
 
@@ -37,12 +37,12 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
 
             processRequestLine(line);
 
-            if (_state == RequestParser::ERROR)    // Bad Request
+            if (_state == ERROR)    // Bad Request
                 break;
             
-            _state = RequestParser::HEADERS;
+            _state = HEADERS;
         }
-        else if (_state == RequestParser::HEADERS)
+        else if (_state == HEADERS)
         {
             std::string line;
             
@@ -54,21 +54,21 @@ RequestParser::State RequestParser::feed(const char* data, size_t len)
             else
             {
                 if (++_headerCount > _maxHeaderCount)
-                    _state = RequestParser::ERROR;
+                    _state = ERROR;
                 else
                     processHeaderLine(line);
             }
         }
-        else if (_state == RequestParser::BODY)
+        else if (_state == BODY)
         {
             bodyRemaining();
 
             if (_bodyBytesRead == _contentLength)
-                _state = RequestParser::COMPLETE;
+                _state = COMPLETE;
             else
                 break;
         }
-        else if (_state == RequestParser::CHUNKED_BODY)
+        else if (_state == CHUNKED_BODY)
         {
             if (!chunkedBodyRemaining())
                 break;
@@ -82,18 +82,18 @@ void RequestParser::checkAfterHeader()
 {
     if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
     {
-        _state = RequestParser::ERROR;
+        _state = ERROR;
         return;
     }
 
     if (_request.hasHeader("transfer-encoding"))
     {
         if (HttpRequest::toLowerCopy(_request.getHeader("transfer-encoding")) != "chunked")
-            _state = RequestParser::ERROR;
+            _state = ERROR;
         else
         {
             _isChunked = true;
-            _state = RequestParser::CHUNKED_BODY;
+            _state = CHUNKED_BODY;
         }
     }
     else if (_request.hasHeader("content-length"))
@@ -101,15 +101,15 @@ void RequestParser::checkAfterHeader()
         if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
         {
             if (_contentLength > _maxBodySize)
-                _state = RequestParser::ERROR;
+                _state = ERROR;
             else
-                _state = _contentLength > 0 ? RequestParser::BODY : RequestParser::COMPLETE;
+                _state = _contentLength > 0 ? BODY : COMPLETE;
         }
         else
-            _state = RequestParser::ERROR;
+            _state = ERROR;
     }
     else
-        _state = RequestParser::COMPLETE;
+        _state = COMPLETE;
 }
 
 // buffer'dan \r\n'e kadar bir satır çeker, tüketir
@@ -143,7 +143,7 @@ void RequestParser::processRequestLine(const std::string& line)
     }
     else
     {
-        _state = RequestParser::ERROR;
+        _state = ERROR;
     }
 }
 
@@ -219,19 +219,19 @@ RequestParser::State RequestParser::getState() const { return _state; }
 
 HttpRequest&    RequestParser::getRequest() { return _request; }
 
-bool            RequestParser::isComplete() const { return _state == RequestParser::COMPLETE; }
+bool            RequestParser::isComplete() const { return _state == COMPLETE; }
 
-bool            RequestParser::hasError() const { return _state == RequestParser::ERROR; }
+bool            RequestParser::hasError() const { return _state == ERROR; }
 
 
 
 void RequestParser::reset()
 {
-    _state = RequestParser::REQUEST_LINE;
+    _state = REQUEST_LINE;
     _contentLength = 0;
     _bodyBytesRead = 0;
     _isChunked = false;
-    _chunkedState = RequestParser::SIZE;
+    _chunkedState = SIZE;
     _chunkLength = 0;
     _headerCount = 0;
     _request.clear();
@@ -274,7 +274,7 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
 
 bool RequestParser::chunkedBodyRemaining()
 {
-    if (_chunkedState == RequestParser::SIZE)
+    if (_chunkedState == SIZE)
     {
         std::string size;
 
@@ -282,11 +282,11 @@ bool RequestParser::chunkedBodyRemaining()
             return false;
         
         if (checkContentLength(size, _chunkLength, 16))
-            _chunkedState = _chunkLength == 0 ? RequestParser::TRAILER : RequestParser::DATA;
+            _chunkedState = _chunkLength == 0 ? TRAILER : DATA;
         else
-            _state = RequestParser::ERROR;
+            _state = ERROR;
     }
-    else if (_chunkedState == RequestParser::DATA)
+    else if (_chunkedState == DATA)
     {
         // 0\r\n
 
@@ -304,12 +304,12 @@ bool RequestParser::chunkedBodyRemaining()
             
             if (_buffer[0] != '\r' || _buffer[1] != '\n')
             {
-                _state = RequestParser::ERROR;
+                _state = ERROR;
                 return false;
             }
             
             _buffer.erase(0, 2);
-            _chunkedState = RequestParser::SIZE;
+            _chunkedState = SIZE;
         }
     }
     else
@@ -327,7 +327,7 @@ bool RequestParser::chunkedBodyRemaining()
         // X-Checksum: abc123\r\n  // Burası extension ve burayı reddediyoruz.
         // \r\n
 
-        _state = trailer.empty() ? RequestParser::COMPLETE : RequestParser::ERROR;
+        _state = trailer.empty() ? COMPLETE : ERROR;
     }
 
     return true;
