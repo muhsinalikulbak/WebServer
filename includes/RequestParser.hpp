@@ -29,7 +29,7 @@ public:
 
 private:
     State           _state;
-    std::string     _buffer;       // henüz işlenmemiş ham byte'lar
+    std::string&    _buffer;       // henüz işlenmemiş ham byte'lar
     HttpRequest     _request;      // inşa edilmekte olan request
     ChunkedState    _chunkedState;
 
@@ -57,11 +57,11 @@ private:
 
 
 public:
-    RequestParser(size_t maxBodySize);
+    RequestParser(size_t maxBodySize, std::string& buffer);
     ~RequestParser();
 
     // recv() sonrası çağrılır, kalan state'e göre devam eder
-    State           feed(const char* data, size_t len);
+    State           feed();
     State           getState() const;
     bool            isComplete() const;
     bool            hasError() const;

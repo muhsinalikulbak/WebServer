@@ -44,6 +44,7 @@ private:
     ClientState             _clientState;
     const ServerConfig&     _serverConfig;  // bu client hangi server bloğuna ait
     CgiHandler*             _activeCgi;     // NULL ise cgi yok
+    std::string             _buffer;
     RequestParser           _parser;
     
     Client(const Client& other);

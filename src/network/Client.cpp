@@ -1,12 +1,13 @@
 #include "Client.hpp"
 
 
-Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.clientMaxBodySize)
+Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.clientMaxBodySize, _buffer)
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
     _activeCgi = NULL;
+    _buffer = "";
 }
 
 
@@ -69,25 +70,23 @@ Client::StreamState Client::receiveData()
         // 4- TCP fin paketi (kapanma) isteği recv
         return PEER_CLOSED;
     }
-
-    RequestParser::State state = _parser.feed(buffer, byte);
+    _buffer.append(buffer, byte);
+    
+    if (_activeCgi)
+        return TRANSFER_INCOMPLETE;
+    
+    RequestParser::State state = _parser.feed();
     return processParserState(state);
 }
 
 Client::StreamState Client::drainBuffer()
 {
-    RequestParser::State state = _parser.feed(NULL, 0);  // recv yok, sadece kalan buffer'ı işler
+    RequestParser::State state = _parser.feed();  // recv yok, sadece kalan buffer'ı işler
     return processParserState(state);
 }
 
 Client::StreamState Client::sendData()
 {
-    // if (_writeBuffer.empty())
-    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
-
-    // _writeBuffer içindeki veriyi istemciye gönderiyoruz
-
-    // int byte = send(_clientFd, buffer, buffer.size(), 0);
 
     int byte = send(_clientFd, "response buffer gelecek", 24, 0);
 
@@ -101,13 +100,18 @@ Client::StreamState Client::sendData()
         // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
         // _writeBuffer.erase(0, byte);
     }
-
-    // Eğer buffer tamamen bittiyse (her şey gönderildiyse) TRANSFER_COMPLETE
-    // if (_writeBuffer.empty())
-    //     return TRANSFER_COMPLETE;  // Tüm veri gönderildi
+    else 
+    {
+        if (_activeCgi)
+        {
+            _activeCgi = NULL; //  Şimdilik böyle kapatıyoruz, içindeki verileri henüz bilmiyorum.
+            // Temiz bir şekilde kapatılıp NULL set edilecek.
+        }
+        return TRANSFER_COMPLETE;
+    }
 
     return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
 }
 
 
-void Client::resetParser() { _parser.reset(); }
+void    Client::resetParser() { _parser.reset(); }

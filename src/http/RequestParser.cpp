@@ -6,7 +6,7 @@
 
 // HttpRequestParser implementasyonu
 
-RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
+RequestParser::RequestParser(size_t maxBodySize, std::string& buffer): _buffer(buffer), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
 {
     _state = REQUEST_LINE;
     _chunkedState = SIZE;
@@ -22,11 +22,8 @@ RequestParser::~RequestParser()
 }
 
 
-RequestParser::State RequestParser::feed(const char* data, size_t len)
+RequestParser::State RequestParser::feed()
 {
-    if (data != NULL && len > 0)
-        _buffer.append(data, len); // Gelen veriyi depola
-
     while (_state != COMPLETE && _state != ERROR)
     {
 

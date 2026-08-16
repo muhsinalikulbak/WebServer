@@ -256,6 +256,9 @@ void Server::run()
 		{
 			EpollHandler* sock = static_cast<EpollHandler*>(_events[i].data.ptr);
 
+			// Client bir istek yollayıp ardından bağlantıyı kapatmak istediğini söyleyebilir.
+			// Bu durumda response gitmeli ardından bağlantı kapatılmalı
+			 
 			if (_events[i].events & (EPOLLERR | EPOLLHUP))
 			{
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
