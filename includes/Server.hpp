@@ -18,6 +18,8 @@ class Server
 {
 private:
 
+    const ConfigParser&             _config;
+
     // Setleri set<EpollHandler*> olarak ayarlayabilirim
     // Bu sayede kodda  bazı yerlerdeki static_cast<T> lere ihtiyacımız kalmaz.
     std::set<Socket*>               _listenSockets;
@@ -41,10 +43,10 @@ private:
     
 public:
 
-    Server();
+    Server(const ConfigParser& config);
     ~Server();
 
-    void    init(const ConfigParser& config); // Config dosyasını alıp socketleri (ip:port) açar
+    void    init(); // Config dosyasını alıp socketleri (ip:port) açar
     void    run();
 
 };

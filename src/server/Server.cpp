@@ -6,7 +6,7 @@
 #include <cerrno>
 #include <cstdio>
 
-Server::Server()
+Server::Server(const ConfigParser& config) : _config(config)
 {
 	_epollFd = -1;
 	_lastTimeoutCheck = std::time(NULL);
@@ -45,9 +45,9 @@ Server::~Server()
 		close(_epollFd);
 }
 
-void Server::init(const ConfigParser& config)
+void Server::init()
 {
-	const std::vector<ServerConfig>& servers = config.getServers();
+	const std::vector<ServerConfig>& servers = _config.getServers();
 	std::string host;
 	int 		port = 0;
 

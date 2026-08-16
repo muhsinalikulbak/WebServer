@@ -18,11 +18,11 @@ int main(int argc, char** argv)
 	signal(SIGPIPE, SIG_IGN);
 
 	try
-	{
+	{	
 		ConfigParser config(configPath);
-		Server s;
+		Server s(config);
 	
-		s.init(config);
+		s.init();
 		s.run();
 	}
 	catch (const std::exception& e)

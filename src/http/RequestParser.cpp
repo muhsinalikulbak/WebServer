@@ -323,7 +323,7 @@ bool RequestParser::chunkedBodyRemaining()
             }
             
             _buffer.erase(0, 2);
-            _bodyBytesRead = 0;
+            _bodyBytesRead = 0; // Her yeni chunk için sıfırlamamız gerekir.
             _chunkedState = SIZE;
         }
     }
