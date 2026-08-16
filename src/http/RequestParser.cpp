@@ -1,6 +1,7 @@
 #include "RequestParser.hpp"
 #include <cstdlib>
 #include <cerrno>
+#include <cctype>
 
 
 // HttpRequestParser implementasyonu
@@ -173,21 +174,21 @@ void RequestParser::processHeaderLine(const std::string& line)
     _request.setHeader(key, value);
 }
 
-// Kontrol et
 void RequestParser::trimString(std::string& str)
 {
     if (str.empty())
         return;
 
-    size_t start = 0;
-    size_t end = str.size() - 1;
+    const std::string whitespace = " \t\r\n\f\v";
+    size_t start = str.find_first_not_of(whitespace);
 
-    while (str[start] && std::isspace(str[start]))
-        start++;
-    
-    while (str[start] && str[end] && std::isspace(str[end]))
-        end--;
-    
+    if (start == std::string::npos)
+    {
+        str.clear();
+        return;
+    }
+
+    size_t end = str.find_last_not_of(whitespace);
     str = str.substr(start, end - start + 1);
 }
 
