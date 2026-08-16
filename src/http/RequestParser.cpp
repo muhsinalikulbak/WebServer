@@ -263,6 +263,7 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
     }
 
     char* endptr;
+    errno = 0;
     unsigned long result = std::strtoul(value.c_str(), &endptr, base);
 
     if (*endptr != '\0' || errno == ERANGE)   // strtoul tamamını tüketmediyse
@@ -282,7 +283,10 @@ bool RequestParser::chunkedBodyRemaining()
             return false;
         
         if (checkContentLength(size, _chunkLength, 16))
+        {
+            _bodyBytesRead = 0;
             _chunkedState = _chunkLength == 0 ? TRAILER : DATA;
+        }
         else
             _state = ERROR;
     }
@@ -309,6 +313,7 @@ bool RequestParser::chunkedBodyRemaining()
             }
             
             _buffer.erase(0, 2);
+            _bodyBytesRead = 0;
             _chunkedState = SIZE;
         }
     }
