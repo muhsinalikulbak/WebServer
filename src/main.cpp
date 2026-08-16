@@ -20,9 +20,9 @@ int main(int argc, char** argv)
 	try
 	{	
 		ConfigParser config(configPath);
-		Server s(config);
+		Server s;
 	
-		s.init();
+		s.init(config);
 		s.run();
 	}
 	catch (const std::exception& e)
