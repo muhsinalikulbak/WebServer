@@ -23,7 +23,8 @@ RequestParser::~RequestParser()
 
 RequestParser::State RequestParser::feed(const char* data, size_t len)
 {
-    _buffer.append(data, len); // Gelen veriyi depola
+    if (data != NULL && len > 0)
+        _buffer.append(data, len); // Gelen veriyi depola
 
     while (_state != COMPLETE && _state != ERROR)
     {
@@ -151,16 +152,25 @@ void RequestParser::processHeaderLine(const std::string& line)
 {
     size_t colonPos = line.find(':');
     
-    if (colonPos != std::string::npos)
+    if (colonPos == std::string::npos)
     {
-        std::string key = line.substr(0, colonPos);
-        std::string value = line.substr(colonPos + 1);
-
-        trimString(key);
-        trimString(value);
-    
-        _request.setHeader(key, value);
+        _state = ERROR;
+        return;
     }
+
+    std::string key = line.substr(0, colonPos);
+    std::string value = line.substr(colonPos + 1);
+
+    trimString(key);
+    trimString(value);
+
+    if (key.empty())
+    {
+        _state = ERROR;
+        return;
+    }
+
+    _request.setHeader(key, value);
 }
 
 // Kontrol et
