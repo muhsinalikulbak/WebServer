@@ -1,13 +1,13 @@
 #include "Client.hpp"
 
 
-Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.clientMaxBodySize, _buffer)
+Client::Client(int fd, const ServerConfig& config) : _tempBuffer(), _serverConfig(config), _parser(config.clientMaxBodySize)
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
     _activeCgi = NULL;
-    _buffer = "";
+    _tempBuffer = "";
 }
 
 
@@ -70,18 +70,20 @@ Client::StreamState Client::receiveData()
         // 4- TCP fin paketi (kapanma) isteği recv
         return PEER_CLOSED;
     }
-    _buffer.append(buffer, byte);
+    _tempBuffer.append(buffer, byte);
     
     if (_activeCgi)
         return TRANSFER_INCOMPLETE;
     
-    RequestParser::State state = _parser.feed();
+    RequestParser::State state = _parser.feed(_tempBuffer);
+    _tempBuffer.clear();
+
     return processParserState(state);
 }
 
 Client::StreamState Client::drainBuffer()
 {
-    RequestParser::State state = _parser.feed();  // recv yok, sadece kalan buffer'ı işler
+    RequestParser::State state = _parser.feed(_tempBuffer);  // recv yok, sadece kalan buffer'ı işler
     return processParserState(state);
 }
 

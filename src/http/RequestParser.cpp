@@ -6,7 +6,7 @@
 
 // HttpRequestParser implementasyonu
 
-RequestParser::RequestParser(size_t maxBodySize, std::string& buffer): _buffer(buffer), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
+RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
 {
     _state = REQUEST_LINE;
     _chunkedState = SIZE;
@@ -22,8 +22,11 @@ RequestParser::~RequestParser()
 }
 
 
-RequestParser::State RequestParser::feed()
+RequestParser::State RequestParser::feed(const std::string& buffer)
 {
+    if (!buffer.empty())
+        _buffer.append(buffer);
+    
     while (_state != COMPLETE && _state != ERROR)
     {
 
@@ -235,13 +238,17 @@ bool            RequestParser::hasError() const { return _state == ERROR; }
 
 void RequestParser::reset()
 {
+    // Reset'de _buffer temizlenmeyecek
+    // Çünkü tek bir recv() çağrısında örneğin iki tam request gelebilir.
+    // ilkini işleyip göndeririz ikincisine de bakmamız gerekir.
+
     _state = REQUEST_LINE;
     _contentLength = 0;
     _bodyBytesRead = 0;
-    _isChunked = false;
-    _chunkedState = SIZE;
     _chunkLength = 0;
     _headerCount = 0;
+    _isChunked = false;
+    _chunkedState = SIZE;
     _request.clear();
 }
 // keep-alive: bir sonraki request için parser'ı sıfırla
