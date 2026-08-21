@@ -60,6 +60,14 @@ void HttpRequest::setUri(const std::string& uri)
     _uri = uri;  // orijinal tam URI'yi de saklamak isteyebilirsin (log, response header için)
 }
 
+// Burada path cgi'ın hangi path de olduğunu söyler
+// Sonraki kısım ise script'in kullanacağı verilerdir.
+// O yüzden uri'yi ikiye böleriz, path ve query-string olarak
+
+// /cgi-bin/script.py ? name=ali&age=20 #section1
+//   \________________/   \_____________/ \_______/
+//          |                    |            |
+//      Path (Yol)          Query String   Fragment (Çapa)
 
 void HttpRequest::setVersion(const std::string& version)
 {

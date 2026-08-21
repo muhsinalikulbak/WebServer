@@ -263,12 +263,10 @@ void Server::run()
 			// Client bir istek yollayıp ardından bağlantıyı kapatmak istediğini söyleyebilir.
 			// Bu durumda response gitmeli ardından bağlantı kapatılmalı
 			 
-			if (_events[i].events & (EPOLLERR | EPOLLHUP))
+			if (_events[i].events & EPOLLERR)
 			{
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
-				// Ya da Bağlantı koptu ya da /hang up (kernel tarafından otomatik set
-				// edilir.)
-
+	
 				if (sock->getType() == EpollHandler::HANDLER_LISTEN)
 				{
 					perror("Listening socket error");
