@@ -31,7 +31,7 @@ std::string HttpRequest::toLowerCopy(const std::string& s)
 // Ve garbage value riski ortadan kalkar.
 
 HttpRequest::HttpRequest()
-    : _method(), _uri(), _version(), _headers(), _body()
+    : _method(), _uri(), _version(), _headers(), _body(), _path(), _queryString()
 {
 }
 
@@ -44,10 +44,20 @@ void HttpRequest::setMethod(const std::string& method)
     _method = toLowerCopy(method);
 }
 
-
 void HttpRequest::setUri(const std::string& uri)
 {
-    _uri = uri;
+    size_t qPos = uri.find('?');
+    if (qPos != std::string::npos)
+    {
+        _path = uri.substr(0, qPos);
+        _queryString = uri.substr(qPos + 1);
+    }
+    else
+    {
+        _path = uri;
+        _queryString = "";
+    }
+    _uri = uri;  // orijinal tam URI'yi de saklamak isteyebilirsin (log, response header için)
 }
 
 
@@ -118,6 +128,12 @@ std::string HttpRequest::getHeader(const std::string& key) const
     
     return std::string();
 }
+
+const std::map<std::string, std::string>& HttpRequest::getHeaders() const
+{
+    return _headers;
+}
+
 
 // İlgili header var mı ?
 // Örneğin content-length var mı diye kontrol edilir.

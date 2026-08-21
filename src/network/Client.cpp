@@ -72,6 +72,11 @@ Client::StreamState Client::receiveData()
     }
     _tempBuffer.append(buffer, byte);
     
+
+    // burada temp buffer silinip, parser'daki buffer'ı append edecek
+    // Public ayrı bir fonksiyon yazılabilir.
+    // append ayrı - feed ayrı olmuş olur.
+    
     if (_activeCgi)
         return TRANSFER_INCOMPLETE;
     

@@ -12,6 +12,9 @@ private:
     std::string _version;
     std::map<std::string, std::string> _headers;
     std::string _body;
+    std::string _path;
+    std::string _queryString;
+
 
 public:
     HttpRequest();
@@ -34,6 +37,7 @@ public:
     const std::string&  getBody() const;
     std::string         getHeader(const std::string& key) const;
     bool                hasHeader(const std::string& key) const;
+    const std::map<std::string, std::string>& getHeaders() const;
 };
 
 #endif

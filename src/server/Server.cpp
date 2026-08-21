@@ -215,6 +215,8 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
 {
     if (state == Client::REQUEST_ERROR)
     {
+		// Request tamamlanmadan request error olunca
+		// Hangi 400 kodları koyululr.
         // 400 response üret, _writeBuffer'a koy
 		event->events = EPOLLOUT;
 
@@ -225,6 +227,8 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
     }
     else if (state == Client::TRANSFER_COMPLETE)
     {
+		// Önce request check yap
+		// check fonksiyonu request parser'da olmalı ve statik olabilir
         client->setClientState(Client::PROCESSING_REQUEST);
         // normal response üret
 		event->events = EPOLLOUT;
