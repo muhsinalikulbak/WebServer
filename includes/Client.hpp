@@ -39,6 +39,7 @@ public:
     };
 
 private:
+
     int                     _clientFd;
     std::time_t             _lastActivity;
     ClientState             _clientState;

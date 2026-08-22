@@ -107,6 +107,14 @@ int Socket::acceptConnection()
     sockaddr_in client_addr;
     socklen_t len = sizeof(client_addr);
 
+    // Len struct'ın size'ını fonksiyona verir ve 
+    // Doldurma yaparken bu size'ı geçip overflow olmasın diye
+    // Size verilir.
+
+    // sockaddr generic struct'dır, accept ipv4 ipv6 gibi farklı
+    // structları da bu 2. parametreye alabilir. ama sockaddr tipinde verilir.
+    // Struct kendi içinde sin_family'e bakarak hangi ip türü olduğunu anlar.
+
     int clientFd = accept(_fd, (sockaddr *)&client_addr, &len);
 
     if (clientFd != -1)
