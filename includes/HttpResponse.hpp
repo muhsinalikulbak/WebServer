@@ -22,13 +22,12 @@ public:
     HttpResponse& operator=(const HttpResponse& other);
 
     void setStatus(int code);
-    void setStatus(int code, const std::string& text); // özel status text istersen
     void setHeader(const std::string& key, const std::string& value);
     void setBody(const std::string& body);
     void appendBody(const std::string& data);
 
     int                 getStatus() const;
-    const std::string&  getHeader(const std::string& key) const;
+    std::string         getHeader(const std::string& key) const;
     bool                hasHeader(const std::string& key) const;
     const std::string&  getBody() const;
 

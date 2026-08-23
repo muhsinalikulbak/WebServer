@@ -11,6 +11,7 @@ SRCS =	src/main.cpp \
 		src/http/RequestParser.cpp \
 		src/http/ResponseBuilder.cpp \
 		src/http/Router.cpp \
+		src/http/RequestValidator.cpp \
 		src/server/Server.cpp \
 		src/server/ConfigParser.cpp \
 		src/server/LocationConfig.cpp \
@@ -18,6 +19,7 @@ SRCS =	src/main.cpp \
 		src/utils/FdUtils.cpp  \
 		src/cgi/CgiExecutor.cpp  \
 		src/cgi/CgiHandler.cpp \
+
 
 		
 

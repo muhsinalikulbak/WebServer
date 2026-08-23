@@ -60,16 +60,26 @@ void Socket::bindSocket()
     struct addrinfo hints;
     struct addrinfo* result = NULL;
 
+    // struct verileri garbage olabilir
+    // O yüzden kullanmadığım attribute'lar
+    // Garbage kalarak yanlış davranışa yol açabilir.
+    // O yüzden başta tüm attribute'ları default olarak setliyoruz.
+    
     std::memset(&hints, 0, sizeof(hints));
     hints.ai_family   = AF_INET;     // AF_INET
     hints.ai_socktype = SOCK_STREAM;       // SOCK_STREAM
     hints.ai_flags    = AI_PASSIVE;  // node NULL olduğunda INADDR_ANY/wildcard ver
 
+    // GetAddrInfo fonksiyonu portu string ister
+    // Çünkü "http" gelirse bile getaddrinfo bunu ---> 80 portuna çevirir
+
     std::ostringstream portStream;
     portStream << _port;
     std::string portStr = portStream.str();
 
-    // host boşsa veya 0.0.0.0 ise node'u NULL bırak -> AI_PASSIVE ile wildcard bind
+    // host boşsa veya 0.0.0.0 ise node'u NULL bırak -> AI_PASSIVE sayesinde
+    // getaddrinfo bunu farkedip 0.0.0.0 adresini ayarlar.
+    
     bool wildcard = (_host.empty() || _host == "0.0.0.0");
     const char* node = wildcard ? NULL : _host.c_str();
 
