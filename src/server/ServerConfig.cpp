@@ -267,6 +267,22 @@ static LocationConfig parseLocation(const std::vector<std::string> &tokens,
   return location;
 }
 
+static void validateUniqueLocationPaths(const std::vector<LocationConfig> &locations)
+{
+  std::set<std::string> seenPaths;
+
+  // Aynı path'in iki kez tanımlanması Router'ın sessizce ilk bloğu seçip ikincisini yok saymasına yol açar.
+  // Bu yüzden yalnızca birebir aynı location path tekrarlarını burada hata olarak yakalıyoruz.
+  for (size_t i = 0; i < locations.size(); ++i)
+  {
+    const std::string &path = locations[i].path;
+    std::pair<std::set<std::string>::iterator, bool> result = seenPaths.insert(path);
+
+    if (!result.second)
+      throw std::invalid_argument("Config parse error: duplicate location path: " + path);
+  }
+}
+
 static void applyServerDirective(ServerConfig &server, const std::vector<std::string> &directive)
 {
   if (directive.empty())
@@ -362,6 +378,7 @@ ServerConfig::ServerConfig(const std::string &allConf)
   if (i != tokens.size())
     throw std::invalid_argument(
         "Config parse error: extra tokens after server block");
+  validateUniqueLocationPaths(locations);
   if (listens.empty())
     throw std::invalid_argument(
         "Config parse error: no listen directive in server");
