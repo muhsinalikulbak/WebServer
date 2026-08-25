@@ -56,6 +56,7 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& other)
     return *this;
 }
 
+// status code set etme
 void HttpResponse::setStatus(int code)
 {
     _statusCode = code;
@@ -72,6 +73,8 @@ void HttpResponse::setBody(const std::string& body)
     _body = body;
 }
 
+// Burada cgi çıktısı için appendBody yerine 
+// Direk cgiStdOutBuffer set edilebilir
 void HttpResponse::appendBody(const std::string& data)
 {
     _body.append(data);
@@ -100,6 +103,10 @@ const std::string& HttpResponse::getBody() const
     return _body;
 }
 
+// serialize() fonksiyonunun görevi, 
+// HttpResponse sınıfının içindeki verileri 
+// HTTP standartlarına (RFC 7230 vb.) uygun tek bir std::string haline getirmektir.
+
 std::string HttpResponse::serialize() const
 {
     std::ostringstream out;
@@ -123,3 +130,12 @@ std::string HttpResponse::serialize() const
 
     return out.str();
 }
+
+// ÖRNEK RESPONSE
+
+// HTTP/1.1 200 OK\r\n                   <-- Status Line (Sürüm, Kod, Mesaj)
+// Content-Type: text/html\r\n           <-- Header (Başlıklar)
+// Server: webserv/1.0\r\n                <-- Header
+// Content-Length: 13\r\n                <-- Header (Body boyutu)
+// \r\n                                  <-- Boş Satır (Headers ile Body'yi ayırır!)
+// Hello, World!                         <-- Body (İçerik)
