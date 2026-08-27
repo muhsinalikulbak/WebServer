@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="High-Performance Non-Blocking C++98 HTTP WebServer Powered by Epoll Event Loop">
+    <title>C++ Epoll WebServer | High-Performance HTTP Server</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+    <!-- Background Decorative Glows -->
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">C++ WebServer</span>
+                <span class="badge badge-cpp">C++98 / Epoll</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Mimari</a></li>
+                <li><a href="#tester">HTTP Tester</a></li>
+                <li><a href="#upload">Dosya Yükle (POST)</a></li>
+                <li><a href="#config">Konfigürasyon</a></li>
+            </ul>
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Server Status: <strong>ONLINE</strong></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-container">
+            <div class="hero-tag">
+                <span class="sparkle">✨</span> Yüksek Performanslı Non-Blocking G/Ç Mimarisi
+            </div>
+            <h1 class="hero-title">
+                Ölçeklenebilir, Hızlı & <br>
+                <span class="gradient-text">Epoll Event-Loop WebServer</span>
+            </h1>
+            <p class="hero-description">
+                POSIX <code>epoll</code> I/O multiplexing kullanan, tamamen non-blocking, çift yönlü Keep-Alive ve güvenli MIME beyaz liste filtrelemeli C++ HTTP sunucusu.
+            </p>
+
+            <div class="hero-actions">
+                <a href="#tester" class="btn btn-primary">
+                    <span>HTTP İsteği Test Et</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="#features" class="btn btn-glass">
+                    <span>Mimari İncele</span>
+                </a>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value">Epoll</span>
+                    <span class="stat-label">Event Loop Mimarisi</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">O(1)</span>
+                    <span class="stat-label">Soket Bildirim Hızı</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">100%</span>
+                    <span class="stat-label">Non-Blocking I/O</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">C++98</span>
+                    <span class="stat-label">Strict Standard</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Section -->
+    <main class="main-content">
+
+        <!-- Architectural Highlights -->
+        <section id="features" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Sunucu Mimari Özellikleri</h2>
+                <p class="section-subtitle">Performans ve güvenlik odaklı modüler C++ backend tasarımı</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Epoll Event Loop</h3>
+                    <p>Binlerce eşzamanlı bağlantıyı tek bir thread üzerinde bloklanmadan yöneten Linux epoll multiplexing motoru.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>MIME Whitelist Güvenliği</h3>
+                    <p>Sadece izin verilen metin tabanlı uzantıları (HTML, CSS, JS, JSON vb.) sunar. İkili (binary) dosyaları diske okumadan 415 yanıtı döner.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚙️</div>
+                    <h3>CGI & Process İzolasyonu</h3>
+                    <p>Çift yönlü pipe'lar ile Python/PHP script çalıştırma ve otomatik kaynak/child process temizliği.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Non-Blocking Write Buffer</h3>
+                    <p>Kısmi yazma (partial write) durumlarını <code>EPOLLOUT</code> ile yöneten kesintisiz veri iletim tamponu.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive HTTP Tester Widget -->
+        <section id="tester" class="section">
+            <div class="section-header">
+                <h2 class="section-title">İnteraktif HTTP İstek Simülatörü</h2>
+                <p class="section-subtitle">Sunucunuza canlı istek gönderin ve dönen HTTP yanıtını anında görün</p>
+            </div>
+
+            <div class="tester-card glass-panel">
+                <div class="tester-controls">
+                    <div class="control-group">
+                        <label for="httpMethod">HTTP Metodu</label>
+                        <select id="httpMethod" class="input-select">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group flex-grow">
+                        <label for="httpEndpoint">Endpoint Yol (URI)</label>
+                        <input type="text" id="httpEndpoint" class="input-text" value="/" placeholder="/index.html">
+                    </div>
+
+                    <div class="control-group">
+                        <label>&nbsp;</label>
+                        <button id="sendBtn" class="btn btn-primary">İsteği Gönder</button>
+                    </div>
+                </div>
+
+                <div class="tester-output-grid">
+                    <div class="console-box">
+                        <div class="console-header">
+                            <span>Gönderilen İstek (Raw Request)</span>
+                            <span class="console-dot green"></span>
+                        </div>
+                        <pre id="requestConsole" class="code-block"><code>GET / HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: WebServerTester/1.0
+Accept: text/html,text/css,*/*
+Connection: keep-alive</code></pre>
+                    </div>
+
+                    <div class="console-box">
+                        <div class="console-header">
+                            <span>Sunucu Yanıtı (HTTP Response)</span>
+                            <span id="responseStatusBadge" class="badge badge-success">HTTP 200 OK</span>
+                        </div>
+                        <pre id="responseConsole" class="code-block"><code>HTTP/1.1 200 OK
+Content-Type: text/html
+Content-Length: 1840
+Server: C++ Epoll WebServer
+Connection: keep-alive
+
+[Sunucu Yanıt Gövdesi Hazır]</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- File Upload Section (POST Request) -->
+        <section id="upload" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Dosya Yükleme (POST Request)</h2>
+                <p class="section-subtitle">HTTP POST metodu ile sunucuya dosya veya metin verisi yükleyin</p>
+            </div>
+
+            <div class="upload-card glass-panel">
+                <form id="uploadForm" class="upload-form">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-icon">📁</div>
+                        <p class="drop-title">Yüklenecek dosyayı seçin veya buraya sürükleyin</p>
+                        <p class="drop-subtitle">Desteklenen metin formatları: .html, .txt, .json, .css, .js</p>
+                        <input type="file" id="fileInput" name="file" class="file-input" required>
+                        <label for="fileInput" class="btn btn-glass file-label">Dosya Seç</label>
+                    </div>
+
+                    <div class="selected-file-info" id="fileInfo" style="display: none;">
+                        <span class="file-icon">📄</span>
+                        <span class="file-name" id="fileName">secilen-dosya.txt</span>
+                        <span class="file-size" id="fileSize">(0 KB)</span>
+                    </div>
+
+                    <div class="upload-actions">
+                        <button type="submit" id="uploadBtn" class="btn btn-primary btn-large">
+                            <span>Dosyayı Yükle (POST /upload)</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Upload Progress and Response View -->
+                <div class="upload-output" id="uploadOutput" style="display: none;">
+                    <div class="console-box">
+                        <div class="console-header">
+                            <span>Yükleme Yanıtı (Upload Response)</span>
+                            <span id="uploadStatusBadge" class="badge badge-success">HTTP 200 OK</span>
+                        </div>
+                        <pre id="uploadConsole" class="code-block"><code>Yanıt bekleniyor...</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Config Preview -->
+        <section id="config" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Sunucu Konfigürasyon Yapısı</h2>
+                <p class="section-subtitle">Nginx benzeri esnek ve okunabilir blok yapısı</p>
+            </div>
+
+            <div class="code-card glass-panel">
+                <div class="code-header">
+                    <span class="file-name">webserver.conf</span>
+                    <span class="file-lang">NGINX-style Syntax</span>
+                </div>
+                <pre class="code-block"><code>server {
+    listen 127.0.0.1:8080;
+    server_name example.com;
+    client_max_body_size 10M;
+
+    error_page 404 /errors/404.html;
+    error_page 500 /errors/500.html;
+
+    location / {
+        allow_methods GET POST;
+        root ./www;
+        index index.html;
+        autoindex on;
+    }
+
+    location /cgi-bin {
+        allow_methods GET POST;
+        root ./www/cgi-bin;
+        cgi_ext .py /usr/bin/python3;
+    }
+}</code></pre>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p>© 2026 C++ Epoll WebServer Engine. All rights reserved.</p>
+            <p class="footer-sub">POSIX C++98 Non-blocking Event Loop Architecture</p>
+        </div>
+    </footer>
+
+    <script src="/assets/js/main.js"></script>
+</body>
+</html>
