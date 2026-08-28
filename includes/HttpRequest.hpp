@@ -35,6 +35,8 @@ public:
     const std::string&  getUri() const;
     const std::string&  getVersion() const;
     const std::string&  getBody() const;
+    const std::string&  getQueryString() const;
+    const std::string&  getPath() const;
     std::string         getHeader(const std::string& key) const;
     bool                hasHeader(const std::string& key) const;
     const std::map<std::string, std::string>& getHeaders() const;

@@ -126,6 +126,14 @@ const std::string& HttpRequest::getBody() const
     return _body;
 }
 
+const std::string&  HttpRequest::getQueryString() const
+{
+    return _queryString;
+}
+const std::string&  HttpRequest::getPath() const
+{
+    return _path;
+}
 
 std::string HttpRequest::getHeader(const std::string& key) const
 {
