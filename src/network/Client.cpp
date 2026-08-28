@@ -22,21 +22,23 @@ Client::~Client()
 /**** GETTER SETTER ****/
 
 
-std::time_t               Client::getLastActivity() const { return _lastActivity; }
+std::time_t                 Client::getLastActivity() const { return _lastActivity; }
 
-Client::ClientState       Client::getClientState() const { return _clientState; }
+Client::ClientState         Client::getClientState() const { return _clientState; }
 
-void                      Client::setLastActivity(std::time_t time) { _lastActivity = time; }
+void                        Client::setLastActivity(std::time_t time) { _lastActivity = time; }
 
-void                      Client::setClientState(Client::ClientState state) { _clientState = state; }
+void                        Client::setClientState(Client::ClientState state) { _clientState = state; }
 
-int                       Client::getFd() const { return _clientFd; } // Override
+int                         Client::getFd() const { return _clientFd; } // Override
 
-EpollHandler::HandlerType Client::getType() const { return EpollHandler::HANDLER_CLIENT; } // Override
+EpollHandler::HandlerType   Client::getType() const { return EpollHandler::HANDLER_CLIENT; } // Override
 
-const ServerConfig&       Client::getServerConfig() const { return _serverConfig; }
+const ServerConfig&         Client::getServerConfig() const { return _serverConfig; }
 
-bool                      Client::isBadRequest() const { return _parser.hasError(); }
+bool                        Client::isBadRequest() const { return _parser.hasError(); }
+
+const HttpRequest&          Client::getRequest()  { return _parser.getRequest(); }
 
 
 /**** READ WRITE / HELPER FUNCTIONS ****/

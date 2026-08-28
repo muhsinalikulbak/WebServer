@@ -226,13 +226,13 @@ std::vector<std::string> RequestParser::split(const std::string& str, char delim
 }
 
 
-RequestParser::State RequestParser::getState() const { return _state; }
+RequestParser::State    RequestParser::getState() const { return _state; }
 
-HttpRequest&    RequestParser::getRequest() { return _request; }
+const HttpRequest&      RequestParser::getRequest() { return _request; }
 
-bool            RequestParser::isComplete() const { return _state == COMPLETE; }
+bool                    RequestParser::isComplete() const { return _state == COMPLETE; }
 
-bool            RequestParser::hasError() const { return _state == ERROR; }
+bool                    RequestParser::hasError() const { return _state == ERROR; }
 
 
 

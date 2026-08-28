@@ -70,6 +70,7 @@ public:
     const ServerConfig& getServerConfig() const;
     bool                isBadRequest() const;
     void                resetParser();
+    const HttpRequest&  getRequest();
 
 
     StreamState         drainBuffer();

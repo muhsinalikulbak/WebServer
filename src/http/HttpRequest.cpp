@@ -130,6 +130,7 @@ const std::string&  HttpRequest::getQueryString() const
 {
     return _queryString;
 }
+
 const std::string&  HttpRequest::getPath() const
 {
     return _path;
