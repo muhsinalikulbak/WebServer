@@ -1,6 +1,8 @@
 #include "Server.hpp"
 #include "ServerConfig.hpp"
 #include "RequestParser.hpp"
+#include "HttpResponse.hpp"
+#include "ResponseBuilder.hpp"
 
 #include <cstring>
 #include <cerrno>
@@ -227,10 +229,12 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
     }
     else if (state == Client::TRANSFER_COMPLETE)
     {
-		// Önce request check yap
-		// check fonksiyonu request parser'da olmalı ve statik olabilir
+
         client->setClientState(Client::PROCESSING_REQUEST);
-        // normal response üret
+
+        const HttpResponse& response = ResponseBuilder::build(client->getRequest(), client->getServerConfig());
+		client->setWriteBuffer(response.serialize());
+		
 		event->events = EPOLLOUT;
 
 		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)

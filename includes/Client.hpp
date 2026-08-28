@@ -70,6 +70,7 @@ public:
     const ServerConfig& getServerConfig() const;
     bool                isBadRequest() const;
     void                resetParser();
+    void                setWriteBuffer(const std::string& response);
     const HttpRequest&  getRequest();
 
 

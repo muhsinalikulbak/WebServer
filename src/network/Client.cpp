@@ -40,6 +40,8 @@ bool                        Client::isBadRequest() const { return _parser.hasErr
 
 const HttpRequest&          Client::getRequest()  { return _parser.getRequest(); }
 
+void                        Client::setWriteBuffer(const std::string& response) { _writeBuffer = response; }
+
 
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
@@ -97,7 +99,7 @@ Client::StreamState Client::drainBuffer()
 Client::StreamState Client::sendData()
 {
 
-    int byte = send(_clientFd, "response buffer gelecek", 24, 0);
+    int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
 
     if (byte == -1)
     {
@@ -106,11 +108,15 @@ Client::StreamState Client::sendData()
     }
     else if (byte > 0)
     {
-        // Gönderdiğimiz kısım kadarını writeBuffer'dan siliyoruz
-        // _writeBuffer.erase(0, byte);
+        _writeBuffer.erase(0, byte);
     }
-    else 
+    else if (byte == 0)
     {
+
+        // Bu koşula ihtiyaç var mı emin olamadım
+        // Cgi response oluştuktan sonra activeCgi NULL yapılabilir
+        // Yani send ederken bir sorun yaratacağını sanmıyorum.
+
         if (_activeCgi)
         {
             _activeCgi = NULL; //  Şimdilik böyle kapatıyoruz, içindeki verileri henüz bilmiyorum.
