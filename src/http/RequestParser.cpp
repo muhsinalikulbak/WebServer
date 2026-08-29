@@ -15,6 +15,7 @@ RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBod
     _bodyBytesRead = 0;
     _headerCount = 0;
     _isChunked = false;
+    _errorCode = 400;
 }
 
 RequestParser::~RequestParser()
@@ -56,7 +57,7 @@ RequestParser::State RequestParser::feed(const std::string& buffer)
             else
             {
                 if (++_headerCount > _maxHeaderCount)
-                    _state = ERROR;
+                    setError(431);
                 else
                     processHeaderLine(line);
             }
@@ -84,14 +85,14 @@ void RequestParser::checkAfterHeader()
 {
     if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
     {
-        _state = ERROR;
+        setError(400);
         return;
     }
 
     if (_request.hasHeader("transfer-encoding"))
     {
         if (HttpRequest::toLowerCopy(_request.getHeader("transfer-encoding")) != "chunked")
-            _state = ERROR;
+            setError(501);
         else
         {
             _isChunked = true;
@@ -103,12 +104,13 @@ void RequestParser::checkAfterHeader()
         if (checkContentLength(_request.getHeader("content-length"), _contentLength, 10))
         {
             if (_contentLength > _maxBodySize)
-                _state = ERROR;
+                setError(413);
             else
                 _state = _contentLength > 0 ? BODY : COMPLETE;
         }
         else
-            _state = ERROR;
+            setError(400);
+
     }
     else
         _state = COMPLETE;
@@ -145,7 +147,7 @@ void RequestParser::processRequestLine(const std::string& line)
     }
     else
     {
-        _state = ERROR;
+        setError(400);
     }
 }
 
@@ -155,7 +157,7 @@ void RequestParser::processHeaderLine(const std::string& line)
     
     if (colonPos == std::string::npos)
     {
-        _state = ERROR;
+        setError(400);
         return;
     }
 
@@ -167,7 +169,7 @@ void RequestParser::processHeaderLine(const std::string& line)
 
     if (key.empty())
     {
-        _state = ERROR;
+        setError(400);
         return;
     }
 
@@ -303,7 +305,7 @@ bool RequestParser::chunkedBodyRemaining()
             _chunkedState = _chunkLength == 0 ? TRAILER : DATA;
         }
         else
-            _state = ERROR;
+            setError(400);
     }
     else if (_chunkedState == DATA)
     {
@@ -323,7 +325,7 @@ bool RequestParser::chunkedBodyRemaining()
             
             if (_buffer[0] != '\r' || _buffer[1] != '\n')
             {
-                _state = ERROR;
+                setError(400);
                 return false;
             }
             
@@ -347,7 +349,10 @@ bool RequestParser::chunkedBodyRemaining()
         // X-Checksum: abc123\r\n  // Burası extension ve burayı reddediyoruz.
         // \r\n
 
-        _state = trailer.empty() ? COMPLETE : ERROR;
+        if (trailer.empty())
+            _state = COMPLETE;
+        else
+            setError(400);
     }
 
     return true;
@@ -370,3 +375,6 @@ void RequestParser::bodyRemaining()
     _buffer.erase(0, size);
 }
 
+void RequestParser::setError(int code) { _state = ERROR; _errorCode = code; }
+
+int  RequestParser::getErrorCode() const { return _errorCode; }

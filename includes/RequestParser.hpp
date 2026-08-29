@@ -40,19 +40,24 @@ private:
     size_t          _chunkLength;
     size_t          _bodyBytesRead;
     bool            _isChunked;    
+    int             _errorCode;   // constructor ve reset()'te 400'e set edilir (default/fallback)
     
     // Transfer-Encoding: chunked tespiti için (şimdilik sadece işaret)
     // chunked encoding kullanacaksan ayrı state/counter'lar da gerekecek
 
-    bool extractLine(std::string& line);          // buffer'dan \r\n'e kadar bir satır çeker, tüketir
-    void processRequestLine(const std::string& line);
-    void processHeaderLine(const std::string& line);
-    void trimString(std::string& str);
-    bool checkContentLength(const std::string& value, size_t& out, int base);
-    void bodyRemaining();
-    bool chunkedBodyRemaining();
-    void checkAfterHeader();
+    bool    extractLine(std::string& line);          // buffer'dan \r\n'e kadar bir satır çeker, tüketir
+    void    processRequestLine(const std::string& line);
+    void    processHeaderLine(const std::string& line);
+    void    trimString(std::string& str);
+    bool    checkContentLength(const std::string& value, size_t& out, int base);
+    void    bodyRemaining();
+    bool    chunkedBodyRemaining();
+    void    checkAfterHeader();
+    void    setError(int code);
+
     std::vector<std::string> split(const std::string& str, char delimiter);
+
+
 
 
 
@@ -66,6 +71,7 @@ public:
     bool                isComplete() const;
     bool                hasError() const;
     const HttpRequest&  getRequest();
+    int                 getErrorCode() const;
 
     void reset(); // keep-alive: bir sonraki request için parser'ı sıfırla
 };

@@ -72,7 +72,7 @@ public:
     void                resetParser();
     void                setWriteBuffer(const std::string& response);
     const HttpRequest&  getRequest();
-
+    int                 getErrorCode() const;
 
     StreamState         drainBuffer();
     StreamState         receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon

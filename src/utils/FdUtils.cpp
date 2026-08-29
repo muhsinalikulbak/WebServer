@@ -38,7 +38,6 @@ namespace FdUtils
 		{
 			throw std::runtime_error(std::string("Error setsockopt TCP_NODELAY: ") + strerror(errno));
 		}
-
     }
 
     void setReuseAddress(int fd)

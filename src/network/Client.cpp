@@ -36,12 +36,15 @@ EpollHandler::HandlerType   Client::getType() const { return EpollHandler::HANDL
 
 const ServerConfig&         Client::getServerConfig() const { return _serverConfig; }
 
-bool                        Client::isBadRequest() const { return _parser.hasError(); }
-
 const HttpRequest&          Client::getRequest()  { return _parser.getRequest(); }
+
+int                         Client::getErrorCode() const { return _parser.getErrorCode(); }
 
 void                        Client::setWriteBuffer(const std::string& response) { _writeBuffer = response; }
 
+bool                        Client::isBadRequest() const { return _parser.hasError(); }
+
+void                        Client::resetParser() { _parser.reset(); }
 
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
@@ -129,4 +132,3 @@ Client::StreamState Client::sendData()
 }
 
 
-void    Client::resetParser() { _parser.reset(); }
