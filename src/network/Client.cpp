@@ -1,13 +1,12 @@
 #include "Client.hpp"
 
 
-Client::Client(int fd, const ServerConfig& config) : _tempBuffer(), _serverConfig(config), _parser(config.clientMaxBodySize)
+Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _tempBuffer(), _parser(config.clientMaxBodySize)
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
     _activeCgi = NULL;
-    _tempBuffer = "";
 }
 
 

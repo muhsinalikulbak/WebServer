@@ -217,9 +217,9 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
 {
     if (state == Client::REQUEST_ERROR)
     {
-		// Request tamamlanmadan request error olunca
-		// Hangi 400 kodları koyululr.
-        // 400 response üret, _writeBuffer'a koy
+		HttpResponse response = ResponseBuilder::buildErrorResponse(client->getErrorCode(), client->getServerConfig());
+		client->setWriteBuffer(response.serialize());
+
 		event->events = EPOLLOUT;
 
 		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)

@@ -44,8 +44,8 @@ private:
     std::time_t             _lastActivity;
     ClientState             _clientState;
     const ServerConfig&     _serverConfig;  // bu client hangi server bloğuna ait
-    CgiHandler*             _activeCgi;     // NULL ise cgi yok
     std::string             _tempBuffer;
+    CgiHandler*             _activeCgi;     // NULL ise cgi yok
     std::string             _writeBuffer;
     RequestParser           _parser;
     

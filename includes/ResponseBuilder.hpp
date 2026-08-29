@@ -16,7 +16,7 @@ public:
     // İçeride sırasıyla RequestValidator::validate() ve Router::match() çağrılır,
     // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
     static HttpResponse build(const HttpRequest& request, const ServerConfig& serverConfig);
-
+    static HttpResponse buildErrorResponse(int statusCode, const ServerConfig& serverConfig);
 private:
     // Stateless class - instance/copy engellensin
     ResponseBuilder();
@@ -43,7 +43,6 @@ private:
 
     // --- Autoindex / error sayfaları ---
     static HttpResponse buildAutoindexPage(const std::string& dirPath, const std::string& requestPath);
-    static HttpResponse buildErrorResponse(int statusCode, const ServerConfig& serverConfig);
 };
 
 #endif

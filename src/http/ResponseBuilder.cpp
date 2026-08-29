@@ -11,5 +11,9 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
     
 }
 
+HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
+{
+    HttpResponse response;
+}
 
 
