@@ -13,7 +13,6 @@ private:
     std::map<std::string, std::string>  _headers;
     std::string                         _body;
 
-    static std::string statusTextFor(int code);
 
 public:
     HttpResponse();
@@ -25,6 +24,7 @@ public:
     void setHeader(const std::string& key, const std::string& value);
     void setBody(const std::string& body);
     void appendBody(const std::string& data);
+    static std::string statusTextFor(int code);
 
     int                 getStatus() const;
     std::string         getHeader(const std::string& key) const;

@@ -1,6 +1,11 @@
 #include "ResponseBuilder.hpp"
 #include "RequestValidator.hpp"
 #include "Router.hpp"
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream> 
+
 
 // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
 HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConfig& serverConfig)
@@ -39,6 +44,37 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
 {
     HttpResponse response;
+    response.setStatus(statusCode);
+
+    std::map<int, std::string>::const_iterator it = serverConfig.errorPages.find(statusCode);
+    std::string body;
+    bool loaded = false;
+
+    if (it != serverConfig.errorPages.end())
+        loaded = readFile(it->second, body);   // config'teki path'i doğrudan dene
+
+    if (!loaded)
+    {
+        std::ostringstream html;
+        html << "<html><head><title>" << statusCode << "</title></head><body>"
+             << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
+             << "</body></html>";
+        body = html.str();
+    }
+
+    response.setHeader("Content-Type", "text/html");
+    response.setBody(body);
+    return response;
 }
 
+bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
+{
+    std::ifstream file(path.c_str(), std::ios::binary);
+    if (!file.is_open())
+        return false;
 
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    outContent = ss.str();
+    return true;
+}
