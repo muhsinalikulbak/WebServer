@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>405 - Method Not Allowed | WebServer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #08111f;
+            --panel: rgba(15, 23, 42, 0.88);
+            --border: rgba(148, 163, 184, 0.16);
+            --accent: #06b6d4;
+            --accent-2: #8b5cf6;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top left, rgba(6, 182, 212, 0.2), transparent 35%),
+                radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.16), transparent 32%),
+                var(--bg);
+            color: var(--text);
+            font-family: Inter, Arial, sans-serif;
+            padding: 24px;
+        }
+        .card {
+            width: min(520px, 100%);
+            padding: 40px 32px;
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            background: var(--panel);
+            backdrop-filter: blur(18px);
+            text-align: center;
+            box-shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
+        }
+        .code {
+            margin: 0;
+            font-size: clamp(4rem, 14vw, 6rem);
+            line-height: 1;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        h1 { margin: 12px 0 8px; font-size: 2rem; }
+        p { margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
+        a {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 14px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <p class="code">405</p>
+        <h1>Method Not Allowed</h1>
+        <p>The requested HTTP method is not supported for this resource.</p>
+        <a href="/">Go back home</a>
+    </main>
+</body>
+</html>
