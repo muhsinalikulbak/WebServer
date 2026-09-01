@@ -78,3 +78,14 @@ bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
     outContent = ss.str();
     return true;
 }
+
+
+bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, const LocationConfig& location)
+{
+    for (size_t i = 0; i < location.allowedMethods.size(); i++)
+    {
+        if (location.allowedMethods[i] == method)
+            return true;
+    }
+    return false;
+}
