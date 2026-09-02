@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string>
 #include <sstream> 
-
+#include <sys/stat.h>
 
 // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
 HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConfig& serverConfig)
@@ -38,7 +38,7 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
     else if (request.getMethod() == "delete")
         return handleDelete(request, *location);
 
-    return buildErrorResponse(501, serverConfig); // buraya normalde düşmemeli
+    return buildErrorResponse(501, serverConfig);
 }
 
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
@@ -89,3 +89,51 @@ bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, c
     }
     return false;
 }
+
+HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const LocationConfig& location)
+{
+    HttpResponse response;
+    struct stat st;
+
+    if (stat(location.path.c_str(), &st) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            // Path yok 404
+        }
+        else if (errno == EACCES)
+        {
+            // Dizine ya da dosyaya izin yok 403
+        }
+        else if (errno == ENAMETOOLONG)
+        {
+            // Path çok uzun 414
+        }
+        else
+        {
+            //  Beklenmeyen durum 500 Internal server error 
+        }
+    }
+
+    if (S_ISDIR(st.st_mode))
+    {
+        // Location index olup olmadığını nasıl anlayacağım.
+        // Location index stringi mevcut ama içi boş olabilir.
+        // std::ifstream file("index.html")
+    }
+    else if (S_ISREG(st.st_mode))
+    {
+        std::ifstream file(location.path.c_str(), std::ios::binary);
+        if (!file.is_open())
+        {
+            // Internal server error dönülecek 500
+        }
+
+        std::ostringstream os;
+        os << file.rdbuf();
+        response.setBody(os.str());
+        response.setStatus(200);
+    }
+}
+
+
