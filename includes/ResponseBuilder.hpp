@@ -25,9 +25,10 @@ private:
     ~ResponseBuilder();
 
     // --- Method bazlı işlemler ---
-    static HttpResponse handleGet(const HttpRequest& request, const LocationConfig& location);
-    static HttpResponse handlePost(const HttpRequest& request, const LocationConfig& location, size_t clientMaxBodySize);
-    static HttpResponse handleDelete(const HttpRequest& request, const LocationConfig& location);
+    // ResponseBuilder.hpp
+    static HttpResponse handleGet(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
+    static HttpResponse handlePost(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
+    static HttpResponse handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
 
     // --- Yönlendirme / kontrol yardımcıları ---
     static bool         isMethodAllowedForLocation(const std::string& method, const LocationConfig& location);
