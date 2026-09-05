@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream> 
 #include <sys/stat.h>
+#include <dirent.h>   // opendir/readdir/closedir için
 
 // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
 HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConfig& serverConfig)
@@ -101,12 +102,16 @@ std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, con
     std::string remainder = requestPath.substr(location.path.length());
 
     if (remainder.find("..") != std::string::npos)
-        return ""; // traversal denemesi -> caller 403 dönmeli
+        return "";
 
     std::string root = location.root;
-    if (!root.empty() && root[root.length() - 1] == '/'
-        && !remainder.empty() && remainder[0] == '/')
-        root.erase(root.length() - 1); // çift slash olmasın
+    bool rootEndsSlash = !root.empty() && root[root.length() - 1] == '/';
+    bool remainderStartsSlash = !remainder.empty() && remainder[0] == '/';
+
+    if (rootEndsSlash && remainderStartsSlash)
+        root.erase(root.length() - 1);          // çift slash -> tekine indir
+    else if (!rootEndsSlash && !remainderStartsSlash)
+        root += "/";                             // slash yok -> ekle
 
     return root + remainder;
 }
@@ -161,18 +166,27 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
 
     if (isDirectory(filePath))
     {
-        if (location.index.empty())
-            return buildErrorResponse(403, serverConfig); // autoindex yoksa (varsa buildAutoindexPage çağır)
+        std::string dirPath = filePath;
+        if (dirPath[dirPath.length() - 1] != '/')
+            dirPath += "/";
 
-        std::string indexPath = filePath;
-        if (indexPath[indexPath.length() - 1] != '/')
-            indexPath += "/";
-        indexPath += location.index;
+        bool indexFound = false;
+        if (!location.index.empty())
+        {
+            std::string indexPath = dirPath + location.index;
+            if (pathExists(indexPath) && !isDirectory(indexPath))
+            {
+                filePath = indexPath;
+                indexFound = true;
+            }
+        }
 
-        if (!pathExists(indexPath) || isDirectory(indexPath))
-            return buildErrorResponse(404, serverConfig);
-
-        filePath = indexPath;
+        if (!indexFound)
+        {
+            if (location.autoindex)
+                return buildAutoindexPage(dirPath, request.getPath());
+            return buildErrorResponse(403, serverConfig);
+        }
     }
 
     std::string body;
@@ -184,5 +198,59 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
     response.setHeader("Content-Type", getContentType(filePath));
     response.setBody(body); // HEAD ise body'yi serialize() aşamasında dışarıda bırak, burada aynı kalsın
 
+    return response;
+}
+
+
+// dirPath: diskteki gerçek dizin path'i (resolveFilePath sonucu)
+// requestPath: client'ın istediği URL (linkleri doğru üretmek için)
+// Dizin içeriğini basit bir HTML listesi olarak döner (nginx autoindex benzeri).
+
+HttpResponse ResponseBuilder::buildAutoindexPage(const std::string& dirPath, const std::string& requestPath)
+{
+    DIR* dir = opendir(dirPath.c_str());
+    HttpResponse response;
+
+    if (!dir)
+    {
+        response.setStatus(500);
+        response.setHeader("Content-Type", "text/html");
+        response.setBody("<html><body><h1>500 Internal Server Error</h1></body></html>");
+        return response;
+    }
+
+    std::string urlPrefix = requestPath;
+    if (urlPrefix.empty() || urlPrefix[urlPrefix.length() - 1] != '/')
+        urlPrefix += "/";
+
+    std::string diskPrefix = dirPath;
+    if (diskPrefix.empty() || diskPrefix[diskPrefix.length() - 1] != '/')
+        diskPrefix += "/";
+
+    std::ostringstream html;
+    html << "<html><head><title>Index of " << urlPrefix << "</title></head><body>";
+    html << "<h1>Index of " << urlPrefix << "</h1><hr><pre>";
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        std::string name = entry->d_name;
+        if (name == ".")
+            continue; // kendi dizinini listeleme, ama ".." kalsın (üst dizine link)
+
+        struct stat st;
+        std::string childDiskPath = diskPrefix + name;
+        bool isDir = (stat(childDiskPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
+
+        html << "<a href=\"" << urlPrefix << name << (isDir ? "/" : "") << "\">"
+             << name << (isDir ? "/" : "") << "</a>\n";
+    }
+
+    closedir(dir);
+    html << "</pre><hr></body></html>";
+
+    response.setStatus(200);
+    response.setHeader("Content-Type", "text/html");
+    response.setBody(html.str());
     return response;
 }
