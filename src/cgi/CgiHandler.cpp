@@ -1,6 +1,6 @@
 ﻿#include "CgiHandler.hpp"
 
-CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(nullptr)
+CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL)
 {
 }
 
