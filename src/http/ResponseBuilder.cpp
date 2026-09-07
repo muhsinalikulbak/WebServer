@@ -8,6 +8,24 @@
 #include <sys/stat.h>
 #include <dirent.h>   // opendir/readdir/closedir için
 
+static HttpResponse buildStatusResponse(int statusCode, const std::string& locationHeader)
+{
+    HttpResponse response;
+    std::ostringstream html;
+
+    response.setStatus(statusCode);
+    if (!locationHeader.empty())
+        response.setHeader("Location", locationHeader);
+
+    html << "<html><head><title>" << statusCode << "</title></head><body>"
+         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
+         << "</body></html>";
+
+    response.setHeader("Content-Type", "text/html");
+    response.setBody(html.str());
+    return response;
+}
+
 // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
 HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConfig& serverConfig)
 {
@@ -70,21 +88,9 @@ HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerCon
 
 HttpResponse ResponseBuilder::buildRedirect(const LocationConfig& location)
 {
-    HttpResponse response;
-    int statusCode = location.returnCode; // 301 / 302 --- 301 Kalıcı, 302 Geçiçi yönlendirme olduğunu söyler.
+    // 301 / 302 --- 301 Kalıcı, 302 Geçiçi yönlendirme olduğunu söyler.
 
-    response.setStatus(statusCode);
-    if (!location.returnUrl.empty()) 
-        response.setHeader("Location", location.returnUrl); // Güncel URL'dir.
-
-    std::ostringstream html;
-    html << "<html><head><title>" << statusCode << "</title></head><body>"
-         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
-         << "</body></html>";
-
-    response.setHeader("Content-Type", "text/html");
-    response.setBody(html.str());
-    return response;
+    return buildStatusResponse(location.returnCode, location.returnUrl); // Güncel URL'dir.
 }
 
 bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
@@ -176,6 +182,39 @@ std::string ResponseBuilder::getContentType(const std::string& path)
     return "text/plain"; // bilinmeyen extension -> text/plain fallback
 }
 
+
+HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
+{
+	HttpResponse response;
+	std::string filePath = resolveFilePath(request.getPath(), location);
+
+	if (filePath.empty())
+		return buildErrorResponse(403, serverConfig);
+	
+	if (!pathExists(filePath))
+		return buildErrorResponse(404, serverConfig);
+
+	// Dizin silmek yani recursive delete riskli ve zaten zorunlu değil
+	// o yüzden directory silme olmayacak.
+	if (isDirectory(filePath))
+		return buildErrorResponse(403, serverConfig);
+	
+	if (remove(filePath.c_str()) == 0)
+	{
+		response.setStatus(204);
+	}
+	else if (errno == EACCES || errno == EPERM)
+		return buildErrorResponse(403, serverConfig);
+	else if (errno == ENOENT)
+		return buildErrorResponse(404, serverConfig);
+	else
+		return buildErrorResponse(500, serverConfig);
+	
+	return response;
+		
+}
+
+
 HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     std::string filePath = resolveFilePath(request.getPath(), location);
@@ -188,6 +227,11 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
 
     if (isDirectory(filePath))
     {
+        // Relative link'lerin browser tarafından yanlış base URL ile çözülmesini engellemek için,
+        // nginx'in yaptığı gibi slash olmadan gelen dizin isteklerini 301 ile "/" eklenmiş URL'ye yönlendiriyoruz.
+        if (request.getPath().empty() || request.getPath()[request.getPath().length() - 1] != '/')
+            return buildStatusResponse(301, request.getPath() + "/");
+
         // Direction olduğu için, filePath değil artık dirPath olarak işlev görür.
         std::string dirPath = filePath;
         if (dirPath[dirPath.length() - 1] != '/')
@@ -196,7 +240,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
         bool indexFound = false;
         if (!location.index.empty())
         {
-            // var/www/index.html var mı ?
+            // var/www/images/index.html
             std::string indexPath = dirPath + location.index;
             if (pathExists(indexPath) && !isDirectory(indexPath))
             {
