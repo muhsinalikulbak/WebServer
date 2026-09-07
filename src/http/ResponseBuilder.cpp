@@ -68,6 +68,25 @@ HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerCon
     return response;
 }
 
+HttpResponse ResponseBuilder::buildRedirect(const LocationConfig& location)
+{
+    HttpResponse response;
+    int statusCode = location.returnCode; // 301 / 302 --- 301 Kalıcı, 302 Geçiçi yönlendirme olduğunu söyler.
+
+    response.setStatus(statusCode);
+    if (!location.returnUrl.empty()) 
+        response.setHeader("Location", location.returnUrl); // Güncel URL'dir.
+
+    std::ostringstream html;
+    html << "<html><head><title>" << statusCode << "</title></head><body>"
+         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
+         << "</body></html>";
+
+    response.setHeader("Content-Type", "text/html");
+    response.setBody(html.str());
+    return response;
+}
+
 bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
@@ -83,9 +102,11 @@ bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
 
 bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, const LocationConfig& location)
 {
+    // Buradaki toLowerCopy'e test ederken bir bak
+
     for (size_t i = 0; i < location.allowedMethods.size(); i++)
     {
-        if (location.allowedMethods[i] == method)
+        if (HttpRequest::toLowerCopy(location.allowedMethods[i]) == method)
             return true;
     }
     return false;
@@ -101,6 +122,7 @@ std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, con
 {
     std::string remainder = requestPath.substr(location.path.length());
 
+    // .. olayı ne ?
     if (remainder.find("..") != std::string::npos)
         return "";
 
@@ -166,6 +188,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
 
     if (isDirectory(filePath))
     {
+        // Direction olduğu için, filePath değil artık dirPath olarak işlev görür.
         std::string dirPath = filePath;
         if (dirPath[dirPath.length() - 1] != '/')
             dirPath += "/";
@@ -173,6 +196,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
         bool indexFound = false;
         if (!location.index.empty())
         {
+            // var/www/index.html var mı ?
             std::string indexPath = dirPath + location.index;
             if (pathExists(indexPath) && !isDirectory(indexPath))
             {
