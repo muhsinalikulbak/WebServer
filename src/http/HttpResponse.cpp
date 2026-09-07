@@ -18,6 +18,7 @@ std::string HttpResponse::statusTextFor(int code)
         case 404: return "Not Found";
         case 405: return "Method Not Allowed";
         case 408: return "Request Timeout";
+        case 409: return "Conflict";
         case 411: return "Length Required";
         case 413: return "Payload Too Large";
         case 414: return "URI Too Long";

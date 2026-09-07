@@ -182,6 +182,37 @@ std::string ResponseBuilder::getContentType(const std::string& path)
     return "text/plain"; // bilinmeyen extension -> text/plain fallback
 }
 
+HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
+{
+    if (location.uploadStore.empty())
+        return buildErrorResponse(403, serverConfig);
+        
+    if (pathExists(location.uploadStore))
+        return buildErrorResponse(409, serverConfig);
+    
+    if (isDirectory(location.uploadStore))
+        return buildErrorResponse(403, serverConfig);
+    
+    
+    HttpResponse response;
+    std::string filePath = resolveFilePath(location.uploadStore, location);
+
+    if (filePath.empty())
+        return buildErrorResponse(403, serverConfig);
+    
+    // Yüklenecek file/directory zaten varsa conflict dön
+    std::ofstream out(filePath.c_str(), std::ios::binary | std::ios::trunc);
+
+    if (!out.is_open())
+    {
+
+    }
+    out << request.getBody();
+    response.setStatus(201); 
+    
+    return response;
+}
+
 
 HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
