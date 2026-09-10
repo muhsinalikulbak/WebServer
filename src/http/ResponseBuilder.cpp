@@ -117,7 +117,7 @@ bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, c
     }
     return false;
 }
-
+    
 // requestPath (örn "/images/cat.png") ile matched location prefix'ini (location.path) çıkarıp
 // kalanı location.root ile birleştirir, gerçek disk path'ini üretir.
 // örn: location.path="/images", location.root="/var/www/static", requestPath="/images/cat.png"

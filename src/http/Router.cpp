@@ -5,12 +5,16 @@ bool Router::matchesLocationPath(const std::string& path, const std::string& loc
     size_t i;
     size_t locationSize;
 
+    // Root ise direk true
     if (locationPath == "/")
         return true;
 
+    // Empty ise geç
     if (locationPath.empty())
         return false;
 
+    // location size'den küçükse direk false
+    // Örneğin /path ile /xxxxpath 
     locationSize = locationPath.size();
     if (path.size() < locationSize)
         return false;
@@ -29,7 +33,7 @@ bool Router::matchesLocationPath(const std::string& path, const std::string& loc
     if (path.size() == locationSize)
         return true;
 
-        // Burada overflow yok mu
+    // Bu durumda path size , location size'dan büyüktür.
     return (path[locationSize] == '/');
 }
 
