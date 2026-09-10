@@ -1,4 +1,5 @@
 #include "CgiExecutor.hpp"
+#include "FdUtils.hpp"
 // Client sınıfının tanımına ihtiyaç duyacağımız için ekliyoruz
 // #include "Client.hpp" 
 
@@ -152,6 +153,11 @@ CgiHandler* CgiExecutor::execute(Client* client)
         
         close(pipeStdin[0]);  // Parent stdin'den okumayacak, child'a yazacak
         close(pipeStdout[1]); // Parent stdout'a yazmayacak, child'dan okuyacak
+
+        FdUtils::setNonBlocking(pipeStdout[0]);
+        FdUtils::setCloseOnExec(pipeStdout[0]);
+        FdUtils::setNonBlocking(pipeStdin[1]);
+        FdUtils::setCloseOnExec(pipeStdin[1]);
 
         // CgiHandler, Epoll'de okuma/yazma yapmak üzere dönülür
         // Okunacak yer: pipeStdout[0]
