@@ -4,6 +4,13 @@
 #include <iostream>
 #include <csignal>
 
+volatile sig_atomic_t g_shutdownRequested = 0;
+
+static void handleShutdownSignal(int signum)
+{
+	(void)signum;
+	g_shutdownRequested = 1;
+}
 
 int main(int argc, char** argv) 
 {
@@ -16,6 +23,8 @@ int main(int argc, char** argv)
 	std::string configPath = argv[1];
 	
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGINT, handleShutdownSignal);
+	signal(SIGTERM, handleShutdownSignal);
 
 	try
 	{	

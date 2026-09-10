@@ -62,9 +62,12 @@ Client::StreamState Client::receiveData()
     int byte = recv(_clientFd, buffer, 4096, 0);
 
     if (byte == -1) 
-    { 
-        perror("Recv() error"); 
-        return TRANSFER_ERROR; 
+    {
+        // Non-blocking sokette EAGAIN/EWOULDBLOCK/EINTR gerçek hata değildir; epoll ile tekrar denenecek.
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+            return TRANSFER_INCOMPLETE;
+        perror("Recv() error");
+        return TRANSFER_ERROR;
     }
 
     if (byte == 0)
@@ -105,6 +108,9 @@ Client::StreamState Client::sendData()
 
     if (byte == -1)
     {
+        // Non-blocking sokette EAGAIN/EWOULDBLOCK/EINTR gerçek hata değildir; EPOLLOUT ile tekrar denenir.
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+            return TRANSFER_INCOMPLETE;
         perror("Send() error");
         return TRANSFER_ERROR;  // Sistem hatası
     }

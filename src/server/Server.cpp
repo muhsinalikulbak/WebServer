@@ -249,7 +249,7 @@ void Server::run()
 {
 	_lastTimeoutCheck = std::time(NULL);
 
-	while (true)
+	while (!g_shutdownRequested)
 	{
 
 		int activeEvents = epoll_wait(_epollFd, &_events[0], _events.size(), 1000);

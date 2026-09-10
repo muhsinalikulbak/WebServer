@@ -39,6 +39,8 @@ bool Router::matchesLocationPath(const std::string& path, const std::string& loc
 
 const LocationConfig* Router::match(const std::string& path, const ServerConfig& config)
 {
+    // Location olmama durumunu kontrol edebilmek için
+    // Pointer dönülüyor. NULL Check ile hata olduğunu anlıyoruz, çağrılan fonksiyonda
     const LocationConfig* bestMatch;
     size_t bestLength;
     size_t i;
