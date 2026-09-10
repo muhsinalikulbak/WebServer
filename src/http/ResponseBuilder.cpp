@@ -64,7 +64,7 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
     if (isCgiRequest(request.getPath(), *location, cgiExt))
         return buildErrorResponse(501, serverConfig); // CGI fazı henüz yok
 
-    if (request.getMethod() == "get" || request.getMethod() == "head")
+    if (request.getMethod() == "get")
         return handleGet(request, *location, serverConfig);
     else if (request.getMethod() == "post")
         return handlePost(request, *location, serverConfig);
@@ -422,7 +422,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
     // Kaynak başarıyla bulundu ve üretildiğinde standart başarı kodu 200'dür.
     response.setStatus(200);
     response.setHeader("Content-Type", getContentType(filePath));
-    response.setBody(body); // HEAD ise body'yi serialize() aşamasında dışarıda bırak, burada aynı kalsın
+    response.setBody(body);
 
     return response;
 }

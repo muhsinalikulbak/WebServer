@@ -38,6 +38,7 @@ private:
     size_t          _headerCount;
     size_t          _contentLength;
     size_t          _chunkLength;
+    size_t          _chunkedTotalBytes;
     size_t          _bodyBytesRead;
     bool            _isChunked;    
     int             _errorCode;   // constructor ve reset()'te 400'e set edilir (default/fallback)

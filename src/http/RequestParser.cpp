@@ -12,6 +12,7 @@ RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBod
     _chunkedState = SIZE;
     _contentLength = 0;
     _chunkLength = 0;
+    _chunkedTotalBytes = 0;
     _bodyBytesRead = 0;
     _headerCount = 0;
     _isChunked = false;
@@ -248,6 +249,7 @@ void RequestParser::reset()
     _contentLength = 0;
     _bodyBytesRead = 0;
     _chunkLength = 0;
+    _chunkedTotalBytes = 0;
     _headerCount = 0;
     _isChunked = false;
     _chunkedState = SIZE;
@@ -313,6 +315,13 @@ bool RequestParser::chunkedBodyRemaining()
 
         size_t remaining = _chunkLength - _bodyBytesRead;
         size_t size = std::min(remaining, _buffer.size());
+
+        _chunkedTotalBytes += size;
+        if (_chunkedTotalBytes > _maxBodySize)
+        {
+            setError(413);
+            return false;
+        }
         
         _bodyBytesRead += size;
         _request.appendBody(_buffer.substr(0, size));
