@@ -6,6 +6,9 @@
 #include "CgiHandler.hpp"
 
 // Döngüsel bağımlılığı engellemek için
+class HttpRequest;
+struct LocationConfig;
+struct ServerConfig;
 class Client; 
 
 class CgiExecutor
@@ -29,6 +32,10 @@ public:
     void    setScriptPath(const std::string& path);
     void    setInterpreter(const std::string& interpreter);
     void    addEnv(const std::string& key, const std::string& value);
+    void    buildStandardEnv(const HttpRequest& request,
+                             const LocationConfig& location,
+                             const ServerConfig& serverConfig,
+                             const std::string& resolvedScriptPath);
 
     // CGI'yi çalıştırır ve iletişim kurmak için bir CgiHandler döndürür
     CgiHandler* execute(Client* client);
