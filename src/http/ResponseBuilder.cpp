@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <map>
 #include <sstream> 
 #include <sys/stat.h>
 #include <dirent.h>   // opendir/readdir/closedir için
@@ -27,6 +28,72 @@ static HttpResponse buildStatusResponse(int statusCode, const std::string& locat
     response.setHeader("Content-Type", "text/html");
     response.setBody(html.str());
     return response;
+}
+
+ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
+    const HttpRequest& request,
+    const ServerConfig& serverConfig,
+    HttpResponse& outErrorResponse,
+    std::string& outScriptPath,
+    std::string& outInterpreterPath)
+{
+    outScriptPath.clear();
+    outInterpreterPath.clear();
+
+    int validationCode = RequestValidator::validate(request);
+    if (validationCode)
+    {
+        outErrorResponse = buildErrorResponse(validationCode, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    const LocationConfig* location = Router::match(request.getPath(), serverConfig);
+    if (!location)
+    {
+        outErrorResponse = buildErrorResponse(404, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    if (location->returnCode != 0)
+    {
+        outErrorResponse = buildRedirect(*location);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    if (!isMethodAllowedForLocation(request.getMethod(), *location))
+    {
+        outErrorResponse = buildErrorResponse(405, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    std::string cgiExt;
+    if (!isCgiRequest(request.getPath(), *location, cgiExt))
+        return ROUTE_STATIC;
+
+    std::string scriptPath = resolveFilePath(request.getPath(), *location);
+    if (scriptPath.empty())
+    {
+        outErrorResponse = buildErrorResponse(403, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    if (!pathExists(scriptPath) || isDirectory(scriptPath))
+    {
+        outErrorResponse = buildErrorResponse(404, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    std::map<std::string, std::string>::const_iterator it =
+        location->cgiExtension.find(cgiExt);
+    if (it == location->cgiExtension.end())
+    {
+        outErrorResponse = buildErrorResponse(500, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
+    outScriptPath = scriptPath;
+    outInterpreterPath = it->second;
+    return ROUTE_CGI;
 }
 
 // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
@@ -149,6 +216,23 @@ bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, c
     }
     return false;
 }
+
+bool ResponseBuilder::isCgiRequest(const std::string& path, const LocationConfig& location, std::string& outExtension)
+{
+    outExtension.clear();
+
+    size_t slashPos = path.find_last_of('/');
+    size_t dotPos = path.find_last_of('.');
+    if (dotPos == std::string::npos)
+        return false;
+    if (slashPos != std::string::npos && dotPos < slashPos)
+        return false;
+    if (dotPos + 1 >= path.length())
+        return false;
+
+    outExtension = path.substr(dotPos);
+    return (location.cgiExtension.find(outExtension) != location.cgiExtension.end());
+}
     
 // requestPath (örn "/images/cat.png") ile matched location prefix'ini (location.path) çıkarıp
 // kalanı location.root ile birleştirir, gerçek disk path'ini üretir.
@@ -165,7 +249,6 @@ std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, con
 
     // ".." tespiti, üst dizinlere kaçış denemesini engellemek içindir.
     // Güvenlik ihlali riski olduğunda boş path döndürülerek üst katmanda 403 üretilir.
-    // Burası üst dizine gitmesi durumunu yakalamak için mi.
     if (remainder.find("..") != std::string::npos)
         return "";
 

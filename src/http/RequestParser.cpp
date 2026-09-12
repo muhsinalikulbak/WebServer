@@ -111,10 +111,10 @@ void RequestParser::checkAfterHeader()
         }
         else
             setError(400);
-
     }
     else
         _state = COMPLETE;
+    // HEADER SONRASI BİR ŞEY YOK DEMEKTİR, REQUEST BİTER.
 }
 
 // buffer'dan \r\n'e kadar bir satır çeker, tüketir

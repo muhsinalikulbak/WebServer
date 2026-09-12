@@ -5,6 +5,7 @@
 #include "HttpResponse.hpp"
 #include "ServerConfig.hpp"
 #include "LocationConfig.hpp"
+#include <map>
 #include <string>
 
 // Router ve RequestValidator gibi stateless bir utility class.
@@ -12,10 +13,22 @@
 class ResponseBuilder
 {
 public:
+    enum RouteResult
+    {
+        ROUTE_RESPOND_DIRECTLY,
+        ROUTE_STATIC,
+        ROUTE_CGI
+    };
+
     // Server'ın çağıracağı tek public giriş noktası.
     // İçeride sırasıyla RequestValidator::validate() ve Router::match() çağrılır,
     // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
     static HttpResponse build(const HttpRequest& request, const ServerConfig& serverConfig);
+    static RouteResult routeRequest(const HttpRequest& request,
+                                    const ServerConfig& serverConfig,
+                                    HttpResponse& outErrorResponse,
+                                    std::string& outScriptPath,
+                                    std::string& outInterpreterPath);
     static HttpResponse buildErrorResponse(int statusCode, const ServerConfig& serverConfig);
 private:
     // Stateless class - instance/copy engellensin
