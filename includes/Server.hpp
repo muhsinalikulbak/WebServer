@@ -42,6 +42,7 @@ private:
     void    unregisterHandler(EpollHandler* socket);
     void    handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state);
     void    reapCgiProcess(CgiHandler* handler);
+    void    startCgi(Client* client, epoll_event* event, const std::string& scriptPath, const std::string& interpreterPath);
 
     
 public:

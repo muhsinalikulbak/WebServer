@@ -3,6 +3,8 @@
 #include "RequestParser.hpp"
 #include "HttpResponse.hpp"
 #include "ResponseBuilder.hpp"
+#include "CgiExecutor.hpp"
+#include "Router.hpp"
 
 #include <cstring>
 #include <cerrno>
@@ -241,18 +243,34 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
     }
     else if (state == Client::TRANSFER_COMPLETE)
     {
+		ResponseBuilder::RouteResult routeResult;
+		HttpResponse response;
 
         client->setClientState(Client::PROCESSING_REQUEST);
 
-        const HttpResponse& response = ResponseBuilder::build(client->getRequest(), client->getServerConfig());
-		client->setWriteBuffer(response.serialize());
-		
-		event->events = EPOLLOUT;
+        std::string scriptPath;
+        std::string interpreterPath;
+        HttpResponse routeErrorResponse;
 
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
-		{
-			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
-		}
+        routeResult = ResponseBuilder::routeRequest(client->getRequest(), client->getServerConfig(),
+            routeErrorResponse, scriptPath, interpreterPath);
+
+        if (routeResult == ResponseBuilder::ROUTE_CGI)
+        {
+            startCgi(client, event, scriptPath, interpreterPath);
+            return;
+        }
+
+        if (routeResult == ResponseBuilder::ROUTE_RESPOND_DIRECTLY)
+            response = routeErrorResponse;
+        else
+            response = ResponseBuilder::build(client->getRequest(), client->getServerConfig());
+
+        client->setWriteBuffer(response.serialize());
+        event->events = EPOLLOUT;
+
+        if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
+            throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
     }
     // TRANSFER_INCOMPLETE ise hiçbir şey yapma, mevcut event ayarı (EPOLLIN) kalsın
 }
@@ -437,4 +455,34 @@ void Server::reapCgiProcess(CgiHandler* handler)
 	}
 	// result == pid: zaten normal şekilde bitmiş ve reap edildi.
 	// result == -1 (örn. ECHILD): yapacak bir şey yok, zaten reap edilmiş ya da pid geçersiz.
+}
+
+void Server::startCgi(Client* client, epoll_event* event,
+                      const std::string& scriptPath,
+                      const std::string& interpreterPath)
+{
+	const LocationConfig* location = Router::match(client->getRequest().getPath(), client->getServerConfig());
+
+	CgiExecutor executor;
+	if (location)
+		executor.buildStandardEnv(client->getRequest(), *location,
+		                          client->getServerConfig(), scriptPath);
+	executor.setScriptPath(scriptPath);
+	executor.setInterpreter(interpreterPath);
+
+	CgiHandler* cgiHandler = executor.execute(client);
+
+	if (!cgiHandler)
+	{
+		HttpResponse response = ResponseBuilder::buildErrorResponse(500, client->getServerConfig());
+		client->setWriteBuffer(response.serialize());
+		event->events = EPOLLOUT;
+
+		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
+			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+		return;
+	}
+
+	client->setActiveCgi(cgiHandler);
+	registerHandler(cgiHandler);
 }

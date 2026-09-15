@@ -77,6 +77,7 @@ public:
     StreamState         drainBuffer();
     StreamState         receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
     StreamState         sendData();           // Send() çağrısını yapacak fonksiyon
+    void                setActiveCgi(CgiHandler* cgi);
 };
 
 #endif

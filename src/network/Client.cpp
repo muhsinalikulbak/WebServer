@@ -45,6 +45,8 @@ bool                        Client::isBadRequest() const { return _parser.hasErr
 
 void                        Client::resetParser() { _parser.reset(); }
 
+void                        Client::setActiveCgi(CgiHandler* cgi) { _activeCgi = cgi; }
+
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
 Client::StreamState Client::processParserState(RequestParser::State state)
