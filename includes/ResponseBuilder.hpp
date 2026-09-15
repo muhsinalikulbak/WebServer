@@ -29,7 +29,9 @@ public:
                                     HttpResponse& outErrorResponse,
                                     std::string& outScriptPath,
                                     std::string& outInterpreterPath);
+
     static HttpResponse buildErrorResponse(int statusCode, const ServerConfig& serverConfig);
+    
 private:
     // Stateless class - instance/copy engellensin
     ResponseBuilder();

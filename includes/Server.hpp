@@ -4,6 +4,7 @@
 #include "Client.hpp"
 #include "Socket.hpp"
 #include "EpollHandler.hpp"
+#include "CgiHandler.hpp"
 
 #include <string>
 #include <map>
@@ -24,6 +25,7 @@ private:
     // Bu sayede kodda  bazı yerlerdeki static_cast<T> lere ihtiyacımız kalmaz.
     std::set<Socket*>               _listenSockets;
     std::set<Client*>               _clientSockets;
+    std::set<CgiHandler*>           _cgiHandlers;
 
     std::vector<struct epoll_event> _events;            // epoll_wait'in dolduracağı vector
     std::time_t                     _lastTimeoutCheck;
@@ -39,6 +41,7 @@ private:
     void    registerHandler(EpollHandler* socket);
     void    unregisterHandler(EpollHandler* socket);
     void    handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state);
+    void    reapCgiProcess(CgiHandler* handler);
 
     
 public:

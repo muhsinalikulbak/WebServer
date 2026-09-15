@@ -7,6 +7,8 @@
 #include <cstring>
 #include <cerrno>
 #include <cstdio>
+#include <sys/wait.h>
+#include <csignal>
 
 Server::Server()
 {
@@ -18,6 +20,7 @@ Server::~Server()
 {
 	std::set<Client *>::iterator client = _clientSockets.begin();
 	std::set<Socket *>::iterator sock = _listenSockets.begin();
+	std::set<CgiHandler *>::iterator cgi = _cgiHandlers.begin();
 
 
 	while (client != _clientSockets.end())
@@ -39,7 +42,16 @@ Server::~Server()
 		delete temp;
 	}
 
+	while (cgi != _cgiHandlers.end())
+	{
+		CgiHandler* temp = *cgi;
+		cgi++;
+		reapCgiProcess(temp);
+		delete temp;
+	}
+
 	// Dangling pointer'ları set<T> den temizliyoruz
+	_cgiHandlers.clear();
 	_clientSockets.clear();
 	_listenSockets.clear();
 
@@ -367,6 +379,10 @@ void	Server::registerHandler(EpollHandler* socket)
 	{
 		_clientSockets.insert(static_cast<Client*> (socket));
 	}
+	else if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
+	{
+		_cgiHandlers.insert(static_cast<CgiHandler*>(socket));
+	}
 }
 
 
@@ -390,5 +406,35 @@ void Server::unregisterHandler(EpollHandler* socket)
 	{
 		_clientSockets.erase(static_cast<Client*> (socket));
 	}
+	else if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
+	{
+		CgiHandler* cgiHandler = static_cast<CgiHandler*>(socket);
+		reapCgiProcess(cgiHandler);
+		_cgiHandlers.erase(cgiHandler);
+	}
 	delete socket;
+}
+
+void Server::reapCgiProcess(CgiHandler* handler)
+{
+	if (!handler)
+		return;
+
+	pid_t pid = handler->getPid();
+	if (pid <= 0)
+		return;
+
+	int status;
+	pid_t result = waitpid(pid, &status, WNOHANG);
+
+	if (result == 0)
+	{
+		// Child henüz bitmemiş ama biz bu handler'ı kapatıyoruz
+		// (timeout ya da client disconnect). Zorla sonlandırıp
+		// reap ediyoruz, zombie bırakmamak için.
+		kill(pid, SIGKILL);
+		waitpid(pid, &status, 0);
+	}
+	// result == pid: zaten normal şekilde bitmiş ve reap edildi.
+	// result == -1 (örn. ECHILD): yapacak bir şey yok, zaten reap edilmiş ya da pid geçersiz.
 }

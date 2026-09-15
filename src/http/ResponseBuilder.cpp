@@ -399,23 +399,43 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
 HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     // DELETE isteğinde hedef dosyayı güvenli biçimde kaldırmayı amaçlar.
-    // Önce URL->disk çözümlemesi ve varlık tipi doğrulanır, sonra silme denenir.
+    // POST ile aynı mantık: URL'den dosya adını çıkar, uploadStore ile birleştir.
     // errno tabanlı ayrım ile istemci hatası ve sunucu hatası birbirinden ayrılır.
 	HttpResponse response;
-	std::string filePath = resolveFilePath(request.getPath(), location);
 
-    // Çözümleme başarısızsa (örn. traversal) erişim ihlali kabul edilip 403 dönülür.
-	if (filePath.empty())
+    // uploadStore tanımsızsa bu location delete'e izin vermiyor kabul edilir.
+    if (location.uploadStore.empty())
 		return buildErrorResponse(403, serverConfig);
-	
+
+    const std::string& requestPath = request.getPath();
+    size_t slashPos = requestPath.find_last_of('/');
+    std::string filename;
+
+    if (slashPos == std::string::npos)
+        filename = requestPath;
+    else
+        filename = requestPath.substr(slashPos + 1);
+
+    // Boş isim veya ".." içeren isim hem belirsiz hedefe hem traversal riskine yol açar.
+    if (filename.empty() || filename.find("..") != std::string::npos)
+        return buildErrorResponse(400, serverConfig);
+
+    std::string filePath = location.uploadStore;
+    bool storeEndsSlash = !filePath.empty() && filePath[filePath.length() - 1] == '/';
+    bool filenameStartsSlash = !filename.empty() && filename[0] == '/';
+
+    if (storeEndsSlash && filenameStartsSlash)
+        filePath.erase(filePath.length() - 1);
+    else if (!storeEndsSlash && !filenameStartsSlash)
+        filePath += "/";
+
+    filePath += filename;
+
     // Silinecek kaynak yoksa doğru semantik 404'tür.
 	if (!pathExists(filePath))
 		return buildErrorResponse(404, serverConfig);
 
-	// Dizin silmek yani recursive delete riskli ve zaten zorunlu değil
-	// o yüzden directory silme olmayacak.
-    // Dizin silmeyi kapatmak, recursive delete riskini ve beklenmeyen veri kaybını önler.
-    // Bu nedenle dizin hedefinde işlem reddedilir ve 403 dönülür.
+	// Dizin silmek riskli, bu nedenle dizin hedefinde işlem reddedilir.
 	if (isDirectory(filePath))
 		return buildErrorResponse(403, serverConfig);
 	
@@ -432,7 +452,7 @@ HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const Loc
 		return buildErrorResponse(404, serverConfig);
     // Yukarıdakiler dışındaki işletim sistemi hataları sunucu iç hata sınıfına girer.
 	else
-		return buildErrorResponse(500, serverConfig); // Internal server error.
+		return buildErrorResponse(500, serverConfig);
 	
 	return response;
 		
