@@ -56,3 +56,22 @@ void CgiHandler::setOwner(Client* owner)
 {
     _owner = owner;
 }
+
+void CgiHandler::appendOutput(const std::string& data)
+{
+    _cgiOutputBuffer.append(data);
+}
+
+const std::string& CgiHandler::getOutputBuffer() const
+{
+    return _cgiOutputBuffer;
+}
+
+void CgiHandler::closeStdin()
+{
+    if (_stdinPipeFd != -1)
+    {
+        close(_stdinPipeFd);
+        _stdinPipeFd = -1;
+    }
+}

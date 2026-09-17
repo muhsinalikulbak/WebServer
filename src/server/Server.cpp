@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <sys/wait.h>
 #include <csignal>
+#include <sstream>
+#include <cstdlib>
 
 Server::Server()
 {
@@ -65,11 +67,11 @@ void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
 	std::string host;
-	int 		port = 0;
+	int	port = 0;
 
 	// Size parametrese tarihsel bir kalıntı
 	// Normalde eskiden bu poll'un kaç adet socket'i yöneteceğini temsil ederdi.
-	// Şimdi bu size socket eklendikteç dinamik olarak artıyor.
+	// Şimdi bu size socket eklendikçe dinamik olarak artıyor.
 	// O yüzden parametre sadece 0'dan büyük olmalı başka bir işe yaramıyor.
 
 	_epollFd = epoll_create(1);
@@ -89,7 +91,6 @@ void Server::init(const ConfigParser& config)
 			host = it->first;
 			port = it->second;
 
-			// Bu serverconfig'de bulunan listen listesindeki her ip:port s,]'yi baz alacak
 			Socket* sock = new Socket(host, port, servers[i]);
 
 			try
@@ -316,6 +317,11 @@ void Server::run()
 					perror("Client socket error");
 					unregisterHandler(sock);
 				}
+				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
+				{
+					perror("CGI pipe error");
+					finishCgiResponse(static_cast<CgiHandler*>(sock));
+				}
 			}
 			else if (_events[i].events & EPOLLIN)
 			{
@@ -329,10 +335,15 @@ void Server::run()
 					// Var olan client'dan request gelmiş
 					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
 				}
+				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
+				{
+					handleCgiReceive(static_cast<CgiHandler*>(sock));
+				}
 			}
 			else if (_events[i].events & EPOLLOUT)
 			{
-				handleClientSend(static_cast<Client*> (sock), &_events[i]);
+				if (sock->getType() == EpollHandler::HANDLER_CLIENT)
+					handleClientSend(static_cast<Client*>(sock), &_events[i]);
 			}
 		}
 		checkExpiredSockets();
@@ -484,5 +495,107 @@ void Server::startCgi(Client* client, epoll_event* event,
 	}
 
 	client->setActiveCgi(cgiHandler);
+	const std::string& body = client->getRequest().getBody();
+	if (!body.empty())
+		write(cgiHandler->getStdinFd(), body.data(), body.size());
+	cgiHandler->closeStdin();
 	registerHandler(cgiHandler);
+}
+
+void Server::handleCgiReceive(CgiHandler* cgiHandler)
+{
+	char buffer[4096];
+	ssize_t bytesRead = read(cgiHandler->getFd(), buffer, sizeof(buffer));
+
+	if (bytesRead > 0)
+	{
+		cgiHandler->appendOutput(std::string(buffer, bytesRead));
+		return;
+	}
+
+	if (bytesRead == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR))
+		return;
+
+	finishCgiResponse(cgiHandler);
+}
+
+void Server::finishCgiResponse(CgiHandler* cgiHandler)
+{
+	Client* client = cgiHandler->getOwner();
+	const std::string& rawOutput = cgiHandler->getOutputBuffer();
+
+	std::string::size_type headerEnd = rawOutput.find("\r\n\r\n");
+	std::string::size_type separatorLen = 4;
+
+	if (headerEnd == std::string::npos)
+	{
+		headerEnd = rawOutput.find("\n\n");
+		separatorLen = 2;
+	}
+
+	std::string headerBlock;
+	std::string body;
+
+	if (headerEnd == std::string::npos)
+		body = rawOutput;
+	else
+	{
+		headerBlock = rawOutput.substr(0, headerEnd);
+		body = rawOutput.substr(headerEnd + separatorLen);
+	}
+
+	HttpResponse response;
+	response.setStatus(200);
+	response.setHeader("Content-Type", "text/html");
+
+	if (!headerBlock.empty())
+	{
+		std::istringstream headerStream(headerBlock);
+		std::string line;
+
+		while (std::getline(headerStream, line))
+		{
+			if (!line.empty() && line[line.size() - 1] == '\r')
+				line.erase(line.size() - 1);
+			if (line.empty())
+				continue;
+
+			std::string::size_type colonPos = line.find(':');
+			if (colonPos == std::string::npos)
+				continue;
+
+			std::string key = line.substr(0, colonPos);
+			std::string value = line.substr(colonPos + 1);
+
+			while (!value.empty() && value[0] == ' ')
+				value.erase(0, 1);
+
+			if (key == "Status")
+			{
+				int code = std::atoi(value.c_str());
+				if (code > 0)
+					response.setStatus(code);
+			}
+			else
+				response.setHeader(key, value);
+		}
+	}
+
+	response.setBody(body);
+
+	if (client)
+	{
+		client->setActiveCgi(NULL);
+		client->setWriteBuffer(response.serialize());
+
+		struct epoll_event event;
+		std::memset(&event, 0, sizeof(event));
+		event.data.ptr = client;
+		event.events = EPOLLOUT;
+
+		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
+			std::cerr << "Error modifying client to EPOLLOUT after CGI: " << strerror(errno) << std::endl;
+	}
+
+	unregisterHandler(cgiHandler);
 }

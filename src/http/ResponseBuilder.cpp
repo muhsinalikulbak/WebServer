@@ -486,7 +486,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
             return buildStatusResponse(301, request.getPath() + "/");
 
         // Direction olduğu için, filePath değil artık dirPath olarak işlev görür.
-        // Buraya gerek aslında, sadece ekstra ekstra kontrol için.
+        // Buraya gerek aslında, sadece ekstra ekstra kontrol için. ******
         std::string dirPath = filePath;
         if (dirPath[dirPath.length() - 1] != '/')
             dirPath += "/";

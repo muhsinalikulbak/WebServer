@@ -73,6 +73,12 @@ class CgiHandler : public EpollHandler
 		Client*      getOwner() const;
 		void         setOwner(Client* owner);
 
+		/**** CGI OUTPUT BUFFER ****/
+
+		void         appendOutput(const std::string& data);
+		const std::string& getOutputBuffer() const;
+		void         closeStdin();
+
 };
 
 #endif

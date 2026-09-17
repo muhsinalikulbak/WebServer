@@ -65,7 +65,10 @@ Client::StreamState Client::receiveData()
 
     if (byte == -1) 
     {
-        // Non-blocking sokette EAGAIN/EWOULDBLOCK/EINTR gerçek hata değildir; epoll ile tekrar denenecek.
+        // EAGAIN/EWOULDBLOCK: Non-blocking socket'te veri henüz hazır değil (read) veya buffer dolu (write)
+        // Bu beklenen bir durumdur, socket daha sonra tekrar denenmelidir
+        // EINTR: Sistem çağrısı bir signal tarafından kesildi, socket/veri hatası değil
+        // epoll loop'u socket ready olduğunda işlemi otomatik tekrarlayacaktır
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
             return TRANSFER_INCOMPLETE;
         perror("Recv() error");
@@ -110,7 +113,9 @@ Client::StreamState Client::sendData()
 
     if (byte == -1)
     {
-        // Non-blocking sokette EAGAIN/EWOULDBLOCK/EINTR gerçek hata değildir; EPOLLOUT ile tekrar denenir.
+        // EAGAIN/EWOULDBLOCK: Non-blocking socket'te buffer dolu, daha sonra tekrar denenmelidir
+        // EINTR: Sistem çağrısı bir signal tarafından kesildi, socket/veri hatası değil
+        // EPOLLOUT event'i ile socket yazmaya hazır olduğunda işlem tekrarlanacaktır
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
             return TRANSFER_INCOMPLETE;
         perror("Send() error");

@@ -15,6 +15,9 @@
 #include <set>
 #include "ConfigParser.hpp"
 
+// extern: Bu değişkenin main.cpp'de tanımlandığını bildirir
+// volatile sig_atomic_t: Signal-safe global shutdown flag
+// Server ve diğer sınıfların bu değişkene erişebilmesi için extern kullanılır
 extern volatile sig_atomic_t g_shutdownRequested;
 
 class Server
@@ -43,6 +46,8 @@ private:
     void    handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state);
     void    reapCgiProcess(CgiHandler* handler);
     void    startCgi(Client* client, epoll_event* event, const std::string& scriptPath, const std::string& interpreterPath);
+    void    handleCgiReceive(CgiHandler* cgiHandler);
+    void    finishCgiResponse(CgiHandler* cgiHandler);
 
     
 public:
