@@ -323,16 +323,14 @@ void Server::run()
 					finishCgiResponse(static_cast<CgiHandler*>(sock));
 				}
 			}
-			else if (_events[i].events & EPOLLIN)
+			else if ((_events[i].events & EPOLLIN) || (_events[i].events & EPOLLHUP))
 			{
 				if (sock->getType() == EpollHandler::HANDLER_LISTEN)
 				{
-					// Yeni client'i epoll'a ekliyoruz.
 					acceptNewConnection(static_cast<Socket*> (sock));
 				}
 				else if (sock->getType() == EpollHandler::HANDLER_CLIENT)
 				{
-					// Var olan client'dan request gelmiş
 					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
 				}
 				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
