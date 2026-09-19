@@ -51,6 +51,8 @@ private:
     void    finishCgiResponse(CgiHandler* cgiHandler);
     void    registerCgiStdinWrite(CgiHandler* cgiHandler);
     void    handleCgiSend(CgiHandler* cgiHandler);
+    void    checkCgiTimeouts();
+    bool    peekCgiExitStatus(CgiHandler* cgiHandler, int& status);
 
     
 public:

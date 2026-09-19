@@ -41,6 +41,7 @@ class CgiHandler : public EpollHandler
 
 		pid_t       _pid;
 		Client*     _owner;          // Bu CGI hangi client için çalışıyor, response'u ona yazacağız
+		std::time_t _startTime;
 
 		std::string _cgiOutputBuffer; // stdout pipe'ından biriktirdiğimiz ham CGI çıktısı
 		std::string _stdinWriteBuffer; // client'tan gelen ama henüz script'e yazılmamış body kısmı
@@ -84,6 +85,10 @@ class CgiHandler : public EpollHandler
 		void               setStdinBuffer(const std::string& data);
 		const std::string& getStdinBuffer() const;
 		void               consumeStdinBuffer(size_t n);
+
+		/**** START TIME ****/
+
+		std::time_t        getStartTime() const;
 
 };
 

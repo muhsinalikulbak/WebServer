@@ -47,6 +47,8 @@ void                        Client::resetParser() { _parser.reset(); }
 
 void                        Client::setActiveCgi(CgiHandler* cgi) { _activeCgi = cgi; }
 
+CgiHandler*                 Client::getActiveCgi() const { return _activeCgi; }
+
 /**** READ WRITE / HELPER FUNCTIONS ****/
 
 Client::StreamState Client::processParserState(RequestParser::State state)

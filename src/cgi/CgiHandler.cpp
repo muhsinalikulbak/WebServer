@@ -1,12 +1,14 @@
 ﻿#include "CgiHandler.hpp"
 
-CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL)
+CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL), _startTime(std::time(NULL))
 {
 }
 
 CgiHandler::CgiHandler(int stdoutPipeFd, int stdinPipeFd, pid_t pid, Client* owner)
-    : _stdoutPipeFd(stdoutPipeFd), _stdinPipeFd(stdinPipeFd), _pid(pid), _owner(owner)
+    : _stdoutPipeFd(stdoutPipeFd), _stdinPipeFd(stdinPipeFd), _pid(pid), _owner(owner), _startTime(std::time(NULL))
 {
+    // _startTime: CGI başlangıç zamanı, her CGI isteği için yeni handler oluşturulduğunda bir kez set edilir
+    // Timeout kontrolü için kullanılır (10 saniye)
 }
 
 CgiHandler::~CgiHandler()
@@ -89,4 +91,9 @@ const std::string& CgiHandler::getStdinBuffer() const
 void CgiHandler::consumeStdinBuffer(size_t n)
 {
     _stdinWriteBuffer.erase(0, n);
+}
+
+std::time_t CgiHandler::getStartTime() const
+{
+    return _startTime;
 }

@@ -382,8 +382,57 @@ void Server::checkExpiredSockets()
         }
     }
 
+    checkCgiTimeouts();
+
     // 5 saniye geçtiyse zaman damgasını güncelle ve taramayı yap
     _lastTimeoutCheck = std::time(NULL);
+}
+
+void Server::checkCgiTimeouts()
+{
+    std::time_t now = std::time(NULL);
+    std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
+    std::set<CgiHandler*>::iterator end = _cgiHandlers.end();
+
+    while (it != end)
+    {
+        CgiHandler* current = *it;
+        it++;
+
+        if (now - current->getStartTime() > 10)
+        {
+            std::cerr << "[Timeout] CGI pid " << current->getPid() << " timed out, killing." << std::endl;
+
+            Client* client = current->getOwner();
+            if (client)
+            {
+                HttpResponse response = ResponseBuilder::buildErrorResponse(504, client->getServerConfig());
+                client->setActiveCgi(NULL);
+                client->setWriteBuffer(response.serialize());
+
+                struct epoll_event event;
+                std::memset(&event, 0, sizeof(event));
+                event.data.ptr = client;
+                event.events = EPOLLOUT;
+
+                if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
+                    std::cerr << "Error modifying client to EPOLLOUT after CGI timeout: " << strerror(errno) << std::endl;
+            }
+
+            unregisterHandler(current);
+        }
+    }
+}
+
+bool Server::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
+{
+    pid_t pid = cgiHandler->getPid();
+
+    if (pid <= 0)
+        return false;
+
+    pid_t result = waitpid(pid, &status, WNOHANG);
+    return (result == pid);
 }
 
 void	Server::registerHandler(EpollHandler* socket)
@@ -439,7 +488,10 @@ void Server::unregisterHandler(EpollHandler* socket)
 	}
 	else if (socket->getType() == EpollHandler::HANDLER_CLIENT)
 	{
-		_clientSockets.erase(static_cast<Client*> (socket));
+		Client* clientPtr = static_cast<Client*>(socket);
+		if (clientPtr->getActiveCgi())
+			clientPtr->getActiveCgi()->setOwner(NULL);
+		_clientSockets.erase(clientPtr);
 	}
 	else if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
 	{
@@ -565,6 +617,38 @@ void Server::finishCgiResponse(CgiHandler* cgiHandler)
 	{
 		headerBlock = rawOutput.substr(0, headerEnd);
 		body = rawOutput.substr(headerEnd + separatorLen);
+	}
+
+	if (rawOutput.empty())
+	{
+		int status = 0;
+		bool exited = peekCgiExitStatus(cgiHandler, status);
+		bool failed = !exited || (WIFEXITED(status) && WEXITSTATUS(status) != 0) || WIFSIGNALED(status);
+
+		if (failed)
+		{
+			std::cerr << "[CGI] Script produced no output and did not exit cleanly (pid "
+					   << cgiHandler->getPid() << ")." << std::endl;
+
+			Client* client = cgiHandler->getOwner();
+			if (client)
+			{
+				HttpResponse errorResponse = ResponseBuilder::buildErrorResponse(502, client->getServerConfig());
+				client->setActiveCgi(NULL);
+				client->setWriteBuffer(errorResponse.serialize());
+
+				struct epoll_event event;
+				std::memset(&event, 0, sizeof(event));
+				event.data.ptr = client;
+				event.events = EPOLLOUT;
+
+				if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
+					std::cerr << "Error modifying client to EPOLLOUT after CGI failure: " << strerror(errno) << std::endl;
+			}
+
+			unregisterHandler(cgiHandler);
+			return;
+		}
 	}
 
 	HttpResponse response;
