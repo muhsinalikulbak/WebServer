@@ -75,3 +75,18 @@ void CgiHandler::closeStdin()
         _stdinPipeFd = -1;
     }
 }
+
+void CgiHandler::setStdinBuffer(const std::string& data)
+{
+    _stdinWriteBuffer = data;
+}
+
+const std::string& CgiHandler::getStdinBuffer() const
+{
+    return _stdinWriteBuffer;
+}
+
+void CgiHandler::consumeStdinBuffer(size_t n)
+{
+    _stdinWriteBuffer.erase(0, n);
+}

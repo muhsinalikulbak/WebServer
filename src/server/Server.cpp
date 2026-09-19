@@ -295,9 +295,12 @@ void Server::run()
 		{
 			EpollHandler* sock = static_cast<EpollHandler*>(_events[i].data.ptr);
 
+			if (_liveHandlers.find(sock) == _liveHandlers.end())
+				continue; // Bu batch içinde daha önce silinmiş bir handler'a ait bayat event, atla.
+
 			// Client bir istek yollayıp ardından bağlantıyı kapatmak istediğini söyleyebilir.
 			// Bu durumda response gitmeli ardından bağlantı kapatılmalı
-			 
+
 			if (_events[i].events & EPOLLERR)
 			{
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
@@ -342,6 +345,8 @@ void Server::run()
 			{
 				if (sock->getType() == EpollHandler::HANDLER_CLIENT)
 					handleClientSend(static_cast<Client*>(sock), &_events[i]);
+				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
+					handleCgiSend(static_cast<CgiHandler*>(sock));
 			}
 		}
 		checkExpiredSockets();
@@ -410,11 +415,14 @@ void	Server::registerHandler(EpollHandler* socket)
 	{
 		_cgiHandlers.insert(static_cast<CgiHandler*>(socket));
 	}
+
+	_liveHandlers.insert(socket);
 }
 
 
 void Server::unregisterHandler(EpollHandler* socket)
 {
+	_liveHandlers.erase(socket);
 
 	// Burada close(fd) yerine epoll_ctl_del ile silmemizin sebebi cgi sırasında fd miras alınabilir
 	// Ve o process de kapanmadığı için buradaki epoll'dan otomatik olarak silinmeyebilir.
@@ -493,13 +501,29 @@ void Server::startCgi(Client* client, epoll_event* event,
 	}
 
 	client->setActiveCgi(cgiHandler);
+
 	const std::string& body = client->getRequest().getBody();
 	if (!body.empty())
-		write(cgiHandler->getStdinFd(), body.data(), body.size());
-	cgiHandler->closeStdin();
+	{
+		ssize_t written = write(cgiHandler->getStdinFd(), body.data(), body.size());
+		size_t sent = (written > 0) ? static_cast<size_t>(written) : 0;
+
+		if (sent < body.size())
+		{
+			cgiHandler->setStdinBuffer(body.substr(sent));
+			registerCgiStdinWrite(cgiHandler);
+		}
+		else
+			cgiHandler->closeStdin();
+	}
+	else
+		cgiHandler->closeStdin();
+
 	registerHandler(cgiHandler);
 }
 
+// BU client'da olduğu gibi Ayrı bir class içerisinde olabilir mi
+// Mesela handleReceive  Client.cpp de
 void Server::handleCgiReceive(CgiHandler* cgiHandler)
 {
 	char buffer[4096];
@@ -516,6 +540,7 @@ void Server::handleCgiReceive(CgiHandler* cgiHandler)
 
 	finishCgiResponse(cgiHandler);
 }
+
 
 void Server::finishCgiResponse(CgiHandler* cgiHandler)
 {
@@ -596,4 +621,39 @@ void Server::finishCgiResponse(CgiHandler* cgiHandler)
 	}
 
 	unregisterHandler(cgiHandler);
+}
+
+void Server::registerCgiStdinWrite(CgiHandler* cgiHandler)
+{
+	struct epoll_event event;
+	std::memset(&event, 0, sizeof(event));
+	event.data.ptr = cgiHandler;
+	event.events = EPOLLOUT;
+
+	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiHandler->getStdinFd(), &event) == -1)
+	{
+		std::cerr << "Error registering CGI stdin for EPOLLOUT: " << strerror(errno) << std::endl;
+		cgiHandler->closeStdin();
+	}
+}
+
+void Server::handleCgiSend(CgiHandler* cgiHandler)
+{
+	const std::string& buffer = cgiHandler->getStdinBuffer();
+
+	ssize_t written = write(cgiHandler->getStdinFd(), buffer.data(), buffer.size());
+
+	if (written == -1)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			return;
+		std::cerr << "CGI stdin write error: " << strerror(errno) << std::endl;
+		cgiHandler->closeStdin();
+		return;
+	}
+
+	cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
+
+	if (cgiHandler->getStdinBuffer().empty())
+		cgiHandler->closeStdin();
 }

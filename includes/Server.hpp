@@ -29,6 +29,7 @@ private:
     std::set<Socket*>               _listenSockets;
     std::set<Client*>               _clientSockets;
     std::set<CgiHandler*>           _cgiHandlers;
+    std::set<EpollHandler*>         _liveHandlers;
 
     std::vector<struct epoll_event> _events;            // epoll_wait'in dolduracağı vector
     std::time_t                     _lastTimeoutCheck;
@@ -48,6 +49,8 @@ private:
     void    startCgi(Client* client, epoll_event* event, const std::string& scriptPath, const std::string& interpreterPath);
     void    handleCgiReceive(CgiHandler* cgiHandler);
     void    finishCgiResponse(CgiHandler* cgiHandler);
+    void    registerCgiStdinWrite(CgiHandler* cgiHandler);
+    void    handleCgiSend(CgiHandler* cgiHandler);
 
     
 public:
