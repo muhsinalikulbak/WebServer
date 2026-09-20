@@ -349,21 +349,13 @@ void Server::run()
 					handleCgiSend(static_cast<CgiHandler*>(sock));
 			}
 		}
-		checkExpiredSockets();
+		checkTimeouts();
 	}
 }
 
 
-void Server::checkExpiredSockets()
+void Server::checkExpiredSockets(std::time_t now)
 {
-    std::time_t now = std::time(NULL);
-
-    // Eğer son kontrolden beri 5 saniye geçmediyse HİÇBİR ŞEY YAPMA, direkt dön!
-    if (now - _lastTimeoutCheck < 5)
-    {
-        return;
-    }
-
     std::set<Client*>::iterator it = _clientSockets.begin();
     std::set<Client*>::iterator end = _clientSockets.end();
 
@@ -381,16 +373,27 @@ void Server::checkExpiredSockets()
 			unregisterHandler(current);
         }
     }
+}
 
-    checkCgiTimeouts();
+void Server::checkTimeouts()
+{
+    std::time_t now = std::time(NULL);
+
+    // Eğer son kontrolden beri 5 saniye geçmediyse HİÇBİR ŞEY YAPMA, direkt dön!
+    if (now - _lastTimeoutCheck < 5)
+    {
+        return;
+    }
+
+    checkExpiredSockets(now);
+    checkCgiTimeouts(now);
 
     // 5 saniye geçtiyse zaman damgasını güncelle ve taramayı yap
     _lastTimeoutCheck = std::time(NULL);
 }
 
-void Server::checkCgiTimeouts()
+void Server::checkCgiTimeouts(std::time_t now)
 {
-    std::time_t now = std::time(NULL);
     std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
     std::set<CgiHandler*>::iterator end = _cgiHandlers.end();
 

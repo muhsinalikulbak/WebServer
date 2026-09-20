@@ -41,7 +41,8 @@ private:
     void    acceptNewConnection(Socket* masterSocket);
     void    handleClientReceive(Client* client, epoll_event *event);  // EPOLLIN: istemciden veri alma
     void    handleClientSend(Client* client, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
-    void    checkExpiredSockets();
+    void    checkExpiredSockets(std::time_t now);
+    void    checkTimeouts();
     void    registerHandler(EpollHandler* socket);
     void    unregisterHandler(EpollHandler* socket);
     void    handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state);
@@ -51,7 +52,7 @@ private:
     void    finishCgiResponse(CgiHandler* cgiHandler);
     void    registerCgiStdinWrite(CgiHandler* cgiHandler);
     void    handleCgiSend(CgiHandler* cgiHandler);
-    void    checkCgiTimeouts();
+    void    checkCgiTimeouts(std::time_t now);
     bool    peekCgiExitStatus(CgiHandler* cgiHandler, int& status);
 
     
