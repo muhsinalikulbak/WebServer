@@ -23,12 +23,14 @@ RequestParser::~RequestParser()
 {
 }
 
-
-RequestParser::State RequestParser::feed(const std::string& buffer)
+void RequestParser::append(const std::string& buffer)
 {
     if (!buffer.empty())
         _buffer.append(buffer);
-    
+}
+
+RequestParser::State RequestParser::feed()
+{
     while (_state != COMPLETE && _state != ERROR)
     {
 

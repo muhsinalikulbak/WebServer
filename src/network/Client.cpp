@@ -1,7 +1,7 @@
 #include "Client.hpp"
 
 
-Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _tempBuffer(), _parser(config.clientMaxBodySize)
+Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.clientMaxBodySize)
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
@@ -41,15 +41,17 @@ int                         Client::getErrorCode() const { return _parser.getErr
 
 void                        Client::setWriteBuffer(const std::string& response) { _writeBuffer = response; }
 
-bool                        Client::isBadRequest() const { return _parser.hasError(); }
-
-void                        Client::resetParser() { _parser.reset(); }
 
 void                        Client::setActiveCgi(CgiHandler* cgi) { _activeCgi = cgi; }
 
 CgiHandler*                 Client::getActiveCgi() const { return _activeCgi; }
 
+
 /**** READ WRITE / HELPER FUNCTIONS ****/
+
+bool                        Client::isBadRequest() const { return _parser.hasError(); }
+
+void                        Client::resetParser() { _parser.reset(); }
 
 Client::StreamState Client::processParserState(RequestParser::State state)
 {
@@ -86,25 +88,18 @@ Client::StreamState Client::receiveData()
         // 4- TCP fin paketi (kapanma) isteği recv
         return PEER_CLOSED;
     }
-    _tempBuffer.append(buffer, byte);
-    
+    _parser.append(std::string(buffer, byte));
 
-    // burada temp buffer silinip, parser'daki buffer'ı append edecek
-    // Public ayrı bir fonksiyon yazılabilir.
-    // append ayrı - feed ayrı olmuş olur.
-    
     if (_activeCgi)
         return TRANSFER_INCOMPLETE;
-    
-    RequestParser::State state = _parser.feed(_tempBuffer);
-    _tempBuffer.clear();
 
+    RequestParser::State state = _parser.feed();
     return processParserState(state);
 }
 
 Client::StreamState Client::drainBuffer()
 {
-    RequestParser::State state = _parser.feed(_tempBuffer);  // recv yok, sadece kalan buffer'ı işler
+    RequestParser::State state = _parser.feed();  // recv yok, sadece kalan buffer'ı işler
     return processParserState(state);
 }
 

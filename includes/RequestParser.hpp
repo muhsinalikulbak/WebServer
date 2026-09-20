@@ -67,7 +67,8 @@ public:
     ~RequestParser();
 
     // recv() sonrası çağrılır, kalan state'e göre devam eder
-    State               feed(const std::string& buffer);
+    State               feed();
+    void                append(const std::string& buffer);
     State               getState() const;
     bool                isComplete() const;
     bool                hasError() const;
