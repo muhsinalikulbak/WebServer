@@ -84,7 +84,7 @@ void Server::init(const ConfigParser& config)
 				sock->createSocket();
 				sock->bindSocket();
 				sock->startListening();
-				registerHandler(sock);
+				registerHandler(sock); // Epoll_Ctl_Add throw atıyor, bu yerden sonra zaten vectore ekleme olduğu için sorun yok
 			}
 			catch (const std::exception& e)
 			{
@@ -273,9 +273,6 @@ void Server::run()
 			if (_liveHandlers.find(sock) == _liveHandlers.end())
 				continue; // Bu batch içinde daha önce silinmiş bir handler'a ait bayat event, atla.
 
-			// Client bir istek yollayıp ardından bağlantıyı kapatmak istediğini söyleyebilir.
-			// Bu durumda response gitmeli ardından bağlantı kapatılmalı
-
 			if (_events[i].events & EPOLLERR)
 			{
 				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
@@ -376,13 +373,14 @@ void	Server::registerHandler(EpollHandler* socket)
 	event.events = EPOLLIN;
 
 
-	// Pool'a eklenecek soket dinleyen socket'de olabilir,
-	// Dinleyen bir socket'in client için açtığı socket'de olabilir.
+
+	// EPOLL_CTL_ADD CGI ortak olamaz mı ?
 
 	if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
 	{
 		_cgiManager.registerHandler(static_cast<CgiHandler*>(socket));
-		return;  // CgiManager epoll_ctl ADD + set insert + _liveHandlers insert yapar
+		return;  
+		// CgiManager epoll_ctl ADD + set insert + _liveHandlers insert yapar
 	}
 
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, socket->getFd(), &event) == -1)

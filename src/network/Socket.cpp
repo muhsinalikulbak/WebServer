@@ -103,6 +103,13 @@ void Socket::startListening()
   // dinleme sırasına alabileceği maksimum bekleyen (pending) bağlantı
   // talebi sayısını belirleyen sistem limitidir.
 
+  // Örneğin, ulimit sınırınız 1024 ve SOMAXCONN değeriniz 4096 iken
+  // sisteminize aynı anda 5000 bağlantı isteği geldiğinde:
+  // Sunucunuz dosya limiti bittiği için ilk 1024 kişiyi içeri alıp geri kalana kapıyı kapatır;
+  // içeri alınamayan kalan 3976 kişi ise sunucunuz yer açıp onları işleyene kadar 
+  // işletim sisteminin SOMAXCONN bekleme kuyruğunda sıraya girer.
+  // Eğer bu kuyruğa sığmayanlar olsaydı bu client'lar drop olurdu.
+  
   if (listen(_fd, SOMAXCONN) == -1)
   {
     throw std::runtime_error(std::string("Socket listen failed: ") + strerror(errno));

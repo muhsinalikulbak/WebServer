@@ -119,7 +119,6 @@ std::string HttpResponse::serialize() const
     std::map<std::string, std::string>::const_iterator it;
     for (it = _headers.begin(); it != _headers.end(); ++it)
     {
-        // Content-Length'i burada elle eklemiş olabilirsin, aşağıda tekrar eklenmesin diye atla
         if (it->first == "Content-Length")
             continue;
         out << it->first << ": " << it->second << "\r\n";
