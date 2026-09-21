@@ -9,6 +9,7 @@ namespace FdUtils
     void setTcpNodelay(int fd);
     void setReuseAddress(int fd);
     void setReusePort(int fd);
+    bool isTransientIoError(int err);
 }
 
 #endif
