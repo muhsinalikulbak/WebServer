@@ -528,11 +528,7 @@ void Server::startCgi(Client* client, epoll_event* event,
 	if (!cgiHandler)
 	{
 		HttpResponse response = ResponseBuilder::buildErrorResponse(500, client->getServerConfig());
-		client->setWriteBuffer(response.serialize());
-		event->events = EPOLLOUT;
-
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
-			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+		queueResponse(client, response, true);
 		return;
 	}
 
@@ -726,6 +722,8 @@ void Server::handleCgiSend(CgiHandler* cgiHandler)
 		cgiHandler->closeStdin();
 }
 
+// throwOnError: epoll_ctl hatası olduğunda exception fırlatır (true) veya sadece log yazar (false)
+// Mevcut koddaki davranışı korumak için: handleParsedRequest/startCgi'de true, checkCgiTimeouts/finishCgiResponse'da false
 void Server::queueResponse(Client* client, const HttpResponse& response, bool throwOnError)
 {
 	client->setWriteBuffer(response.serialize());
