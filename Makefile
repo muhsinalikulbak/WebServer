@@ -19,6 +19,7 @@ SRCS =	src/main.cpp \
 		src/utils/FdUtils.cpp  \
 		src/cgi/CgiExecutor.cpp  \
 		src/cgi/CgiHandler.cpp \
+			src/cgi/CgiResponseParser.cpp \
 
 
 		
