@@ -11,24 +11,32 @@
 #include <sys/stat.h>
 #include <dirent.h>   // opendir/readdir/closedir için
 
+// Üç farklı kullanım noktasında (status cevabı, hata fallback'i, upload başarısı)
+// birebir tekrarlanan HTML şablonunu tek yerden üretmek için yardımcıdır.
+// Kopyaların zamanla sürüklenmesini (drift) engeller; değişiklik tek noktada yapılır.
+static std::string buildStatusHtml(int statusCode)
+{
+    std::ostringstream html;
+    html << "<html><head><title>" << statusCode << "</title></head><body>"
+         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
+         << "</body></html>";
+    return html.str();
+}
+
 static HttpResponse buildStatusResponse(int statusCode, const std::string& locationHeader)
 {
     // Ortak status cevabı üretmek için tek noktadan body/header kurar.
     // Redirect gibi durumlarda aynı HTML şablonunu tekrar tekrar yazmamak amaçlanır.
     // Location header yalnızca gerçekten gerekli olduğunda eklenir.
     HttpResponse response;
-    std::ostringstream html;
+    std::string body = buildStatusHtml(statusCode);
 
     response.setStatus(statusCode);
     if (!locationHeader.empty())
         response.setHeader("Location", locationHeader);
 
-    html << "<html><head><title>" << statusCode << "</title></head><body>"
-         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
-         << "</body></html>";
-
     response.setHeader("Content-Type", "text/html");
-    response.setBody(html.str());
+    response.setBody(body);
     return response;
 }
 
@@ -174,13 +182,7 @@ HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerCon
     // Özel sayfa okunamazsa hata cevabını boş bırakmamak için fallback üretilir.
     // Böylece istemci her koşulda geçerli bir HTML body alır.
     if (!loaded)
-    {
-        std::ostringstream html;
-        html << "<html><head><title>" << statusCode << "</title></head><body>"
-             << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
-             << "</body></html>";
-        body = html.str();
-    }
+        body = buildStatusHtml(statusCode);
 
     response.setHeader("Content-Type", "text/html");
     response.setBody(body);
@@ -345,13 +347,8 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
     if (!alreadyExists)
         response.setHeader("Location", request.getPath());
 
-    std::ostringstream html;
-    html << "<html><head><title>" << statusCode << "</title></head><body>"
-         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
-         << "</body></html>";
-
     response.setHeader("Content-Type", "text/html");
-    response.setBody(html.str());
+    response.setBody(buildStatusHtml(statusCode));
     return response;
 }
 
