@@ -47,6 +47,12 @@ cleanup_temp_files() {
     fi
 }
 
+# Tüm temizlik işlemleri
+cleanup_all() {
+    stop_server
+    cleanup_temp_files
+}
+
 # Sunucuyu başlat
 start_server() {
     echo -e "${YELLOW}Starting webserver...${NC}"
@@ -81,8 +87,7 @@ stop_server() {
 }
 
 # Cleanup trap
-trap stop_server EXIT INT TERM
-trap cleanup_temp_files EXIT INT TERM
+trap cleanup_all EXIT INT TERM
 
 # Response'u normalize et (Date header gibi değişkenleri kaldır)
 normalize_response() {
