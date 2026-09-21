@@ -665,15 +665,7 @@ void Server::finishCgiResponse(CgiHandler* cgiHandler)
 	if (client)
 	{
 		client->setActiveCgi(NULL);
-		client->setWriteBuffer(response.serialize());
-
-		struct epoll_event event;
-		std::memset(&event, 0, sizeof(event));
-		event.data.ptr = client;
-		event.events = EPOLLOUT;
-
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
-			std::cerr << "Error modifying client to EPOLLOUT after CGI: " << strerror(errno) << std::endl;
+		queueResponse(client, response, false);
 	}
 
 	unregisterHandler(cgiHandler);
