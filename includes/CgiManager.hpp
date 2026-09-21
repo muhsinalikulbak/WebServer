@@ -36,6 +36,7 @@ public:
     bool    peekCgiExitStatus(CgiHandler* cgiHandler, int& status);
     void    startCgi(Client* client, const std::string& scriptPath, const std::string& interpreterPath);
     void    checkCgiTimeouts(std::time_t now);
+    void    finishCgiResponse(CgiHandler* cgiHandler);
     CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers);
     ~CgiManager();
 };

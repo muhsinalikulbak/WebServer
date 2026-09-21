@@ -302,7 +302,7 @@ void Server::run()
 				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
 				{
 					perror("CGI pipe error");
-					finishCgiResponse(static_cast<CgiHandler*>(sock));
+					_cgiManager.finishCgiResponse(static_cast<CgiHandler*>(sock));
 				}
 			}
 			else if ((_events[i].events & EPOLLIN) || (_events[i].events & EPOLLHUP))
@@ -456,106 +456,9 @@ void Server::handleCgiReceive(CgiHandler* cgiHandler)
 	if (bytesRead == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR))
 		return;
 
-	finishCgiResponse(cgiHandler);
+	_cgiManager.finishCgiResponse(cgiHandler);
 }
 
-
-void Server::finishCgiResponse(CgiHandler* cgiHandler)
-{
-	Client* client = cgiHandler->getOwner();
-	const std::string& rawOutput = cgiHandler->getOutputBuffer();
-
-	std::string::size_type headerEnd = rawOutput.find("\r\n\r\n");
-	std::string::size_type separatorLen = 4;
-
-	if (headerEnd == std::string::npos)
-	{
-		headerEnd = rawOutput.find("\n\n");
-		separatorLen = 2;
-	}
-
-	std::string headerBlock;
-	std::string body;
-
-	if (headerEnd == std::string::npos)
-		body = rawOutput;
-	else
-	{
-		headerBlock = rawOutput.substr(0, headerEnd);
-		body = rawOutput.substr(headerEnd + separatorLen);
-	}
-
-	if (rawOutput.empty())
-	{
-		int status = 0;
-		bool exited = _cgiManager.peekCgiExitStatus(cgiHandler, status);
-		bool failed = !exited || (WIFEXITED(status) && WEXITSTATUS(status) != 0) || WIFSIGNALED(status);
-
-		if (failed)
-		{
-			std::cerr << "[CGI] Script produced no output and did not exit cleanly (pid "
-					   << cgiHandler->getPid() << ")." << std::endl;
-
-			Client* client = cgiHandler->getOwner();
-			if (client)
-			{
-				HttpResponse errorResponse = ResponseBuilder::buildErrorResponse(502, client->getServerConfig());
-				client->setActiveCgi(NULL);
-				queueResponse(client, errorResponse, false);
-			}
-
-			unregisterHandler(cgiHandler);
-			return;
-		}
-	}
-
-	HttpResponse response;
-	response.setStatus(200);
-	response.setHeader("Content-Type", "text/html");
-
-	if (!headerBlock.empty())
-	{
-		std::istringstream headerStream(headerBlock);
-		std::string line;
-
-		while (std::getline(headerStream, line))
-		{
-			if (!line.empty() && line[line.size() - 1] == '\r')
-				line.erase(line.size() - 1);
-			if (line.empty())
-				continue;
-
-			std::string::size_type colonPos = line.find(':');
-			if (colonPos == std::string::npos)
-				continue;
-
-			std::string key = line.substr(0, colonPos);
-			std::string value = line.substr(colonPos + 1);
-
-			while (!value.empty() && value[0] == ' ')
-				value.erase(0, 1);
-
-			if (key == "Status")
-			{
-				int code = std::atoi(value.c_str());
-				if (code > 0)
-					response.setStatus(code);
-			}
-			else
-				response.setHeader(key, value);
-		}
-	}
-
-	response.setBody(body);
-
-	if (client)
-	{
-		client->setActiveCgi(NULL);
-		queueResponse(client, response, false);
-	}
-
-	unregisterHandler(cgiHandler);
-}
 
 void Server::handleCgiSend(CgiHandler* cgiHandler)
 {

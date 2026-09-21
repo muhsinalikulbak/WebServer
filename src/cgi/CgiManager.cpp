@@ -11,6 +11,7 @@
 #include "Router.hpp"
 #include "ResponseBuilder.hpp"
 #include "CgiExecutor.hpp"
+#include "CgiResponseParser.hpp"
 
 CgiManager::CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers)
     : _epollFd(epollFd), _liveHandlers(liveHandlers)
@@ -197,6 +198,46 @@ void CgiManager::checkCgiTimeouts(std::time_t now)
             unregisterHandler(current);
         }
     }
+}
+
+void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
+{
+	Client* client = cgiHandler->getOwner();
+	const std::string& rawOutput = cgiHandler->getOutputBuffer();
+
+	if (rawOutput.empty())
+	{
+		int status = 0;
+		bool exited = peekCgiExitStatus(cgiHandler, status);
+		bool failed = !exited || (WIFEXITED(status) && WEXITSTATUS(status) != 0) || WIFSIGNALED(status);
+
+		if (failed)
+		{
+			std::cerr << "[CGI] Script produced no output and did not exit cleanly (pid "
+					   << cgiHandler->getPid() << ")." << std::endl;
+
+			Client* client = cgiHandler->getOwner();
+			if (client)
+			{
+				HttpResponse errorResponse = ResponseBuilder::buildErrorResponse(502, client->getServerConfig());
+				client->setActiveCgi(NULL);
+				queueResponse(client, errorResponse, false);
+			}
+
+			unregisterHandler(cgiHandler);
+			return;
+		}
+	}
+
+	HttpResponse response = CgiResponseParser::parse(rawOutput);
+
+	if (client)
+	{
+		client->setActiveCgi(NULL);
+		queueResponse(client, response, false);
+	}
+
+	unregisterHandler(cgiHandler);
 }
 
 

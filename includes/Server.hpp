@@ -48,7 +48,6 @@ private:
     void    unregisterHandler(EpollHandler* socket);
     void    handleParsedRequest(Client* client, Client::StreamState state);
     void    handleCgiReceive(CgiHandler* cgiHandler);
-    void    finishCgiResponse(CgiHandler* cgiHandler);
     void    handleCgiSend(CgiHandler* cgiHandler);
     void    queueResponse(Client* client, const HttpResponse& response, bool throwOnError);
 
