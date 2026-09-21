@@ -2,7 +2,7 @@
 #include "FdUtils.hpp"
 
 
-Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.clientMaxBodySize)
+Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.maxBodyCeiling())
 {
     _clientFd = fd;
     _lastActivity = std::time(NULL);
