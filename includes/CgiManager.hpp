@@ -27,7 +27,6 @@ private:
     CgiManager& operator=(const CgiManager& other);
 
     void    reapCgiProcess(CgiHandler* handler);
-    void    queueResponse(Client* client, const HttpResponse& response, bool throwOnError);
     void    registerCgiStdinWrite(CgiHandler* cgiHandler);
 
 public:

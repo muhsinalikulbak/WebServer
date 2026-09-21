@@ -13,6 +13,7 @@
 #include "CgiExecutor.hpp"
 #include "CgiResponseParser.hpp"
 #include "FdUtils.hpp"
+#include "ResponseQueue.hpp"
 
 CgiManager::CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers)
     : _epollFd(epollFd), _liveHandlers(liveHandlers)
@@ -98,24 +99,6 @@ bool CgiManager::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
     return (result == pid);
 }
 
-void CgiManager::queueResponse(Client* client, const HttpResponse& response, bool throwOnError)
-{
-    client->setWriteBuffer(response.serialize());
-
-    struct epoll_event event;
-    std::memset(&event, 0, sizeof(event));
-    event.data.ptr = client;
-    event.events = EPOLLOUT;
-
-    if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
-    {
-        if (throwOnError)
-            throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
-        else
-            std::cerr << "Error modifying client to EPOLLOUT: " << strerror(errno) << std::endl;
-    }
-}
-
 void CgiManager::registerCgiStdinWrite(CgiHandler* cgiHandler)
 {
     struct epoll_event event;
@@ -148,7 +131,7 @@ void CgiManager::startCgi(Client* client,
 	if (!cgiHandler)
 	{
 		HttpResponse response = ResponseBuilder::buildErrorResponse(500, client->getServerConfig());
-		queueResponse(client, response, true);
+		ResponseQueue::push(_epollFd, client, response, true);
 		return;
 	}
 
@@ -193,7 +176,7 @@ void CgiManager::checkCgiTimeouts(std::time_t now)
             {
                 HttpResponse response = ResponseBuilder::buildErrorResponse(504, client->getServerConfig());
                 client->setActiveCgi(NULL);
-                queueResponse(client, response, false);
+                ResponseQueue::push(_epollFd, client, response, false);
             }
 
             unregisterHandler(current);
@@ -222,7 +205,7 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 			{
 				HttpResponse errorResponse = ResponseBuilder::buildErrorResponse(502, client->getServerConfig());
 				client->setActiveCgi(NULL);
-				queueResponse(client, errorResponse, false);
+				ResponseQueue::push(_epollFd, client, errorResponse, false);
 			}
 
 			unregisterHandler(cgiHandler);
@@ -235,7 +218,7 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 	if (client)
 	{
 		client->setActiveCgi(NULL);
-		queueResponse(client, response, false);
+		ResponseQueue::push(_epollFd, client, response, false);
 	}
 
 	unregisterHandler(cgiHandler);

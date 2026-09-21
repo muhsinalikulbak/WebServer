@@ -47,7 +47,6 @@ private:
     void    registerHandler(EpollHandler* socket);
     void    unregisterHandler(EpollHandler* socket);
     void    handleParsedRequest(Client* client, Client::StreamState state);
-    void    queueResponse(Client* client, const HttpResponse& response, bool throwOnError);
 
     
 public:

@@ -6,6 +6,7 @@ CXXFLAGS =  -Wall -Wextra -Werror -std=c++98 -Iincludes
 SRCS =	src/main.cpp \
 		src/network/Socket.cpp \
 		src/network/Client.cpp \
+		src/network/ResponseQueue.cpp \
 		src/http/HttpRequest.cpp \
 		src/http/HttpResponse.cpp \
 		src/http/RequestParser.cpp \
