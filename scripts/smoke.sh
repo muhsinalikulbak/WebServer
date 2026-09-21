@@ -40,6 +40,13 @@ cleanup_upload_dir() {
     fi
 }
 
+# Geçici dosyaları temizle
+cleanup_temp_files() {
+    if [ -n "$TEMP_LARGE_FILE" ] && [ -f "$TEMP_LARGE_FILE" ]; then
+        rm -f "$TEMP_LARGE_FILE"
+    fi
+}
+
 # Sunucuyu başlat
 start_server() {
     echo -e "${YELLOW}Starting webserver...${NC}"
@@ -75,6 +82,7 @@ stop_server() {
 
 # Cleanup trap
 trap stop_server EXIT INT TERM
+trap cleanup_temp_files EXIT INT TERM
 
 # Response'u normalize et (Date header gibi değişkenleri kaldır)
 normalize_response() {
@@ -228,7 +236,33 @@ run_test "error_404" "GET" "/notfound"
 
 # Test 15: 413 Payload Too Large (büyük body)
 # 2M'den büyük bir body gönder
-run_test "error_413" "POST" "/upload/large.txt" "$(printf 'A%.0s' {1..3000000})"
+TEMP_LARGE_FILE=$(mktemp)
+head -c 3000000 /dev/zero | tr '\0' 'A' > "$TEMP_LARGE_FILE"
+response=$(curl -s -i -X POST --data-binary @"$TEMP_LARGE_FILE" "http://${HOST}:${PORT}/upload/large.txt" 2>/dev/null || echo "FAILED")
+normalized=$(normalize_response "$response")
+
+if [ "$MODE" = "generate" ]; then
+    echo "$normalized" > "$GOLDEN_DIR/error_413.txt"
+    echo -e "${GREEN}Saved: $GOLDEN_DIR/error_413.txt${NC}"
+else
+    if [ -f "$GOLDEN_DIR/error_413.txt" ]; then
+        local golden=$(cat "$GOLDEN_DIR/error_413.txt")
+        if [ "$normalized" = "$golden" ]; then
+            echo -e "${GREEN}PASS: error_413${NC}"
+        else
+            echo -e "${RED}FAIL: error_413${NC}"
+            echo "Expected:"
+            echo "$golden"
+            echo "Got:"
+            echo "$normalized"
+            echo ""
+            return 1
+        fi
+    else
+        echo -e "${RED}FAIL: error_413 (golden file not found)${NC}"
+        return 1
+    fi
+fi
 
 echo ""
 echo -e "${GREEN}All tests completed in $MODE mode${NC}"
