@@ -259,4 +259,23 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 	finishCgiResponse(cgiHandler);
 }
 
+void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
+{
+	const std::string& buffer = cgiHandler->getStdinBuffer();
 
+	ssize_t written = write(cgiHandler->getStdinFd(), buffer.data(), buffer.size());
+
+	if (written == -1)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			return;
+		std::cerr << "CGI stdin write error: " << strerror(errno) << std::endl;
+		cgiHandler->closeStdin();
+		return;
+	}
+
+	cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
+
+	if (cgiHandler->getStdinBuffer().empty())
+		cgiHandler->closeStdin();
+}

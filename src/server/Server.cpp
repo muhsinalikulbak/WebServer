@@ -325,7 +325,7 @@ void Server::run()
 				if (sock->getType() == EpollHandler::HANDLER_CLIENT)
 					handleClientSend(static_cast<Client*>(sock), &_events[i]);
 				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
-					handleCgiSend(static_cast<CgiHandler*>(sock));
+					_cgiManager.handleCgiSend(static_cast<CgiHandler*>(sock));
 			}
 		}
 		checkTimeouts();
@@ -438,27 +438,6 @@ void Server::unregisterHandler(EpollHandler* socket)
 		_clientSockets.erase(clientPtr);
 	}
 	delete socket;
-}
-
-void Server::handleCgiSend(CgiHandler* cgiHandler)
-{
-	const std::string& buffer = cgiHandler->getStdinBuffer();
-
-	ssize_t written = write(cgiHandler->getStdinFd(), buffer.data(), buffer.size());
-
-	if (written == -1)
-	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-			return;
-		std::cerr << "CGI stdin write error: " << strerror(errno) << std::endl;
-		cgiHandler->closeStdin();
-		return;
-	}
-
-	cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
-
-	if (cgiHandler->getStdinBuffer().empty())
-		cgiHandler->closeStdin();
 }
 
 // throwOnError: epoll_ctl hatası olduğunda exception fırlatır (true) veya sadece log yazar (false)

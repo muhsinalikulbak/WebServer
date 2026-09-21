@@ -38,6 +38,7 @@ public:
     void    checkCgiTimeouts(std::time_t now);
     void    finishCgiResponse(CgiHandler* cgiHandler);
     void    handleCgiReceive(CgiHandler* cgiHandler);
+    void    handleCgiSend(CgiHandler* cgiHandler);
     CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers);
     ~CgiManager();
 };
