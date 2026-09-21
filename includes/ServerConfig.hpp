@@ -24,6 +24,14 @@ public:
   std::map<int, std::string>  errorPages;                      // Hata Sayfaları: [404] = "/errors/404.html"
   std::vector<LocationConfig> locations;                      // İçindeki Location Blokları
 
+  // server limiti ve tüm location override'larının en büyüğü.
+  // RequestParser request'i routing'den ÖNCE okur, hangi location'a gideceğini bilmez;
+  // bu yüzden en gevşek limit tavan olarak kullanılır. Böylece büyük limitli location'a
+  // giden body parser'da yanlışlıkla 413 almaz.
+  size_t maxBodyCeiling() const;
+  // Bir location için geçerli limit: location override verdiyse o değer, yoksa server limiti.
+  size_t effectiveBodyLimit(const LocationConfig* loc) const;
+
   ServerConfig();
   ServerConfig(const std::string &allConf);
   ServerConfig(const ServerConfig &other);

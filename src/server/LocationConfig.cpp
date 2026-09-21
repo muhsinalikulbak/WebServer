@@ -10,6 +10,8 @@ LocationConfig::LocationConfig()
     returnCode = 0;
     uploadEnable = false;
     uploadStore = "";
+    clientMaxBodySize = 0;
+    hasClientMaxBodySize = false;
 }
 
 LocationConfig::LocationConfig(const LocationConfig& other)
@@ -31,6 +33,8 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other)
         uploadEnable = other.uploadEnable;
         uploadStore = other.uploadStore;
         cgiExtension = other.cgiExtension;
+        clientMaxBodySize = other.clientMaxBodySize;
+        hasClientMaxBodySize = other.hasClientMaxBodySize;
     }
     return *this;
 }

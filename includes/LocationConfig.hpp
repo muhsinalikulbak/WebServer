@@ -18,6 +18,8 @@ public:
     bool                                uploadEnable;
     std::string                         uploadStore;
     std::map<std::string, std::string>  cgiExtension;
+    size_t                              clientMaxBodySize;        // location bazlı limit; server limitini o location için ezer.
+    bool                                hasClientMaxBodySize;     // direktif verilmiş mi? (subject /post_body maxBody 100 şartı)
 
     LocationConfig();
     LocationConfig(const LocationConfig& other);

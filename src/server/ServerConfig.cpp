@@ -237,6 +237,14 @@ static void applyLocationDirective(LocationConfig &location,
           "Config parse error: cgi_ext requires extension and executable");
     location.cgiExtension[directive[1]] = directive[2];
   }
+  else if (key == "client_max_body_size")
+  {
+    if (directive.size() != 2)
+      throw std::invalid_argument(
+          "Config parse error: client_max_body_size expects a single value");
+    location.clientMaxBodySize = parseBodySize(directive[1]);
+    location.hasClientMaxBodySize = true;
+  }
   else
     throw std::invalid_argument(
         "Config parse error: unknown location directive: " + key);
@@ -400,3 +408,22 @@ ServerConfig &ServerConfig::operator=(const ServerConfig &other)
 }
 
 ServerConfig::~ServerConfig() {}
+
+size_t ServerConfig::maxBodyCeiling() const
+{
+  size_t ceiling = clientMaxBodySize;
+  for (std::vector<LocationConfig>::const_iterator it = locations.begin();
+       it != locations.end(); ++it)
+  {
+    if (it->hasClientMaxBodySize && it->clientMaxBodySize > ceiling)
+      ceiling = it->clientMaxBodySize;
+  }
+  return ceiling;
+}
+
+size_t ServerConfig::effectiveBodyLimit(const LocationConfig* loc) const
+{
+  if (loc != NULL && loc->hasClientMaxBodySize)
+    return loc->clientMaxBodySize;
+  return clientMaxBodySize;
+}
