@@ -19,6 +19,7 @@ SRCS =	src/main.cpp \
 		src/server/ServerConfig.cpp  \
 		src/utils/FdUtils.cpp  \
 		src/utils/FileUtils.cpp  \
+		src/utils/MimeTypes.cpp  \
 		src/cgi/CgiExecutor.cpp  \
 		src/cgi/CgiHandler.cpp \
 			src/cgi/CgiResponseParser.cpp \
