@@ -1,0 +1,6 @@
+HTTP/1.1 301 Moved Permanently
+Content-Type: text/html
+Location: https://example.com/new-path
+Content-Length: 104
+
+<html><head><title>301</title></head><body><center><h1>301 Moved Permanently</h1></center></body></html>

@@ -1,0 +1,6 @@
+HTTP/1.1 201 Created
+Content-Type: text/html
+Location: /upload/test100.txt
+Content-Length: 94
+
+<html><head><title>201</title></head><body><center><h1>201 Created</h1></center></body></html>

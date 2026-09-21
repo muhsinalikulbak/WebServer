@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Content-Length: 40
+
+READ_BYTES=17
+CONTENT=test data for cgi
