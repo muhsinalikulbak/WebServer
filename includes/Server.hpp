@@ -5,6 +5,7 @@
 #include "Socket.hpp"
 #include "EpollHandler.hpp"
 #include "CgiHandler.hpp"
+#include "HttpResponse.hpp"
 
 #include <string>
 #include <map>
