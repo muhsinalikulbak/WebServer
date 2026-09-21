@@ -159,7 +159,7 @@ void Server::acceptNewConnection(Socket* masterSocket)
 	}
 }
 
-void Server::handleClientReceive(Client* client, epoll_event *event)
+void Server::handleClientReceive(Client* client)
 {
 	try
 	{
@@ -323,7 +323,7 @@ void Server::run()
 				}
 				else if (sock->getType() == EpollHandler::HANDLER_CLIENT)
 				{
-					handleClientReceive(static_cast<Client*> (sock), &_events[i]);
+					handleClientReceive(static_cast<Client*> (sock));
 				}
 				else if (sock->getType() == EpollHandler::HANDLER_CGI_PIPE)
 				{

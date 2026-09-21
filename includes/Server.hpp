@@ -40,7 +40,7 @@ private:
     Server& operator=(const Server& other);
 
     void    acceptNewConnection(Socket* masterSocket);
-    void    handleClientReceive(Client* client, epoll_event *event);  // EPOLLIN: istemciden veri alma
+    void    handleClientReceive(Client* client);  // EPOLLIN: istemciden veri alma
     void    handleClientSend(Client* client, epoll_event *event);     // EPOLLOUT: istemciye veri gönderme
     void    checkExpiredSockets(std::time_t now);
     void    checkTimeouts();
