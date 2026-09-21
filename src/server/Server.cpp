@@ -251,7 +251,7 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
 
         if (routeResult == ResponseBuilder::ROUTE_CGI)
         {
-            startCgi(client, event, scriptPath, interpreterPath);
+            startCgi(client, scriptPath, interpreterPath);
             return;
         }
 
@@ -510,7 +510,7 @@ void Server::reapCgiProcess(CgiHandler* handler)
 	// result == -1 (örn. ECHILD): yapacak bir şey yok, zaten reap edilmiş ya da pid geçersiz.
 }
 
-void Server::startCgi(Client* client, epoll_event* event,
+void Server::startCgi(Client* client,
                       const std::string& scriptPath,
                       const std::string& interpreterPath)
 {
@@ -707,7 +707,10 @@ void Server::handleCgiSend(CgiHandler* cgiHandler)
 }
 
 // throwOnError: epoll_ctl hatası olduğunda exception fırlatır (true) veya sadece log yazar (false)
-// Mevcut koddaki davranışı korumak için: handleParsedRequest/startCgi'de true, checkCgiTimeouts/finishCgiResponse'da fals
+// Mevcut koddaki davranışı korumak için: handleParsedRequest/startCgi'de true, checkCgiTimeouts/finishCgiResponse'da false
+// Eski kodda her response üretilen yerde bu kodu tek tek yazıyordum ve bazı yerde throw fırlatırken
+// Bazı yerlerde sadece error mesajı basıyordum, bu yapıyı korumak için bir bool parametre ile bunu çözdüm.
+
 void Server::queueResponse(Client* client, const HttpResponse& response, bool throwOnError)
 {
 	client->setWriteBuffer(response.serialize());
