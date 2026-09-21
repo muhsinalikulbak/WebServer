@@ -4,8 +4,8 @@
 #include "Client.hpp"
 #include "Socket.hpp"
 #include "EpollHandler.hpp"
-#include "CgiHandler.hpp"
 #include "HttpResponse.hpp"
+#include "CgiManager.hpp"
 
 #include <string>
 #include <map>
@@ -29,12 +29,12 @@ private:
     // Bu sayede kodda  bazı yerlerdeki static_cast<T> lere ihtiyacımız kalmaz.
     std::set<Socket*>               _listenSockets;
     std::set<Client*>               _clientSockets;
-    std::set<CgiHandler*>           _cgiHandlers;
     std::set<EpollHandler*>         _liveHandlers;
 
     std::vector<struct epoll_event> _events;            // epoll_wait'in dolduracağı vector
     std::time_t                     _lastTimeoutCheck;
     int                             _epollFd;
+    CgiManager                      _cgiManager;
     
     Server(const Server& other);
     Server& operator=(const Server& other);
@@ -47,14 +47,10 @@ private:
     void    registerHandler(EpollHandler* socket);
     void    unregisterHandler(EpollHandler* socket);
     void    handleParsedRequest(Client* client, Client::StreamState state);
-    void    reapCgiProcess(CgiHandler* handler);
-    void    startCgi(Client* client, const std::string& scriptPath, const std::string& interpreterPath);
     void    handleCgiReceive(CgiHandler* cgiHandler);
     void    finishCgiResponse(CgiHandler* cgiHandler);
-    void    registerCgiStdinWrite(CgiHandler* cgiHandler);
     void    handleCgiSend(CgiHandler* cgiHandler);
     void    checkCgiTimeouts(std::time_t now);
-    bool    peekCgiExitStatus(CgiHandler* cgiHandler, int& status);
     void    queueResponse(Client* client, const HttpResponse& response, bool throwOnError);
 
     

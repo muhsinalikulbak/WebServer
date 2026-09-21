@@ -20,6 +20,7 @@ SRCS =	src/main.cpp \
 		src/cgi/CgiExecutor.cpp  \
 		src/cgi/CgiHandler.cpp \
 			src/cgi/CgiResponseParser.cpp \
+			src/cgi/CgiManager.cpp \
 
 
 		

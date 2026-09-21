@@ -15,6 +15,7 @@
 #include <cstdlib>
 
 Server::Server()
+	: _cgiManager(_epollFd, _liveHandlers)
 {
 	_epollFd = -1;
 	_lastTimeoutCheck = std::time(NULL);
@@ -24,8 +25,6 @@ Server::~Server()
 {
 	std::set<Client *>::iterator client = _clientSockets.begin();
 	std::set<Socket *>::iterator sock = _listenSockets.begin();
-	std::set<CgiHandler *>::iterator cgi = _cgiHandlers.begin();
-
 
 	while (client != _clientSockets.end())
 	{
@@ -46,16 +45,7 @@ Server::~Server()
 		delete temp;
 	}
 
-	while (cgi != _cgiHandlers.end())
-	{
-		CgiHandler* temp = *cgi;
-		cgi++;
-		reapCgiProcess(temp);
-		delete temp;
-	}
-
 	// Dangling pointer'ları set<T> den temizliyoruz
-	_cgiHandlers.clear();
 	_clientSockets.clear();
 	_listenSockets.clear();
 
@@ -251,7 +241,7 @@ void Server::handleParsedRequest(Client* client, Client::StreamState state)
 
         if (routeResult == ResponseBuilder::ROUTE_CGI)
         {
-            startCgi(client, scriptPath, interpreterPath);
+            _cgiManager.startCgi(client, scriptPath, interpreterPath);
             return;
         }
 
@@ -383,40 +373,8 @@ void Server::checkTimeouts()
 
 void Server::checkCgiTimeouts(std::time_t now)
 {
-    std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
-    std::set<CgiHandler*>::iterator end = _cgiHandlers.end();
-
-    while (it != end)
-    {
-        CgiHandler* current = *it;
-        it++;
-
-        if (now - current->getStartTime() > 10)
-        {
-            std::cerr << "[Timeout] CGI pid " << current->getPid() << " timed out, killing." << std::endl;
-
-            Client* client = current->getOwner();
-            if (client)
-            {
-                HttpResponse response = ResponseBuilder::buildErrorResponse(504, client->getServerConfig());
-                client->setActiveCgi(NULL);
-                queueResponse(client, response, false);
-            }
-
-            unregisterHandler(current);
-        }
-    }
-}
-
-bool Server::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
-{
-    pid_t pid = cgiHandler->getPid();
-
-    if (pid <= 0)
-        return false;
-
-    pid_t result = waitpid(pid, &status, WNOHANG);
-    return (result == pid);
+    // Geçici: Commit 10'da CgiManager'a taşınacak
+    (void)now;
 }
 
 void	Server::registerHandler(EpollHandler* socket)
@@ -431,6 +389,12 @@ void	Server::registerHandler(EpollHandler* socket)
 	// Pool'a eklenecek soket dinleyen socket'de olabilir,
 	// Dinleyen bir socket'in client için açtığı socket'de olabilir.
 
+	if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
+	{
+		_cgiManager.registerHandler(static_cast<CgiHandler*>(socket));
+		return;  // CgiManager epoll_ctl ADD + set insert + _liveHandlers insert yapar
+	}
+
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, socket->getFd(), &event) == -1)
 	{
 		throw std::runtime_error(std::string("Error epoll add: ") + strerror(errno));
@@ -444,10 +408,6 @@ void	Server::registerHandler(EpollHandler* socket)
 	{
 		_clientSockets.insert(static_cast<Client*> (socket));
 	}
-	else if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
-	{
-		_cgiHandlers.insert(static_cast<CgiHandler*>(socket));
-	}
 
 	_liveHandlers.insert(socket);
 }
@@ -455,6 +415,12 @@ void	Server::registerHandler(EpollHandler* socket)
 
 void Server::unregisterHandler(EpollHandler* socket)
 {
+	if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
+	{
+		_cgiManager.unregisterHandler(static_cast<CgiHandler*>(socket));
+		return;  // CgiManager epoll_ctl DEL + set erase + _liveHandlers erase yapar
+	}
+
 	_liveHandlers.erase(socket);
 
 	// Burada close(fd) yerine epoll_ctl_del ile silmemizin sebebi cgi sırasında fd miras alınabilir
@@ -477,81 +443,7 @@ void Server::unregisterHandler(EpollHandler* socket)
 			clientPtr->getActiveCgi()->setOwner(NULL);
 		_clientSockets.erase(clientPtr);
 	}
-	else if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
-	{
-		CgiHandler* cgiHandler = static_cast<CgiHandler*>(socket);
-		reapCgiProcess(cgiHandler);
-		_cgiHandlers.erase(cgiHandler);
-	}
 	delete socket;
-}
-
-void Server::reapCgiProcess(CgiHandler* handler)
-{
-	if (!handler)
-		return;
-
-	pid_t pid = handler->getPid();
-	if (pid <= 0)
-		return;
-
-	int status;
-	pid_t result = waitpid(pid, &status, WNOHANG);
-
-	if (result == 0)
-	{
-		// Child henüz bitmemiş ama biz bu handler'ı kapatıyoruz
-		// (timeout ya da client disconnect). Zorla sonlandırıp
-		// reap ediyoruz, zombie bırakmamak için.
-		kill(pid, SIGKILL);
-		waitpid(pid, &status, 0);
-	}
-	// result == pid: zaten normal şekilde bitmiş ve reap edildi.
-	// result == -1 (örn. ECHILD): yapacak bir şey yok, zaten reap edilmiş ya da pid geçersiz.
-}
-
-void Server::startCgi(Client* client,
-                      const std::string& scriptPath,
-                      const std::string& interpreterPath)
-{
-	const LocationConfig* location = Router::match(client->getRequest().getPath(), client->getServerConfig());
-
-	CgiExecutor executor;
-	if (location)
-		executor.buildStandardEnv(client->getRequest(), *location,
-		                          client->getServerConfig(), scriptPath);
-	executor.setScriptPath(scriptPath);
-	executor.setInterpreter(interpreterPath);
-
-	CgiHandler* cgiHandler = executor.execute(client);
-
-	if (!cgiHandler)
-	{
-		HttpResponse response = ResponseBuilder::buildErrorResponse(500, client->getServerConfig());
-		queueResponse(client, response, true);
-		return;
-	}
-
-	client->setActiveCgi(cgiHandler);
-
-	const std::string& body = client->getRequest().getBody();
-	if (!body.empty())
-	{
-		ssize_t written = write(cgiHandler->getStdinFd(), body.data(), body.size());
-		size_t sent = (written > 0) ? static_cast<size_t>(written) : 0;
-
-		if (sent < body.size())
-		{
-			cgiHandler->setStdinBuffer(body.substr(sent));
-			registerCgiStdinWrite(cgiHandler);
-		}
-		else
-			cgiHandler->closeStdin();
-	}
-	else
-		cgiHandler->closeStdin();
-
-	registerHandler(cgiHandler);
 }
 
 // BU client'da olduğu gibi Ayrı bir class içerisinde olabilir mi
@@ -602,7 +494,7 @@ void Server::finishCgiResponse(CgiHandler* cgiHandler)
 	if (rawOutput.empty())
 	{
 		int status = 0;
-		bool exited = peekCgiExitStatus(cgiHandler, status);
+		bool exited = _cgiManager.peekCgiExitStatus(cgiHandler, status);
 		bool failed = !exited || (WIFEXITED(status) && WEXITSTATUS(status) != 0) || WIFSIGNALED(status);
 
 		if (failed)
@@ -669,20 +561,6 @@ void Server::finishCgiResponse(CgiHandler* cgiHandler)
 	}
 
 	unregisterHandler(cgiHandler);
-}
-
-void Server::registerCgiStdinWrite(CgiHandler* cgiHandler)
-{
-	struct epoll_event event;
-	std::memset(&event, 0, sizeof(event));
-	event.data.ptr = cgiHandler;
-	event.events = EPOLLOUT;
-
-	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiHandler->getStdinFd(), &event) == -1)
-	{
-		std::cerr << "Error registering CGI stdin for EPOLLOUT: " << strerror(errno) << std::endl;
-		cgiHandler->closeStdin();
-	}
 }
 
 void Server::handleCgiSend(CgiHandler* cgiHandler)
