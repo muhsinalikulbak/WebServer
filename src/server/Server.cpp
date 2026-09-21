@@ -260,11 +260,7 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
         else
             response = ResponseBuilder::build(client->getRequest(), client->getServerConfig());
 
-        client->setWriteBuffer(response.serialize());
-        event->events = EPOLLOUT;
-
-        if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
-            throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+        queueResponse(client, response, true);
     }
     // TRANSFER_INCOMPLETE ise hiçbir şey yapma, mevcut event ayarı (EPOLLIN) kalsın
 }
