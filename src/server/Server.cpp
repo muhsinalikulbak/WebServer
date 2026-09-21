@@ -365,16 +365,10 @@ void Server::checkTimeouts()
     }
 
     checkExpiredSockets(now);
-    checkCgiTimeouts(now);
+    _cgiManager.checkCgiTimeouts(now);
 
     // 5 saniye geçtiyse zaman damgasını güncelle ve taramayı yap
     _lastTimeoutCheck = std::time(NULL);
-}
-
-void Server::checkCgiTimeouts(std::time_t now)
-{
-    // Geçici: Commit 10'da CgiManager'a taşınacak
-    (void)now;
 }
 
 void	Server::registerHandler(EpollHandler* socket)

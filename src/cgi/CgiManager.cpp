@@ -172,3 +172,31 @@ void CgiManager::startCgi(Client* client,
 	registerHandler(cgiHandler);
 }
 
+void CgiManager::checkCgiTimeouts(std::time_t now)
+{
+    std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
+    std::set<CgiHandler*>::iterator end = _cgiHandlers.end();
+
+    while (it != end)
+    {
+        CgiHandler* current = *it;
+        it++;
+
+        if (now - current->getStartTime() > 10)
+        {
+            std::cerr << "[Timeout] CGI pid " << current->getPid() << " timed out, killing." << std::endl;
+
+            Client* client = current->getOwner();
+            if (client)
+            {
+                HttpResponse response = ResponseBuilder::buildErrorResponse(504, client->getServerConfig());
+                client->setActiveCgi(NULL);
+                queueResponse(client, response, false);
+            }
+
+            unregisterHandler(current);
+        }
+    }
+}
+
+

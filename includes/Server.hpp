@@ -50,7 +50,6 @@ private:
     void    handleCgiReceive(CgiHandler* cgiHandler);
     void    finishCgiResponse(CgiHandler* cgiHandler);
     void    handleCgiSend(CgiHandler* cgiHandler);
-    void    checkCgiTimeouts(std::time_t now);
     void    queueResponse(Client* client, const HttpResponse& response, bool throwOnError);
 
     
