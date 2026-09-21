@@ -12,6 +12,7 @@
 #include "ResponseBuilder.hpp"
 #include "CgiExecutor.hpp"
 #include "CgiResponseParser.hpp"
+#include "FdUtils.hpp"
 
 CgiManager::CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers)
     : _epollFd(epollFd), _liveHandlers(liveHandlers)
@@ -253,7 +254,7 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 		return;
 	}
 
-	if (bytesRead == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR))
+	if (bytesRead == -1 && FdUtils::isTransientIoError(errno))
 		return;
 
 	finishCgiResponse(cgiHandler);
@@ -267,7 +268,7 @@ void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 
 	if (written == -1)
 	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+		if (FdUtils::isTransientIoError(errno))
 			return;
 		std::cerr << "CGI stdin write error: " << strerror(errno) << std::endl;
 		cgiHandler->closeStdin();

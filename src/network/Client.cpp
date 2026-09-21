@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include "FdUtils.hpp"
 
 
 Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.clientMaxBodySize)
@@ -73,7 +74,7 @@ Client::StreamState Client::receiveData()
         // Bu beklenen bir durumdur, socket daha sonra tekrar denenmelidir
         // EINTR: Sistem çağrısı bir signal tarafından kesildi, socket/veri hatası değil
         // epoll loop'u socket ready olduğunda işlemi otomatik tekrarlayacaktır
-        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+        if (FdUtils::isTransientIoError(errno))
             return TRANSFER_INCOMPLETE;
         perror("Recv() error");
         return TRANSFER_ERROR;
@@ -113,7 +114,7 @@ Client::StreamState Client::sendData()
         // EAGAIN/EWOULDBLOCK: Non-blocking socket'te buffer dolu, daha sonra tekrar denenmelidir
         // EINTR: Sistem çağrısı bir signal tarafından kesildi, socket/veri hatası değil
         // EPOLLOUT event'i ile socket yazmaya hazır olduğunda işlem tekrarlanacaktır
-        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+        if (FdUtils::isTransientIoError(errno))
             return TRANSFER_INCOMPLETE;
         perror("Send() error");
         return TRANSFER_ERROR;  // Sistem hatası
