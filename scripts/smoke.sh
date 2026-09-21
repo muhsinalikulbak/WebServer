@@ -235,9 +235,9 @@ run_test "error_405" "DELETE" "/"
 run_test "error_404" "GET" "/notfound"
 
 # Test 15: 413 Payload Too Large (büyük body)
-# 2M'den büyük bir body gönder
+# 10M'den büyük bir body gönder
 TEMP_LARGE_FILE=$(mktemp)
-head -c 3000000 /dev/zero | tr '\0' 'A' > "$TEMP_LARGE_FILE"
+head -c 11000000 /dev/zero | tr '\0' 'A' > "$TEMP_LARGE_FILE"
 response=$(curl -s -i -X POST --data-binary @"$TEMP_LARGE_FILE" "http://${HOST}:${PORT}/upload/large.txt" 2>/dev/null || echo "FAILED")
 normalized=$(normalize_response "$response")
 
@@ -246,7 +246,7 @@ if [ "$MODE" = "generate" ]; then
     echo -e "${GREEN}Saved: $GOLDEN_DIR/error_413.txt${NC}"
 else
     if [ -f "$GOLDEN_DIR/error_413.txt" ]; then
-        local golden=$(cat "$GOLDEN_DIR/error_413.txt")
+        golden=$(cat "$GOLDEN_DIR/error_413.txt")
         if [ "$normalized" = "$golden" ]; then
             echo -e "${GREEN}PASS: error_413${NC}"
         else
@@ -256,11 +256,11 @@ else
             echo "Got:"
             echo "$normalized"
             echo ""
-            return 1
+            exit 1
         fi
     else
         echo -e "${RED}FAIL: error_413 (golden file not found)${NC}"
-        return 1
+        exit 1
     fi
 fi
 
