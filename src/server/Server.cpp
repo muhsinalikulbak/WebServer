@@ -174,7 +174,7 @@ void Server::handleClientReceive(Client* client, epoll_event *event)
 			unregisterHandler(client);
 		}
 		else
-			handleParsedRequest(client, event, state);
+			handleParsedRequest(client, state);
 	}
 	catch (const std::exception& e)
 	{
@@ -218,7 +218,7 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 				}
 			}
 			else
-				handleParsedRequest(client, event, drainState);
+				handleParsedRequest(client, drainState);
 		}
 	}
 	catch (const std::exception& e)
@@ -228,7 +228,7 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 	}
 }
 
-void Server::handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state)
+void Server::handleParsedRequest(Client* client, Client::StreamState state)
 {
     if (state == Client::REQUEST_ERROR)
     {

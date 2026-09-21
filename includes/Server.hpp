@@ -46,7 +46,7 @@ private:
     void    checkTimeouts();
     void    registerHandler(EpollHandler* socket);
     void    unregisterHandler(EpollHandler* socket);
-    void    handleParsedRequest(Client* client, epoll_event* event, Client::StreamState state);
+    void    handleParsedRequest(Client* client, Client::StreamState state);
     void    reapCgiProcess(CgiHandler* handler);
     void    startCgi(Client* client, const std::string& scriptPath, const std::string& interpreterPath);
     void    handleCgiReceive(CgiHandler* cgiHandler);
