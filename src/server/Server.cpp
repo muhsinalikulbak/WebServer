@@ -233,14 +233,7 @@ void Server::handleParsedRequest(Client* client, epoll_event* event, Client::Str
     if (state == Client::REQUEST_ERROR)
     {
 		HttpResponse response = ResponseBuilder::buildErrorResponse(client->getErrorCode(), client->getServerConfig());
-		client->setWriteBuffer(response.serialize());
-
-		event->events = EPOLLOUT;
-
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), event) == -1)
-		{
-			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
-		}
+		queueResponse(client, response, true);
     }
     else if (state == Client::TRANSFER_COMPLETE)
     {
@@ -743,4 +736,22 @@ void Server::handleCgiSend(CgiHandler* cgiHandler)
 
 	if (cgiHandler->getStdinBuffer().empty())
 		cgiHandler->closeStdin();
+}
+
+void Server::queueResponse(Client* client, const HttpResponse& response, bool throwOnError)
+{
+	client->setWriteBuffer(response.serialize());
+
+	struct epoll_event event;
+	std::memset(&event, 0, sizeof(event));
+	event.data.ptr = client;
+	event.events = EPOLLOUT;
+
+	if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
+	{
+		if (throwOnError)
+			throw std::runtime_error(std::string("Error modifying to EPOLLOUT: ") + strerror(errno));
+		else
+			std::cerr << "Error modifying client to EPOLLOUT: " << strerror(errno) << std::endl;
+	}
 }

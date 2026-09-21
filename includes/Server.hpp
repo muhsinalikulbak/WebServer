@@ -54,6 +54,7 @@ private:
     void    handleCgiSend(CgiHandler* cgiHandler);
     void    checkCgiTimeouts(std::time_t now);
     bool    peekCgiExitStatus(CgiHandler* cgiHandler, int& status);
+    void    queueResponse(Client* client, const HttpResponse& response, bool throwOnError);
 
     
 public:
