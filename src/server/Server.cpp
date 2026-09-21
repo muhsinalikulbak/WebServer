@@ -3,16 +3,11 @@
 #include "RequestParser.hpp"
 #include "HttpResponse.hpp"
 #include "ResponseBuilder.hpp"
-#include "CgiExecutor.hpp"
-#include "Router.hpp"
 
 #include <cstring>
 #include <cerrno>
 #include <cstdio>
-#include <sys/wait.h>
 #include <csignal>
-#include <sstream>
-#include <cstdlib>
 
 Server::Server()
 	: _cgiManager(_epollFd, _liveHandlers)
