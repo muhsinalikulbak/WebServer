@@ -3,6 +3,7 @@
 #include "Router.hpp"
 #include "FileUtils.hpp"
 #include "MimeTypes.hpp"
+#include "ErrorResponse.hpp"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -10,35 +11,6 @@
 #include <sstream> 
 #include <sys/stat.h>
 #include <dirent.h>   // opendir/readdir/closedir için
-
-// Üç farklı kullanım noktasında (status cevabı, hata fallback'i, upload başarısı)
-// birebir tekrarlanan HTML şablonunu tek yerden üretmek için yardımcıdır.
-// Kopyaların zamanla sürüklenmesini (drift) engeller; değişiklik tek noktada yapılır.
-static std::string buildStatusHtml(int statusCode)
-{
-    std::ostringstream html;
-    html << "<html><head><title>" << statusCode << "</title></head><body>"
-         << "<center><h1>" << statusCode << " " << HttpResponse::statusTextFor(statusCode) << "</h1></center>"
-         << "</body></html>";
-    return html.str();
-}
-
-static HttpResponse buildStatusResponse(int statusCode, const std::string& locationHeader)
-{
-    // Ortak status cevabı üretmek için tek noktadan body/header kurar.
-    // Redirect gibi durumlarda aynı HTML şablonunu tekrar tekrar yazmamak amaçlanır.
-    // Location header yalnızca gerçekten gerekli olduğunda eklenir.
-    HttpResponse response;
-    std::string body = buildStatusHtml(statusCode);
-
-    response.setStatus(statusCode);
-    if (!locationHeader.empty())
-        response.setHeader("Location", locationHeader);
-
-    response.setHeader("Content-Type", "text/html");
-    response.setBody(body);
-    return response;
-}
 
 ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     const HttpRequest& request,
@@ -162,42 +134,13 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
     return buildErrorResponse(501, serverConfig);
 }
 
+// Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
-{
-    // Hata cevaplarını tek tip üretmek için merkez fonksiyondur.
-    // Önce config'teki özel error page dosyasını dener.
-    // Dosya yoksa her zaman güvenli bir fallback HTML üretir.
-    HttpResponse response;
-    response.setStatus(statusCode);
+{ return ErrorResponse::build(statusCode, serverConfig); }
 
-    std::map<int, std::string>::const_iterator it = serverConfig.errorPages.find(statusCode);
-    std::string body;
-    bool loaded = false;
-
-    // Config'te bu status için özel sayfa tanımlıysa onu yüklemeye çalışır.
-    // Amaç kullanıcıya daha anlaşılır ve özelleştirilebilir hata çıktısı vermektir.
-    if (it != serverConfig.errorPages.end())
-        loaded = readFile(it->second, body);   // config'teki path'i doğrudan dene
-
-    // Özel sayfa okunamazsa hata cevabını boş bırakmamak için fallback üretilir.
-    // Böylece istemci her koşulda geçerli bir HTML body alır.
-    if (!loaded)
-        body = buildStatusHtml(statusCode);
-
-    response.setHeader("Content-Type", "text/html");
-    response.setBody(body);
-    return response;
-}
-
+// Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
 HttpResponse ResponseBuilder::buildRedirect(const LocationConfig& location)
-{
-    // Location return kuralını HTTP redirect cevabına çevirir.
-    // Kodu ve hedef URL'yi tek noktadan üretmek davranış tutarlılığı sağlar.
-    // 301/302 seçimi config üzerinden geldiği için burada sadece uygulanır.
-    // 301 / 302 --- 301 Kalıcı, 302 Geçiçi yönlendirme olduğunu söyler.
-
-    return buildStatusResponse(location.returnCode, location.returnUrl); // Güncel URL'dir.
-}
+{ return ErrorResponse::redirect(location); }
 
 // Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
 bool ResponseBuilder::readFile(const std::string& path, std::string& outContent) { return FileUtils::readFile(path, outContent); }
@@ -340,16 +283,13 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
 
     // Yeni oluşturulan kaynakta 201 dönülerek resource creation semantiği korunur.
     // Var olan dosya üzerine yazmada yalnızca içerik güncellendiği için 200 yeterlidir.
-    HttpResponse response;
     int statusCode = alreadyExists ? 200 : 201;
-    response.setStatus(statusCode);
     // Location sadece yeni kaynak oluşturulduğunda istemciye canonical yolu bildirmek için eklenir.
-    if (!alreadyExists)
-        response.setHeader("Location", request.getPath());
-
-    response.setHeader("Content-Type", "text/html");
-    response.setBody(buildStatusHtml(statusCode));
-    return response;
+    // Varlık durumunda boş Location, ErrorResponse::redirect'te header'ın eklenmemesini sağlar.
+    LocationConfig respLoc;
+    respLoc.returnCode = statusCode;
+    respLoc.returnUrl = alreadyExists ? "" : request.getPath();
+    return buildRedirect(respLoc);
 }
 
 
@@ -440,7 +380,14 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
         // Dizine slash ile yönlendirme, relative asset linklerinin bozulmaması için kritiktir.
         // Bu yüzden kalıcı URL normalizasyonu olarak 301 tercih edilir.
         if (request.getPath().empty() || request.getPath()[request.getPath().length() - 1] != '/')
-            return buildStatusResponse(301, request.getPath() + "/");
+        {
+            // Slash eklenmiş URL'yi redirect olarak üretmek için geçici bir LocationConfig kurulur;
+            // ErrorResponse::redirect aynı buildStatusResponse yolunu kullanır (tek kaynak).
+            LocationConfig redirectLoc;
+            redirectLoc.returnCode = 301;
+            redirectLoc.returnUrl = request.getPath() + "/";
+            return buildRedirect(redirectLoc);
+        }
 
         // Direction olduğu için, filePath değil artık dirPath olarak işlev görür.
         // Buraya gerek aslında, sadece ekstra ekstra kontrol için. ******

@@ -11,6 +11,7 @@ SRCS =	src/main.cpp \
 		src/http/HttpResponse.cpp \
 		src/http/RequestParser.cpp \
 		src/http/ResponseBuilder.cpp \
+		src/http/ErrorResponse.cpp \
 		src/http/Router.cpp \
 		src/http/RequestValidator.cpp \
 		src/server/Server.cpp \
