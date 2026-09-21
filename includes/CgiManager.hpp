@@ -37,6 +37,7 @@ public:
     void    startCgi(Client* client, const std::string& scriptPath, const std::string& interpreterPath);
     void    checkCgiTimeouts(std::time_t now);
     void    finishCgiResponse(CgiHandler* cgiHandler);
+    void    handleCgiReceive(CgiHandler* cgiHandler);
     CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers);
     ~CgiManager();
 };

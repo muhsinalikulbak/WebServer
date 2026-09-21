@@ -240,4 +240,23 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 	unregisterHandler(cgiHandler);
 }
 
+// BU client'da olduğu gibi Ayrı bir class içerisinde olabilir mi
+// Mesela handleReceive  Client.cpp de
+void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
+{
+	char buffer[4096];
+	ssize_t bytesRead = read(cgiHandler->getFd(), buffer, sizeof(buffer));
+
+	if (bytesRead > 0)
+	{
+		cgiHandler->appendOutput(std::string(buffer, bytesRead));
+		return;
+	}
+
+	if (bytesRead == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR))
+		return;
+
+	finishCgiResponse(cgiHandler);
+}
+
 
