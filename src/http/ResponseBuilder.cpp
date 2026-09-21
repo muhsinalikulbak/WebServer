@@ -54,6 +54,15 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
         return ROUTE_RESPOND_DIRECTLY;
     }
 
+    // Parser sadece tavanı uygular; location'a özel gerçek limit route belli olduktan
+    // sonra burada uygulanır. Redirect/method kontrolünden önce olması, fazla büyük body'nin
+    // hangi handler'a gideceğinden bağımsız reddedilmesi içindir.
+    if (request.getBody().size() > serverConfig.effectiveBodyLimit(location))
+    {
+        outErrorResponse = buildErrorResponse(413, serverConfig);
+        return ROUTE_RESPOND_DIRECTLY;
+    }
+
     if (location->returnCode != 0)
     {
         outErrorResponse = buildRedirect(*location);
