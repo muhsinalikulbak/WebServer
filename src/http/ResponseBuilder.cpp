@@ -4,6 +4,7 @@
 #include "FileUtils.hpp"
 #include "MimeTypes.hpp"
 #include "ErrorResponse.hpp"
+#include "HttpStatusResponse.hpp"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -137,10 +138,10 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
 // Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
 { return ErrorResponse::build(statusCode, serverConfig); }
+// Gerçek üretim HttpStatusResponse modülüne taşındı; davranış birebir korunur.
 
-// Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
 HttpResponse ResponseBuilder::buildRedirect(const LocationConfig& location)
-{ return ErrorResponse::redirect(location); }
+{ return HttpStatusResponse::redirect(location); }
 
 // Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
 bool ResponseBuilder::readFile(const std::string& path, std::string& outContent) { return FileUtils::readFile(path, outContent); }
@@ -255,8 +256,8 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
     // Var olan dosya üzerine yazmada yalnızca içerik güncellendiği için 200 yeterlidir.
     int statusCode = alreadyExists ? 200 : 201;
     // Location sadece yeni kaynak oluşturulduğunda istemciye canonical yolu bildirmek için eklenir.
-    // Varlık durumunda boş Location, ErrorResponse::status'te header'ın eklenmemesini sağlar.
-    return ErrorResponse::status(statusCode, alreadyExists ? "" : request.getPath());
+    // Varlık durumunda boş Location, HttpStatusResponse::build'te header'ın eklenmemesini sağlar.
+    return HttpStatusResponse::build(statusCode, alreadyExists ? "" : request.getPath());
 }
 
 
@@ -336,7 +337,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
         if (request.getPath().empty() || request.getPath()[request.getPath().length() - 1] != '/')
         {
             // Slash eklenmiş URL'yi redirect olarak üretmek için geçici bir LocationConfig kurulur;
-            // ErrorResponse::redirect aynı buildStatusResponse yolunu kullanır (tek kaynak).
+            // HttpStatusResponse::redirect aynı HTML şablonunu kullanır (tek kaynak).
             LocationConfig redirectLoc;
             redirectLoc.returnCode = 301;
             redirectLoc.returnUrl = request.getPath() + "/";
