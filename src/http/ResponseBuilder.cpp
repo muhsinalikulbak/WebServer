@@ -264,11 +264,8 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
     // Var olan dosya üzerine yazmada yalnızca içerik güncellendiği için 200 yeterlidir.
     int statusCode = alreadyExists ? 200 : 201;
     // Location sadece yeni kaynak oluşturulduğunda istemciye canonical yolu bildirmek için eklenir.
-    // Varlık durumunda boş Location, ErrorResponse::redirect'te header'ın eklenmemesini sağlar.
-    LocationConfig respLoc;
-    respLoc.returnCode = statusCode;
-    respLoc.returnUrl = alreadyExists ? "" : request.getPath();
-    return buildRedirect(respLoc);
+    // Varlık durumunda boş Location, ErrorResponse::status'te header'ın eklenmemesini sağlar.
+    return ErrorResponse::status(statusCode, alreadyExists ? "" : request.getPath());
 }
 
 
