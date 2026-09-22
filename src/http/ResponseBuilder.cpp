@@ -137,14 +137,21 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
 
 // Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
-{ return ErrorResponse::build(statusCode, serverConfig); }
+{
+    return ErrorResponse::build(statusCode, serverConfig);
+}
 // Gerçek üretim HttpStatusResponse modülüne taşındı; davranış birebir korunur.
 
 HttpResponse ResponseBuilder::buildRedirect(const LocationConfig& location)
-{ return HttpStatusResponse::redirect(location); }
+{
+    return HttpStatusResponse::redirect(location);
+}
 
 // Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
-bool ResponseBuilder::readFile(const std::string& path, std::string& outContent) { return FileUtils::readFile(path, outContent); }
+bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
+{
+    return FileUtils::readFile(path, outContent);
+}
 
 
 bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, const LocationConfig& location)
