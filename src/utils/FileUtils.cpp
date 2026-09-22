@@ -29,6 +29,8 @@ bool FileUtils::isDirectory(const std::string& path)
 // Dosya içeriğini binary olarak tek seferde belleğe taşır.
 // Binary mod, satır sonu dönüşümü gibi platform etkilerini önleyerek
 // gönderilecek içeriğin diskteki haliyle birebir korunmasını sağlar.
+
+// Burada ss << file.rdbuf() her durumda içeriği bloklamadan yazıyor mu ?
 bool FileUtils::readFile(const std::string& path, std::string& outContent)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
@@ -39,4 +41,23 @@ bool FileUtils::readFile(const std::string& path, std::string& outContent)
     ss << file.rdbuf();
     outContent = ss.str();
     return true;
+}
+
+// İki path parçasını tek slash sınırıyla birleştirir: ikisi de slash ile bitip
+// başlıyorsa birini siler, hiçbiri değilse araya "/" ekler. Boş girdilerde de
+// aynı mantık işler (boş base + rest -> "/" + rest; boş rest -> base aynen kalır).
+// Neden: resolveFilePath (root+remainder) ve uploadStore+filename birleştirmelerindeki
+// çift-slash düzeltmesi tek noktada toplanır, kopya mantık taşınmaz.
+std::string FileUtils::joinPath(const std::string& base, const std::string& rest)
+{
+    std::string result = base;
+    bool baseEndsSlash = !result.empty() && result[result.length() - 1] == '/';
+    bool restStartsSlash = !rest.empty() && rest[0] == '/';
+
+    if (baseEndsSlash && restStartsSlash)
+        result.erase(result.length() - 1);      // çift slash -> tekine indir
+    else if (!baseEndsSlash && !restStartsSlash)
+        result += "/";                           // slash yok -> ekle
+
+    return result + rest;
 }

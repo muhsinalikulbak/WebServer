@@ -196,16 +196,8 @@ std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, con
     if (remainder.find("..") != std::string::npos)
         return "";
 
-    std::string root = location.root;
-    bool rootEndsSlash = !root.empty() && root[root.length() - 1] == '/';
-    bool remainderStartsSlash = !remainder.empty() && remainder[0] == '/';
-
-    if (rootEndsSlash && remainderStartsSlash)
-        root.erase(root.length() - 1);          // çift slash -> tekine indir
-    else if (!rootEndsSlash && !remainderStartsSlash)
-        root += "/";                             // slash yok -> ekle
-
-    return root + remainder;
+    // root ve remainder arasındaki slash normalizasyonu FileUtils::joinPath'te ortaklaşır.
+    return FileUtils::joinPath(location.root, remainder);
 }
 
 // Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
@@ -247,16 +239,9 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
     if (filename.empty() || filename.find("..") != std::string::npos)
         return buildErrorResponse(400, serverConfig);
 
-    std::string filePath = location.uploadStore;
-    bool storeEndsSlash = !filePath.empty() && filePath[filePath.length() - 1] == '/';
-    bool filenameStartsSlash = !filename.empty() && filename[0] == '/';
-
-    if (storeEndsSlash && filenameStartsSlash)
-        filePath.erase(filePath.length() - 1);
-    else if (!storeEndsSlash && !filenameStartsSlash)
-        filePath += "/";
-
-    filePath += filename;
+    // filename hiçbir zaman '/' ile başlamaz (lastPathSegment sonrası), dolayısıyla
+    // joinPath uploadStore ile aynı sonucu verir: varsa tek slash, yoksa "store/name".
+    std::string filePath = FileUtils::joinPath(location.uploadStore, filename);
 
     // Hedef path bir dizine denk geliyorsa dosya üzerine yazma yapılamaz.
     // Kaynak mevcut olsa da işlem yetkisiz/uygunsuz olduğu için 403 seçilir.
@@ -317,16 +302,9 @@ HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const Loc
     if (filename.empty() || filename.find("..") != std::string::npos)
         return buildErrorResponse(400, serverConfig);
 
-    std::string filePath = location.uploadStore;
-    bool storeEndsSlash = !filePath.empty() && filePath[filePath.length() - 1] == '/';
-    bool filenameStartsSlash = !filename.empty() && filename[0] == '/';
-
-    if (storeEndsSlash && filenameStartsSlash)
-        filePath.erase(filePath.length() - 1);
-    else if (!storeEndsSlash && !filenameStartsSlash)
-        filePath += "/";
-
-    filePath += filename;
+    // filename hiçbir zaman '/' ile başlamaz (lastPathSegment sonrası), dolayısıyla
+    // joinPath uploadStore ile aynı sonucu verir: varsa tek slash, yoksa "store/name".
+    std::string filePath = FileUtils::joinPath(location.uploadStore, filename);
 
     // Silinecek kaynak yoksa doğru semantik 404'tür.
 	if (!pathExists(filePath))
