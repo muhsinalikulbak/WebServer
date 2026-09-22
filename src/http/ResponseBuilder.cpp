@@ -68,7 +68,7 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
         return ROUTE_RESPOND_DIRECTLY;
     }
 
-    if (!pathExists(scriptPath) || isDirectory(scriptPath))
+    if (!FileUtils::pathExists(scriptPath) || FileUtils::isDirectory(scriptPath))
     {
         outErrorResponse = buildErrorResponse(404, serverConfig);
         return ROUTE_RESPOND_DIRECTLY;
@@ -200,15 +200,6 @@ std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, con
     return FileUtils::joinPath(location.root, remainder);
 }
 
-// Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
-bool ResponseBuilder::pathExists(const std::string& path) { return FileUtils::pathExists(path); }
-
-// Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
-bool ResponseBuilder::isDirectory(const std::string& path) { return FileUtils::isDirectory(path); }
-
-// Gerçek uygulama MimeTypes üzerine taşındı; davranış birebir korunur.
-std::string ResponseBuilder::getContentType(const std::string& path) { return MimeTypes::fromPath(path); }
-
 HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     // POST gövdesini uploadStore altına dosya olarak kaydeder.
@@ -222,7 +213,7 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
 
     // Upload hedefi diskte yoksa ya da dizin değilse istemci değil config hatasıdır.
     // Sunucu yanlış yapılandırıldığı için 500 Internal Server Error seçilir.
-    if (!pathExists(location.uploadStore) || !isDirectory(location.uploadStore))
+    if (!FileUtils::pathExists(location.uploadStore) || !FileUtils::isDirectory(location.uploadStore))
         return buildErrorResponse(500, serverConfig);
 
     // upload file adı, URL'nin son path parçasıdır (FileUtils'te ortaklaşır).
@@ -239,8 +230,8 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
 
     // Hedef path bir dizine denk geliyorsa dosya üzerine yazma yapılamaz.
     // Kaynak mevcut olsa da işlem yetkisiz/uygunsuz olduğu için 403 seçilir.
-    bool exists = pathExists(filePath);
-    if (exists && isDirectory(filePath))
+    bool exists = FileUtils::pathExists(filePath);
+    if (exists && FileUtils::isDirectory(filePath))
         return buildErrorResponse(403, serverConfig);
 
     bool alreadyExists = exists;
@@ -292,11 +283,11 @@ HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const Loc
     std::string filePath = FileUtils::joinPath(location.uploadStore, filename);
 
     // Silinecek kaynak yoksa doğru semantik 404'tür.
-	if (!pathExists(filePath))
+	if (!FileUtils::pathExists(filePath))
 		return buildErrorResponse(404, serverConfig);
 
 	// Dizin silmek riskli, bu nedenle dizin hedefinde işlem reddedilir.
-	if (isDirectory(filePath))
+	if (FileUtils::isDirectory(filePath))
 		return buildErrorResponse(403, serverConfig);
 	
 	if (std::remove(filePath.c_str()) == 0)
@@ -333,10 +324,10 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
         return buildErrorResponse(403, serverConfig);
 
     // Hedef yoksa istemci yanlış URL istemiştir; doğru yanıt 404'tür.
-    if (!pathExists(filePath))
+    if (!FileUtils::pathExists(filePath))
         return buildErrorResponse(404, serverConfig);
 
-    if (isDirectory(filePath))
+    if (FileUtils::isDirectory(filePath))
     {
         // Relative link'lerin browser tarafından yanlış base URL ile çözülmesini engellemek için,
         // nginx'in yaptığı gibi slash olmadan gelen dizin isteklerini 301 ile "/" eklenmiş URL'ye yönlendiriyoruz.
@@ -364,7 +355,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
             // Index dosyası varsa dizin görünümü yerine onu sunmak
             // klasik web server beklentisini korur.
             std::string indexPath = dirPath + location.index;
-            if (pathExists(indexPath) && !isDirectory(indexPath))
+            if (FileUtils::pathExists(indexPath) && !FileUtils::isDirectory(indexPath))
             {
                 filePath = indexPath;
                 indexFound = true;
@@ -390,7 +381,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
     HttpResponse response;
     // Kaynak başarıyla bulundu ve üretildiğinde standart başarı kodu 200'dür.
     response.setStatus(200);
-    response.setHeader("Content-Type", getContentType(filePath));
+    response.setHeader("Content-Type", MimeTypes::fromPath(filePath));
     response.setBody(body);
 
     return response;

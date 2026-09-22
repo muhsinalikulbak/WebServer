@@ -52,10 +52,7 @@ private:
 
     // --- Dosya sistemi yardımcıları ---
     static std::string  resolveFilePath(const std::string& requestPath, const LocationConfig& location);
-    static bool         pathExists(const std::string& path);
-    static bool         isDirectory(const std::string& path);
     static bool         readFile(const std::string& path, std::string& outContent);
-    static std::string  getContentType(const std::string& path);
 
     // --- Autoindex / error sayfaları ---
     static HttpResponse buildAutoindexPage(const std::string& dirPath, const std::string& requestPath);
