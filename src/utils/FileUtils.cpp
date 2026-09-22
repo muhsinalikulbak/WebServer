@@ -72,3 +72,13 @@ std::string FileUtils::lastPathSegment(const std::string& path)
         return path;
     return path.substr(slashPos + 1);
 }
+
+// Path sonu '/' ile bitmiyorsa (veya boşsa) sona '/' ekler.
+// Neden: autoindex urlPrefix/diskPrefix ve handleGet dirPath normalizasyonu aynı
+// mantığı üç kez tekrar ediyordu; tek noktada toplanır.
+std::string FileUtils::withTrailingSlash(const std::string& path)
+{
+    if (path.empty() || path[path.length() - 1] != '/')
+        return path + "/";
+    return path;
+}

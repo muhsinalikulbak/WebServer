@@ -357,9 +357,8 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
 
         // Direction olduğu için, filePath değil artık dirPath olarak işlev görür.
         // Buraya gerek aslında, sadece ekstra ekstra kontrol için. ******
-        std::string dirPath = filePath;
-        if (dirPath[dirPath.length() - 1] != '/')
-            dirPath += "/";
+        // filePath bir dizin olduğundan boş değildir; trailing slash FileUtils'te eklenir.
+        std::string dirPath = FileUtils::withTrailingSlash(filePath);
 
         bool indexFound = false;
         if (!location.index.empty())
@@ -425,15 +424,11 @@ HttpResponse ResponseBuilder::buildAutoindexPage(const std::string& dirPath, con
 
     // URL prefix'ini slash ile normalize etmek, üretilen linklerin
     // hem dosya hem dizin öğelerinde tutarlı olmasını sağlar.
-    std::string urlPrefix = requestPath;
-    if (urlPrefix.empty() || urlPrefix[urlPrefix.length() - 1] != '/')
-        urlPrefix += "/";
+    std::string urlPrefix = FileUtils::withTrailingSlash(requestPath);
 
     // Disk prefix normalizasyonu, child path üretiminde çift/eksik slash
     // kaynaklı stat hatalarını engellemek için yapılır.
-    std::string diskPrefix = dirPath;
-    if (diskPrefix.empty() || diskPrefix[diskPrefix.length() - 1] != '/')
-        diskPrefix += "/";
+    std::string diskPrefix = FileUtils::withTrailingSlash(dirPath);
 
     std::ostringstream html;
     html << "<html><head><title>Index of " << urlPrefix << "</title></head><body>";
