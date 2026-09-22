@@ -61,3 +61,14 @@ std::string FileUtils::joinPath(const std::string& base, const std::string& rest
 
     return result + rest;
 }
+
+// Path'in son '/' işaretinden sonraki parçasını döner; '/' yoksa path'in tamamı.
+// Neden: upload filenamei çıkarma mantığı handlePost ve handleDelete'te birebir tekrar
+// ediliyordu; farklı amaçlar (stat, join) için tek noktada toplanır.
+std::string FileUtils::lastPathSegment(const std::string& path)
+{
+    size_t slashPos = path.find_last_of('/');
+    if (slashPos == std::string::npos)
+        return path;
+    return path.substr(slashPos + 1);
+}

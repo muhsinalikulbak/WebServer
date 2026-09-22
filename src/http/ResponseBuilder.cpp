@@ -225,14 +225,8 @@ HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const Locat
     if (!pathExists(location.uploadStore) || !isDirectory(location.uploadStore))
         return buildErrorResponse(500, serverConfig);
 
-    const std::string& requestPath = request.getPath();
-    size_t slashPos = requestPath.find_last_of('/');
-    std::string filename;
-
-    if (slashPos == std::string::npos)
-        filename = requestPath;
-    else
-        filename = requestPath.substr(slashPos + 1);
+    // upload file adı, URL'nin son path parçasıdır (FileUtils'te ortaklaşır).
+    std::string filename = FileUtils::lastPathSegment(request.getPath());
 
     // Boş isim veya ".." içeren isim hem belirsiz hedefe hem traversal riskine yol açar.
     // Bu nedenle istemci girdisi geçersiz sayılarak 400 Bad Request döndürülür.
@@ -289,14 +283,8 @@ HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const Loc
     if (location.uploadStore.empty())
 		return buildErrorResponse(403, serverConfig);
 
-    const std::string& requestPath = request.getPath();
-    size_t slashPos = requestPath.find_last_of('/');
-    std::string filename;
-
-    if (slashPos == std::string::npos)
-        filename = requestPath;
-    else
-        filename = requestPath.substr(slashPos + 1);
+    // Silinecek dosya adı, URL'nin son path parçasıdır (FileUtils'te ortaklaşır).
+    std::string filename = FileUtils::lastPathSegment(request.getPath());
 
     // Boş isim veya ".." içeren isim hem belirsiz hedefe hem traversal riskine yol açar.
     if (filename.empty() || filename.find("..") != std::string::npos)

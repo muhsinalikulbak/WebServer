@@ -10,6 +10,7 @@ namespace FileUtils
     bool isDirectory(const std::string& path);
     bool readFile(const std::string& path, std::string& outContent);
     std::string joinPath(const std::string& base, const std::string& rest);
+    std::string lastPathSegment(const std::string& path);
 }
 
 #endif
