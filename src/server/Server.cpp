@@ -436,8 +436,13 @@ void Server::unregisterHandler(EpollHandler* socket)
 	else if (socket->getType() == EpollHandler::HANDLER_CLIENT)
 	{
 		Client* clientPtr = static_cast<Client*>(socket);
+		// Client artık response bekleyemeyeceği için, hâlâ çalışan CGI'yi de hemen
+		// sonlandırıyoruz. Bu hem gereksiz kaynak (process, pipe, bellek) tutmayı
+		// önler hem de CgiHandler'ın client'ın body'sine doğrudan referans tutmasını
+		// (Commit 2) güvenli kılar: CGI, sahibi öldüğü anda kendisi de sonlanır,
+		// hiçbir zaman ölü bir referansa erişmez.
 		if (clientPtr->getActiveCgi())
-			clientPtr->getActiveCgi()->setOwner(NULL);
+			_cgiManager.unregisterHandler(clientPtr->getActiveCgi());
 		_clientSockets.erase(clientPtr);
 	}
 	delete socket;
