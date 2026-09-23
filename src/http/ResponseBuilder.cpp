@@ -6,6 +6,7 @@
 #include "ErrorResponse.hpp"
 #include "HttpStatusResponse.hpp"
 #include "StaticHandler.hpp"
+#include "UploadHandler.hpp"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -102,8 +103,8 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
 HttpResponse ResponseBuilder::dispatch(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     if (request.getMethod() == "get")    return StaticHandler::get(request, location, serverConfig);
-    if (request.getMethod() == "post")   return handlePost(request, location, serverConfig);
-    if (request.getMethod() == "delete") return handleDelete(request, location, serverConfig);
+    if (request.getMethod() == "post")   return UploadHandler::post(request, location, serverConfig);
+    if (request.getMethod() == "delete") return UploadHandler::remove(request, location, serverConfig);
     return buildErrorResponse(501, serverConfig);   // teorik olarak ulaşılamaz güvenlik ağı
 }
 
@@ -167,114 +168,4 @@ std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, con
     // root ve remainder arasındaki slash normalizasyonu FileUtils::joinPath'te ortaklaşır.
     return FileUtils::joinPath(location.root, remainder);
 }
-
-HttpResponse ResponseBuilder::handlePost(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
-{
-    // POST gövdesini uploadStore altına dosya olarak kaydeder.
-    // Akışın amacı hem path güvenliğini korumak hem de dosya yazım hatalarını
-    // doğru HTTP status kodlarıyla istemciye anlaşılır biçimde yansıtmaktır.
-
-    // uploadStore tanımsızsa bu location upload'a izin vermiyor kabul edilir.
-    // Bu yüzden erişim reddi semantiğiyle 403 dönülür.
-    if (location.uploadStore.empty())
-        return buildErrorResponse(403, serverConfig);
-
-    // Upload hedefi diskte yoksa ya da dizin değilse istemci değil config hatasıdır.
-    // Sunucu yanlış yapılandırıldığı için 500 Internal Server Error seçilir.
-    if (!FileUtils::pathExists(location.uploadStore) || !FileUtils::isDirectory(location.uploadStore))
-        return buildErrorResponse(500, serverConfig);
-
-    // upload file adı, URL'nin son path parçasıdır (FileUtils'te ortaklaşır).
-    std::string filename = FileUtils::lastPathSegment(request.getPath());
-
-    // Boş isim veya ".." içeren isim hem belirsiz hedefe hem traversal riskine yol açar.
-    // Bu nedenle istemci girdisi geçersiz sayılarak 400 Bad Request döndürülür.
-    if (filename.empty() || filename.find("..") != std::string::npos)
-        return buildErrorResponse(400, serverConfig);
-
-    // filename hiçbir zaman '/' ile başlamaz (lastPathSegment sonrası), dolayısıyla
-    // joinPath uploadStore ile aynı sonucu verir: varsa tek slash, yoksa "store/name".
-    std::string filePath = FileUtils::joinPath(location.uploadStore, filename);
-
-    // Hedef path bir dizine denk geliyorsa dosya üzerine yazma yapılamaz.
-    // Kaynak mevcut olsa da işlem yetkisiz/uygunsuz olduğu için 403 seçilir.
-    bool exists = FileUtils::pathExists(filePath);
-    if (exists && FileUtils::isDirectory(filePath))
-        return buildErrorResponse(403, serverConfig);
-
-    bool alreadyExists = exists;
-
-    // Dosya açılamıyorsa yazma aşamasına geçmek mümkün değildir.
-    // Bu durum sunucu tarafı I/O problemi olduğu için 500 ile raporlanır.
-    std::ofstream out(filePath.c_str(), std::ios::binary | std::ios::trunc);
-    if (!out.is_open())
-        return buildErrorResponse(500, serverConfig);
-
-    const std::string& data = request.getBody();
-    out.write(data.data(), data.size());
-    out.close();
-
-    // Yazma sonrası fail kontrolü, disk dolu/izin gibi geç yakalanan I/O hatalarını
-    // istemciye doğru iletmek için zorunludur; aksi halde sahte başarı üretilebilir.
-    if (out.fail())
-        return buildErrorResponse(500, serverConfig);
-
-    // Yeni oluşturulan kaynakta 201 dönülerek resource creation semantiği korunur.
-    // Var olan dosya üzerine yazmada yalnızca içerik güncellendiği için 200 yeterlidir.
-    int statusCode = alreadyExists ? 200 : 201;
-    // Location sadece yeni kaynak oluşturulduğunda istemciye canonical yolu bildirmek için eklenir.
-    // Varlık durumunda boş Location, HttpStatusResponse::build'te header'ın eklenmemesini sağlar.
-    return HttpStatusResponse::build(statusCode, alreadyExists ? "" : request.getPath());
-}
-
-
-HttpResponse ResponseBuilder::handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
-{
-    // DELETE isteğinde hedef dosyayı güvenli biçimde kaldırmayı amaçlar.
-    // POST ile aynı mantık: URL'den dosya adını çıkar, uploadStore ile birleştir.
-    // errno tabanlı ayrım ile istemci hatası ve sunucu hatası birbirinden ayrılır.
-	HttpResponse response;
-
-    // uploadStore tanımsızsa bu location delete'e izin vermiyor kabul edilir.
-    if (location.uploadStore.empty())
-		return buildErrorResponse(403, serverConfig);
-
-    // Silinecek dosya adı, URL'nin son path parçasıdır (FileUtils'te ortaklaşır).
-    std::string filename = FileUtils::lastPathSegment(request.getPath());
-
-    // Boş isim veya ".." içeren isim hem belirsiz hedefe hem traversal riskine yol açar.
-    if (filename.empty() || filename.find("..") != std::string::npos)
-        return buildErrorResponse(400, serverConfig);
-
-    // filename hiçbir zaman '/' ile başlamaz (lastPathSegment sonrası), dolayısıyla
-    // joinPath uploadStore ile aynı sonucu verir: varsa tek slash, yoksa "store/name".
-    std::string filePath = FileUtils::joinPath(location.uploadStore, filename);
-
-    // Silinecek kaynak yoksa doğru semantik 404'tür.
-	if (!FileUtils::pathExists(filePath))
-		return buildErrorResponse(404, serverConfig);
-
-	// Dizin silmek riskli, bu nedenle dizin hedefinde işlem reddedilir.
-	if (FileUtils::isDirectory(filePath))
-		return buildErrorResponse(403, serverConfig);
-	
-	if (std::remove(filePath.c_str()) == 0)
-	{
-        // Başarılı silmede body gerekmeyen durum kodu olarak 204 uygundur.
-		response.setStatus(204);
-	}
-    // İzin/yetki engeli olduğunda kaynak olsa bile işlem yasak olduğu için 403 döner.
-	else if (errno == EACCES || errno == EPERM)
-		return buildErrorResponse(403, serverConfig);
-    // Data race gibi sebeplerle dosya artık yoksa istemciye 404 bildirilir.
-	else if (errno == ENOENT)
-		return buildErrorResponse(404, serverConfig);
-    // Yukarıdakiler dışındaki işletim sistemi hataları sunucu iç hata sınıfına girer.
-	else
-		return buildErrorResponse(500, serverConfig);
-	
-	return response;
-		
-}
-
 

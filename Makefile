@@ -16,6 +16,7 @@ SRCS =	src/main.cpp \
 		src/http/Router.cpp \
 		src/http/RequestValidator.cpp \
 		src/http/StaticHandler.cpp \
+		src/http/UploadHandler.cpp \
 		src/server/Server.cpp \
 		src/server/ConfigParser.cpp \
 		src/server/LocationConfig.cpp \

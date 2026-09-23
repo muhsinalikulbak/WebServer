@@ -45,10 +45,6 @@ private:
     ResponseBuilder& operator=(const ResponseBuilder& other);
     ~ResponseBuilder();
 
-    // --- Method bazlı işlemler ---
-    static HttpResponse handlePost(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
-    static HttpResponse handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
-
     // --- Yönlendirme / kontrol yardımcıları ---
     static bool         isMethodAllowedForLocation(const std::string& method, const LocationConfig& location);
     static bool         isCgiRequest(const std::string& path, const LocationConfig& location, std::string& outExtension);
