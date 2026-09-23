@@ -23,7 +23,8 @@ public:
     // Server'ın çağıracağı tek public giriş noktası.
     // İçeride sırasıyla RequestValidator::validate() ve Router::match() çağrılır,
     // sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
-    static HttpResponse build(const HttpRequest& request, const ServerConfig& serverConfig);
+    static HttpResponse dispatch(const HttpRequest& request, const LocationConfig& location,
+                                 const ServerConfig& serverConfig);
     static RouteResult routeRequest(const HttpRequest& request,
                                     const ServerConfig& serverConfig,
                                     HttpResponse& outErrorResponse,

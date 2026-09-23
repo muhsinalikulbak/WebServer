@@ -245,7 +245,10 @@ void Server::handleParsedRequest(Client* client, Client::StreamState state)
         if (routeResult == ResponseBuilder::ROUTE_RESPOND_DIRECTLY)
             response = routeErrorResponse;
         else
-            response = ResponseBuilder::build(client->getRequest(), client->getServerConfig());
+            // ROUTE_STATIC: kalacak tek yanıt dalı. matchedLocation, routeRequest'in
+            // ROUTE_STATIC dönebilmesi için location bulması gerektiğinden NULL olamaz;
+            // 404 dalı location bulunamadığında ROUTE_RESPOND_DIRECTLY dönerek buraya ulaşmaz.
+            response = ResponseBuilder::dispatch(client->getRequest(), *matchedLocation, client->getServerConfig());
 
         ResponseQueue::push(_epollFd, client, response, true);
     }

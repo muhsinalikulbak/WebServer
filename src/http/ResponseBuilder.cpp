@@ -92,51 +92,18 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     return ROUTE_CGI;
 }
 
-// sonucuna göre uygun dala (error / redirect / GET / POST / DELETE) dallanılır.
-HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConfig& serverConfig)
+// dispatch yalnızca ROUTE_STATIC durumunda çağrılır. routeRequest zaten
+// method/redirect/413/404/get kontrolünü yapıp isteği doğrulamıştır; burada
+// validate/match TEKRARLANMAZ. Eski build() bu kontrolleri routeRequest'ten
+// bağımsız ikinci kez yapıyordu ve 413 kontrolü eksikti (routeRequest'te vardı) -
+// iki fonksiyon sessizce sapmıştı. dispatch tek karar noktası olan routeRequest'e
+// güvenerek bu riski ortadan kaldırır.
+HttpResponse ResponseBuilder::dispatch(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
-    // Bu fonksiyon istek işleme akışının yönlendiricisidir.
-    // Önce request semantiğini doğrular, sonra location eşleşmesini bulur.
-    // Ardından method/özel durumlara göre doğru handler'a dallanır.
-    int validationCode = RequestValidator::validate(request);
-
-    // Validator bir kod döndürdüyse istemci hatası/protokol ihlali vardır,
-    // request işleme devam etmek yerine doğrudan ilgili hata cevabı dönülür.
-    if (validationCode)
-        return buildErrorResponse(validationCode, serverConfig);
-
-    const LocationConfig* location = Router::match(request.getPath(), serverConfig);
-    
-    // Hiçbir location eşleşmezse kaynak bulunamadı kabul edilir ve 404 dönülür.
-    // Bu seçim routing seviyesinde "URL bu server'da yok" anlamını taşır.
-    if (!location)
-        return buildErrorResponse(404, serverConfig);
-
-    // return direktifi metoddan bağımsız çalışır (nginx semantiği) -> method check'ten önce
-    if (location->returnCode != 0)
-        return HttpStatusResponse::redirect(*location);
-
-    // Method bu location için izinli değilse 405 dönülür.
-    // Çünkü kaynak var, fakat o kaynakta bu HTTP method'u desteklenmiyor.
-    if (!isMethodAllowedForLocation(request.getMethod(), *location))
-        return buildErrorResponse(405, serverConfig);
-
-    std::string cgiExt;
-    // CGI yolu tespit edilip henüz implementasyon yoksa 501 seçilir.
-    // Bu kod "server özelliği tanıyor ama desteklemiyor" semantiğini verir.
-    if (isCgiRequest(request.getPath(), *location, cgiExt))
-        return buildErrorResponse(501, serverConfig); // CGI fazı henüz yok
-
-    if (request.getMethod() == "get")
-        return handleGet(request, *location, serverConfig);
-    else if (request.getMethod() == "post")
-        return handlePost(request, *location, serverConfig);
-    else if (request.getMethod() == "delete")
-        return handleDelete(request, *location, serverConfig);
-
-    // Bu noktaya düşmek, method ailesinin teorik olarak desteklenmediği anlamına gelir.
-    // 501 ile cevaplayarak istemciye sunucu tarafında özellik eksikliği bildirilir.
-    return buildErrorResponse(501, serverConfig);
+    if (request.getMethod() == "get")    return handleGet(request, location, serverConfig);
+    if (request.getMethod() == "post")   return handlePost(request, location, serverConfig);
+    if (request.getMethod() == "delete") return handleDelete(request, location, serverConfig);
+    return buildErrorResponse(501, serverConfig);   // teorik olarak ulaşılamaz güvenlik ağı
 }
 
 // Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
