@@ -326,6 +326,11 @@ void Server::run()
 			}
 		}
 		checkTimeouts();
+
+		// Bu turda unregister edilen (ama henüz silinmeyen) tüm CGI handler'ları
+		// şimdi güvenle serbest bırakılır - for döngüsü ve checkTimeouts tamamen
+		// bitti, artık hiçbir _events[] girdisi bu pointer'lara referans vermiyor.
+		_cgiManager.flushPendingDeletions();
 	}
 }
 
