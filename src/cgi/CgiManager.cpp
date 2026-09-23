@@ -59,6 +59,17 @@ void CgiManager::unregisterHandler(CgiHandler* handler)
         perror("Epoll dell error");
     }
 
+    // stdin tarafı hâlâ epoll'a kayıtlıysa (yazma tamamlanmadan buraya
+    // gelindiyse), sadece destructor'daki close()'a güvenmek yerine burada
+    // açıkça kaldırıyoruz; aksi halde aynı batch'te bu fd için bekleyen bir
+    // event, silinmek üzere olan bu nesneye (ya da bellek yeniden kullanılırsa
+    // BAŞKA bir nesneye) yanlışlıkla yönlendirilebilir.
+    if (handler->getStdinFd() != -1)
+    {
+        if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, handler->getStdinFd(), NULL) == -1)
+            perror("Epoll dell error (cgi stdin)");
+    }
+
     reapCgiProcess(handler);
     _cgiHandlers.erase(handler);
     delete handler;
