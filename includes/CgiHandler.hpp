@@ -84,6 +84,7 @@ class CgiHandler : public EpollHandler
 		/**** STDIN WRITE BUFFER ****/
 
 		void               setStdinBuffer(const std::string& data);
+		void               setStdinBuffer(const std::string& data, size_t offset);
 		const char*        stdinRemainingData() const;
 		size_t             stdinRemainingSize() const;
 		void               consumeStdinBuffer(size_t n);

@@ -145,7 +145,7 @@ void CgiManager::startCgi(Client* client,
 
 		if (sent < body.size())
 		{
-			cgiHandler->setStdinBuffer(body.substr(sent));
+			cgiHandler->setStdinBuffer(body, sent);
 			registerCgiStdinWrite(cgiHandler);
 		}
 		else

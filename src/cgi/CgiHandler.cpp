@@ -84,6 +84,12 @@ void CgiHandler::setStdinBuffer(const std::string& data)
     _stdinWriteOffset = 0;
 }
 
+void CgiHandler::setStdinBuffer(const std::string& data, size_t offset)
+{
+    _stdinWriteBuffer = data;
+    _stdinWriteOffset = offset;
+}
+
 const char* CgiHandler::stdinRemainingData() const
 {
     return _stdinWriteBuffer.data() + _stdinWriteOffset;
