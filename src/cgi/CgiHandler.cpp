@@ -1,4 +1,5 @@
 ﻿#include "CgiHandler.hpp"
+#include "Client.hpp"
 
 CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL), _startTime(std::time(NULL)), _stdinWriteOffset(0)
 {
@@ -69,45 +70,45 @@ const std::string& CgiHandler::getOutputBuffer() const
     return _cgiOutputBuffer;
 }
 
-void CgiHandler::closeStdin()
+void CgiHandler::closeStdin(int epollFd)
 {
     if (_stdinPipeFd != -1)
     {
+        // close() kernel'i epoll'dan implicit olarak düşürür ama bu, epoll_wait()'in
+        // kullanıcı alanına kopyaladığı ve henüz işlenmemiş anlık bir stdin event'i ile
+        // yarışabilir. Açık DEL bu yarışı kapatır; hata olursa yut - fd zaten kapanıyor
+        // olabilir (ENOENT ise zaten kayıtlı değildir).
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, _stdinPipeFd, NULL);
         close(_stdinPipeFd);
         _stdinPipeFd = -1;
     }
 }
 
-void CgiHandler::setStdinBuffer(const std::string& data)
+void CgiHandler::setStdinOffset(size_t offset)
 {
-    _stdinWriteBuffer = data;
-    _stdinWriteOffset = 0;
-}
-
-void CgiHandler::setStdinBuffer(const std::string& data, size_t offset)
-{
-    _stdinWriteBuffer = data;
     _stdinWriteOffset = offset;
 }
 
 const char* CgiHandler::stdinRemainingData() const
 {
-    return _stdinWriteBuffer.data() + _stdinWriteOffset;
+    if (!_owner)
+        return NULL;
+    return _owner->getRequest().getBody().data() + _stdinWriteOffset;
 }
 
 size_t CgiHandler::stdinRemainingSize() const
 {
-    return _stdinWriteBuffer.size() - _stdinWriteOffset;
+    if (!_owner)
+        return 0;
+    return _owner->getRequest().getBody().size() - _stdinWriteOffset;
 }
 
 void CgiHandler::consumeStdinBuffer(size_t n)
 {
     _stdinWriteOffset += n;
-    if (_stdinWriteOffset == _stdinWriteBuffer.size())
-    {
-        _stdinWriteBuffer.clear();
+    const std::string& body = _owner->getRequest().getBody();
+    if (_stdinWriteOffset == body.size())
         _stdinWriteOffset = 0;
-    }
 }
 
 std::time_t CgiHandler::getStartTime() const

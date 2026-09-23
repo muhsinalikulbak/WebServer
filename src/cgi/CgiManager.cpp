@@ -141,7 +141,7 @@ void CgiManager::registerCgiStdinWrite(CgiHandler* cgiHandler)
     if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, cgiHandler->getStdinFd(), &event) == -1)
     {
         std::cerr << "Error registering CGI stdin for EPOLLOUT: " << strerror(errno) << std::endl;
-        cgiHandler->closeStdin();
+        cgiHandler->closeStdin(_epollFd);
     }
 }
 
@@ -177,14 +177,14 @@ void CgiManager::startCgi(Client* client,
 
 		if (sent < body.size())
 		{
-			cgiHandler->setStdinBuffer(body, sent);
+			cgiHandler->setStdinOffset(sent);
 			registerCgiStdinWrite(cgiHandler);
 		}
 		else
-			cgiHandler->closeStdin();
+			cgiHandler->closeStdin(_epollFd);
 	}
 	else
-		cgiHandler->closeStdin();
+		cgiHandler->closeStdin(_epollFd);
 
 	registerHandler(cgiHandler);
 }
@@ -281,6 +281,11 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 
 void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 {
+	// Adım 1'deki açık DEL kök nedeni gidermeli; bu guard ekstra bir güvenlik
+	// ağıdır - eğer hâlâ bir yarış varsa en azından write(-1,...) çağrısını engeller.
+	if (cgiHandler->getStdinFd() == -1)
+		return;
+
 	const char* data = cgiHandler->stdinRemainingData();
 	size_t      size = cgiHandler->stdinRemainingSize();
 
@@ -291,12 +296,12 @@ void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 		if (FdUtils::isTransientIoError(errno))
 			return;
 		std::cerr << "CGI stdin write error: " << strerror(errno) << std::endl;
-		cgiHandler->closeStdin();
+		cgiHandler->closeStdin(_epollFd);
 		return;
 	}
 
 	cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
 
 	if (cgiHandler->stdinRemainingSize() == 0)
-		cgiHandler->closeStdin();
+		cgiHandler->closeStdin(_epollFd);
 }

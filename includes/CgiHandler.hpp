@@ -5,6 +5,7 @@
 #include <string>
 #include <ctime>
 #include <sys/types.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 
 class Client;
@@ -44,9 +45,12 @@ class CgiHandler : public EpollHandler
 		std::time_t _startTime;
 
 		std::string _cgiOutputBuffer; // stdout pipe'ından biriktirdiğimiz ham CGI çıktısı
-		std::string _stdinWriteBuffer; // client'tan gelen ama henüz script'e yazılmamış body kısmı
-		size_t      _stdinWriteOffset; // _stdinWriteBuffer içinde henüz yazılmamış kısmın başlangıcı
-		// Bu direk set edilir, sonra write() ile parça parça gideceği için buffer boşalanana kadar yazılır
+
+		// Owner'ın istek body'sinde (getRequest().getBody()) henüz script'e
+		// yazılmamış kısmın başlangıcı. Veri kopyalanmaz, body'ye referansla
+		// ilerlenir; owner'ın yaşam süresi Commit 1 güvencesiyle CGI'dan uzundur.
+		size_t      _stdinWriteOffset; // body içinde yazılacak bir sonraki baytın konumu
+		// Direk set edilir, sonra write() ile parça parça gideceği için body bitene kadar yazılır
 
 
 
@@ -79,12 +83,11 @@ class CgiHandler : public EpollHandler
 
 		void         appendOutput(const std::string& data);
 		const std::string& getOutputBuffer() const;
-		void         closeStdin();
+		void         closeStdin(int epollFd);
 
-		/**** STDIN WRITE BUFFER ****/
+		/**** STDIN WRITE OFFSET (body'ye referans, kopya yok) ****/
 
-		void               setStdinBuffer(const std::string& data);
-		void               setStdinBuffer(const std::string& data, size_t offset);
+		void               setStdinOffset(size_t offset);
 		const char*        stdinRemainingData() const;
 		size_t             stdinRemainingSize() const;
 		void               consumeStdinBuffer(size_t n);
