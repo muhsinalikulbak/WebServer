@@ -28,7 +28,8 @@ public:
                                     const ServerConfig& serverConfig,
                                     HttpResponse& outErrorResponse,
                                     std::string& outScriptPath,
-                                    std::string& outInterpreterPath);
+                                    std::string& outInterpreterPath,
+                                    const LocationConfig*& outLocation);
 
     static HttpResponse buildErrorResponse(int statusCode, const ServerConfig& serverConfig);
     

@@ -231,9 +231,10 @@ void Server::handleParsedRequest(Client* client, Client::StreamState state)
         std::string scriptPath;
         std::string interpreterPath;
         HttpResponse routeErrorResponse;
+        const LocationConfig* matchedLocation = NULL;
 
         routeResult = ResponseBuilder::routeRequest(client->getRequest(), client->getServerConfig(),
-            routeErrorResponse, scriptPath, interpreterPath);
+            routeErrorResponse, scriptPath, interpreterPath, matchedLocation);
 
         if (routeResult == ResponseBuilder::ROUTE_CGI)
         {

@@ -18,7 +18,8 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     const ServerConfig& serverConfig,
     HttpResponse& outErrorResponse,
     std::string& outScriptPath,
-    std::string& outInterpreterPath)
+    std::string& outInterpreterPath,
+    const LocationConfig*& outLocation)
 {
     outScriptPath.clear();
     outInterpreterPath.clear();
@@ -31,6 +32,9 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     }
 
     const LocationConfig* location = Router::match(request.getPath(), serverConfig);
+    // Eşleşen location dispatch aşamasında da gerektiği için dışarı verilir;
+    // NULL olsa bile 404 dalına girmeden önce set edilir.
+    outLocation = location;
     if (!location)
     {
         outErrorResponse = buildErrorResponse(404, serverConfig);
