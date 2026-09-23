@@ -68,3 +68,6 @@ opencode.json
 Testing/
 .cache/
 
+# Webserver derlenmiş binary (make ile üretilir, depoda tutulmaz)
+/webserver
+
