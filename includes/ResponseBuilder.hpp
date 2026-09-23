@@ -33,6 +33,10 @@ public:
                                     const LocationConfig*& outLocation);
 
     static HttpResponse buildErrorResponse(int statusCode, const ServerConfig& serverConfig);
+
+    // Statik ve CGI path çözümlemesinde ortak kullanılan tek yardımcı;
+    // StaticHandler da (handleGet) aynı çözümlemeyi kullandığından public'tir.
+    static std::string  resolveFilePath(const std::string& requestPath, const LocationConfig& location);
     
 private:
     // Stateless class - instance/copy engellensin
@@ -42,20 +46,12 @@ private:
     ~ResponseBuilder();
 
     // --- Method bazlı işlemler ---
-    // ResponseBuilder.hpp
-    static HttpResponse handleGet(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
     static HttpResponse handlePost(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
     static HttpResponse handleDelete(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig);
 
     // --- Yönlendirme / kontrol yardımcıları ---
     static bool         isMethodAllowedForLocation(const std::string& method, const LocationConfig& location);
     static bool         isCgiRequest(const std::string& path, const LocationConfig& location, std::string& outExtension);
-
-    // --- Dosya sistemi yardımcıları ---
-    static std::string  resolveFilePath(const std::string& requestPath, const LocationConfig& location);
-
-    // --- Autoindex / error sayfaları ---
-    static HttpResponse buildAutoindexPage(const std::string& dirPath, const std::string& requestPath);
 };
 
 #endif
