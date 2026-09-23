@@ -249,9 +249,10 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 
 void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 {
-	const std::string& buffer = cgiHandler->getStdinBuffer();
+	const char* data = cgiHandler->stdinRemainingData();
+	size_t      size = cgiHandler->stdinRemainingSize();
 
-	ssize_t written = write(cgiHandler->getStdinFd(), buffer.data(), buffer.size());
+	ssize_t written = write(cgiHandler->getStdinFd(), data, size);
 
 	if (written == -1)
 	{
@@ -264,6 +265,6 @@ void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 
 	cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
 
-	if (cgiHandler->getStdinBuffer().empty())
+	if (cgiHandler->stdinRemainingSize() == 0)
 		cgiHandler->closeStdin();
 }
