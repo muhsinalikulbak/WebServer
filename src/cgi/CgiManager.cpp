@@ -31,6 +31,12 @@ CgiManager::~CgiManager()
         delete temp;
     }
     _cgiHandlers.clear();
+
+    // Server kapanırken flushPendingDeletions() bir daha çağrılmayacağı için
+    // kalan bekleyen silmeleri de serbest bırak (sızıntı önleme).
+    for (size_t i = 0; i < _pendingDeletion.size(); ++i)
+        delete _pendingDeletion[i];
+    _pendingDeletion.clear();
 }
 
 void CgiManager::registerHandler(CgiHandler* handler)
@@ -72,7 +78,22 @@ void CgiManager::unregisterHandler(CgiHandler* handler)
 
     reapCgiProcess(handler);
     _cgiHandlers.erase(handler);
-    delete handler;
+
+    // delete'i burada yapmıyoruz: aynı epoll_wait() batch'inde bu handler'a ait
+    // başka bir (stdin) event hâlâ _events[] içinde işlenmeyi bekliyor olabilir.
+    // Belleği hemen serbest bırakırsak, aynı adres bu batch bitmeden yeni bir
+    // CgiHandler için (startCgi çağrısıyla) yeniden kullanılabilir ve o eski
+    // event yanlışlıkla yeni nesneye yönlendirilip write()/read() EBADF ile
+    // karşılaşabilir (ABA problemi). Gerçek silme flushPendingDeletions() ile
+    // batch bitince yapılır.
+    _pendingDeletion.push_back(handler);
+}
+
+void CgiManager::flushPendingDeletions()
+{
+    for (size_t i = 0; i < _pendingDeletion.size(); ++i)
+        delete _pendingDeletion[i];
+    _pendingDeletion.clear();
 }
 
 void CgiManager::reapCgiProcess(CgiHandler* handler)

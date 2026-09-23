@@ -6,6 +6,7 @@
 #include "HttpResponse.hpp"
 #include <string>
 #include <set>
+#include <vector>
 #include <ctime>
 #include <sys/types.h>
 
@@ -20,6 +21,7 @@ class CgiManager
 {
 private:
     std::set<CgiHandler*>           _cgiHandlers;
+    std::vector<CgiHandler*>        _pendingDeletion;
     int&                            _epollFd;
     std::set<EpollHandler*>&        _liveHandlers;
 
@@ -32,6 +34,7 @@ private:
 public:
     void    registerHandler(CgiHandler* handler);
     void    unregisterHandler(CgiHandler* handler);
+    void    flushPendingDeletions();
     bool    peekCgiExitStatus(CgiHandler* cgiHandler, int& status);
     void    startCgi(Client* client, const std::string& scriptPath, const std::string& interpreterPath);
     void    checkCgiTimeouts(std::time_t now);
