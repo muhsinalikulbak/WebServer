@@ -126,10 +126,11 @@ HttpResponse StaticHandler::get(const HttpRequest& request, const LocationConfig
         if (!indexFound)
         {
             // Autoindex açıksa dizin listesi üretmek kullanıcıya keşif imkanı verir.
-            // Kapalıysa dizin içeriği ifşasını önlemek için 403 dönülür.
+            // Kapalıysa/dizin için index bulunamıyorsa kaynak erişilemez kabul edilip
+            // 404 döndürülür (reference webserv ile aynı davranış).
             if (location.autoindex)
                 return buildAutoindexPage(dirPath, request.getPath());
-            return ResponseBuilder::buildErrorResponse(403, serverConfig);
+            return ResponseBuilder::buildErrorResponse(404, serverConfig);
         }
     }
 

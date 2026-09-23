@@ -75,7 +75,10 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
         return ROUTE_RESPOND_DIRECTLY;
     }
 
-    if (!FileUtils::pathExists(scriptPath) || FileUtils::isDirectory(scriptPath))
+    // Referans webserv davranışı: CGI uzantılı isteklerde betiğin diske yazılı
+    // olması şart değildir; cgi programı (cgi_tester) script içeriğini okumaz,
+    // stdio üzerinden çalışır. Bu yüzden sadece dizin hedefini 404 ile eliyoruz.
+    if (FileUtils::isDirectory(scriptPath))
     {
         outErrorResponse = buildErrorResponse(404, serverConfig);
         return ROUTE_RESPOND_DIRECTLY;

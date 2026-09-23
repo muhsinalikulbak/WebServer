@@ -167,7 +167,11 @@ void CgiManager::checkCgiTimeouts(std::time_t now)
         CgiHandler* current = *it;
         it++;
 
-        if (now - current->getStartTime() > 10)
+        // Büyük CGI yükleri (örn. 100MB POST → cgi_tester yankısı) 10 sn'nin
+        // üzerinde sürebilir ve busy loop esnasında timeout kontrolüne bile
+        // ulaşılamayabilir. Bu yüzden 60 sn'lik rahat bir eşik kullanıyoruz;
+        // gerçek takılmış bir script için yine de makul bir sürede 504 döner.
+        if (now - current->getStartTime() > 60)
         {
             std::cerr << "[Timeout] CGI pid " << current->getPid() << " timed out, killing." << std::endl;
 
@@ -228,7 +232,7 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 // Mesela handleReceive  Client.cpp de
 void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 {
-	char buffer[4096];
+	char buffer[65536];
 	ssize_t bytesRead = read(cgiHandler->getFd(), buffer, sizeof(buffer));
 
 	if (bytesRead > 0)

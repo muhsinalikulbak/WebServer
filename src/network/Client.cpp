@@ -65,7 +65,7 @@ Client::StreamState Client::processParserState(RequestParser::State state)
 
 Client::StreamState Client::receiveData()
 {
-    char buffer[4096];
+    char buffer[65536];
     int byte = recv(_clientFd, buffer, 4096, 0);
 
     if (byte == -1) 

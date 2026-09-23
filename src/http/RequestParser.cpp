@@ -344,6 +344,10 @@ bool RequestParser::chunkedBodyRemaining()
             _bodyBytesRead = 0; // Her yeni chunk için sıfırlamamız gerekir.
             _chunkedState = SIZE;
         }
+
+        // Buffer'da hâlâ veri varsa aynı buffer üzerinden işlemeye devam et,
+        // yoksa yeni veri beklemek için döngüden çık (endless spin'i önler).
+        return !_buffer.empty();
     }
     else
     {
