@@ -8,6 +8,7 @@ Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _par
     _lastActivity = std::time(NULL);
     _clientState = WAITING_FOR_REQUEST;
     _activeCgi = NULL;
+    _writeOffset = 0;
 }
 
 
@@ -40,7 +41,7 @@ const HttpRequest&          Client::getRequest()  { return _parser.getRequest();
 
 int                         Client::getErrorCode() const { return _parser.getErrorCode(); }
 
-void                        Client::setWriteBuffer(const std::string& response) { _writeBuffer = response; }
+void                        Client::setWriteBuffer(const std::string& response) { _writeBuffer = response; _writeOffset = 0; }
 
 
 void                        Client::setActiveCgi(CgiHandler* cgi) { _activeCgi = cgi; }
@@ -107,7 +108,7 @@ Client::StreamState Client::drainBuffer()
 Client::StreamState Client::sendData()
 {
 
-    int byte = send(_clientFd, _writeBuffer.c_str(), _writeBuffer.size(), 0);
+    int byte = send(_clientFd, _writeBuffer.data() + _writeOffset, _writeBuffer.size() - _writeOffset, 0);
 
     if (byte == -1)
     {
@@ -121,7 +122,12 @@ Client::StreamState Client::sendData()
     }
     else if (byte > 0)
     {
-        _writeBuffer.erase(0, byte);
+        _writeOffset += byte;
+        if (_writeOffset == _writeBuffer.size())
+        {
+            _writeBuffer.clear();
+            _writeOffset = 0;
+        }
     }
     else if (byte == 0)
     {

@@ -46,6 +46,7 @@ private:
     const ServerConfig&     _serverConfig;  // bu client hangi server bloğuna ait
     CgiHandler*             _activeCgi;     // NULL ise cgi yok
     std::string             _writeBuffer;
+    size_t                  _writeOffset;  // _writeBuffer içinde henüz gönderilmemiş kısmın başlangıcı
     RequestParser           _parser;
     
     Client(const Client& other);
