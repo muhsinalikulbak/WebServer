@@ -48,7 +48,7 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
 
     if (location->returnCode != 0)
     {
-        outErrorResponse = buildRedirect(*location);
+        outErrorResponse = HttpStatusResponse::redirect(*location);
         return ROUTE_RESPOND_DIRECTLY;
     }
 
@@ -110,7 +110,7 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
 
     // return direktifi metoddan bağımsız çalışır (nginx semantiği) -> method check'ten önce
     if (location->returnCode != 0)
-        return buildRedirect(*location);
+        return HttpStatusResponse::redirect(*location);
 
     // Method bu location için izinli değilse 405 dönülür.
     // Çünkü kaynak var, fakat o kaynakta bu HTTP method'u desteklenmiyor.
@@ -139,18 +139,6 @@ HttpResponse ResponseBuilder::build(const HttpRequest& request, const ServerConf
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
 {
     return ErrorResponse::build(statusCode, serverConfig);
-}
-// Gerçek üretim HttpStatusResponse modülüne taşındı; davranış birebir korunur.
-
-HttpResponse ResponseBuilder::buildRedirect(const LocationConfig& location)
-{
-    return HttpStatusResponse::redirect(location);
-}
-
-// Gerçek uygulama FileUtils üzerine taşındı; davranış birebir korunur.
-bool ResponseBuilder::readFile(const std::string& path, std::string& outContent)
-{
-    return FileUtils::readFile(path, outContent);
 }
 
 
@@ -343,12 +331,9 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
         // Bu yüzden kalıcı URL normalizasyonu olarak 301 tercih edilir.
         if (request.getPath().empty() || request.getPath()[request.getPath().length() - 1] != '/')
         {
-            // Slash eklenmiş URL'yi redirect olarak üretmek için geçici bir LocationConfig kurulur;
-            // HttpStatusResponse::redirect aynı HTML şablonunu kullanır (tek kaynak).
-            LocationConfig redirectLoc;
-            redirectLoc.returnCode = 301;
-            redirectLoc.returnUrl = request.getPath() + "/";
-            return buildRedirect(redirectLoc);
+            // Bu config'ten gelen bir redirect değil, trailing-slash normalizasyonu; bu yüzden
+            // location.returnCode/returnUrl uydurmak yerine status kodu ve hedefi doğrudan veriyoruz.
+            return HttpStatusResponse::build(301, request.getPath() + "/");
         }
 
         // Direction olduğu için, filePath değil artık dirPath olarak işlev görür.
@@ -383,7 +368,7 @@ HttpResponse ResponseBuilder::handleGet(const HttpRequest& request, const Locati
     std::string body;
     // Okunabilirlik/izin/I/O problemi varsa sunucu dosyayı temsil edemez;
     // bu nedenle istemciye 500 Internal Server Error gönderilir.
-    if (!readFile(filePath, body))
+    if (!FileUtils::readFile(filePath, body))
         return buildErrorResponse(500, serverConfig);
 
     HttpResponse response;

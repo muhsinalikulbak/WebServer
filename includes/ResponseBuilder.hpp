@@ -48,11 +48,9 @@ private:
     // --- Yönlendirme / kontrol yardımcıları ---
     static bool         isMethodAllowedForLocation(const std::string& method, const LocationConfig& location);
     static bool         isCgiRequest(const std::string& path, const LocationConfig& location, std::string& outExtension);
-    static HttpResponse buildRedirect(const LocationConfig& location);
 
     // --- Dosya sistemi yardımcıları ---
     static std::string  resolveFilePath(const std::string& requestPath, const LocationConfig& location);
-    static bool         readFile(const std::string& path, std::string& outContent);
 
     // --- Autoindex / error sayfaları ---
     static HttpResponse buildAutoindexPage(const std::string& dirPath, const std::string& requestPath);

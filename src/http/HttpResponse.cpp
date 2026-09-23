@@ -119,6 +119,12 @@ std::string HttpResponse::serialize() const
     std::map<std::string, std::string>::const_iterator it;
     for (it = _headers.begin(); it != _headers.end(); ++it)
     {
+        // CGI çıktısı kendi Content-Length header'ını gönderebilir (CgiResponseParser
+        // tüm CGI header'larını olduğu gibi kopyalar); bu satır olmadan hem CGI'nin
+        // (bayat/yanlış olabilecek) değeri hem gerçek body boyutu iki ayrı
+        // Content-Length satırı olarak yazılır, bu da geçersiz bir response üretir.
+        // Bu yüzden CGI kaynaklı olanı atlanır, gerçek boyut her zaman aşağıda
+        // yeniden hesaplanıp yazılır.
         if (it->first == "Content-Length")
             continue;
         out << it->first << ": " << it->second << "\r\n";
