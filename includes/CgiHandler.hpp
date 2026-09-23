@@ -45,6 +45,7 @@ class CgiHandler : public EpollHandler
 
 		std::string _cgiOutputBuffer; // stdout pipe'ından biriktirdiğimiz ham CGI çıktısı
 		std::string _stdinWriteBuffer; // client'tan gelen ama henüz script'e yazılmamış body kısmı
+		size_t      _stdinWriteOffset; // _stdinWriteBuffer içinde henüz yazılmamış kısmın başlangıcı
 		// Bu direk set edilir, sonra write() ile parça parça gideceği için buffer boşalanana kadar yazılır
 
 
@@ -83,7 +84,8 @@ class CgiHandler : public EpollHandler
 		/**** STDIN WRITE BUFFER ****/
 
 		void               setStdinBuffer(const std::string& data);
-		const std::string& getStdinBuffer() const;
+		const char*        stdinRemainingData() const;
+		size_t             stdinRemainingSize() const;
 		void               consumeStdinBuffer(size_t n);
 
 		/**** START TIME ****/

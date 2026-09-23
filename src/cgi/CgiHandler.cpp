@@ -1,11 +1,11 @@
 ﻿#include "CgiHandler.hpp"
 
-CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL), _startTime(std::time(NULL))
+CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL), _startTime(std::time(NULL)), _stdinWriteOffset(0)
 {
 }
 
 CgiHandler::CgiHandler(int stdoutPipeFd, int stdinPipeFd, pid_t pid, Client* owner)
-    : _stdoutPipeFd(stdoutPipeFd), _stdinPipeFd(stdinPipeFd), _pid(pid), _owner(owner), _startTime(std::time(NULL))
+    : _stdoutPipeFd(stdoutPipeFd), _stdinPipeFd(stdinPipeFd), _pid(pid), _owner(owner), _startTime(std::time(NULL)), _stdinWriteOffset(0)
 {
     // _startTime: CGI başlangıç zamanı, her CGI isteği için yeni handler oluşturulduğunda bir kez set edilir
     // Timeout kontrolü için kullanılır (10 saniye)
@@ -81,16 +81,27 @@ void CgiHandler::closeStdin()
 void CgiHandler::setStdinBuffer(const std::string& data)
 {
     _stdinWriteBuffer = data;
+    _stdinWriteOffset = 0;
 }
 
-const std::string& CgiHandler::getStdinBuffer() const
+const char* CgiHandler::stdinRemainingData() const
 {
-    return _stdinWriteBuffer;
+    return _stdinWriteBuffer.data() + _stdinWriteOffset;
+}
+
+size_t CgiHandler::stdinRemainingSize() const
+{
+    return _stdinWriteBuffer.size() - _stdinWriteOffset;
 }
 
 void CgiHandler::consumeStdinBuffer(size_t n)
 {
-    _stdinWriteBuffer.erase(0, n);
+    _stdinWriteOffset += n;
+    if (_stdinWriteOffset == _stdinWriteBuffer.size())
+    {
+        _stdinWriteBuffer.clear();
+        _stdinWriteOffset = 0;
+    }
 }
 
 std::time_t CgiHandler::getStartTime() const
