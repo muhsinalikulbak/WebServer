@@ -15,7 +15,7 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BASE="${1:-http://127.0.0.1:8080}"
-CONF="$ROOT/demo.conf"
+CONF="$ROOT/webserver.conf"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -72,8 +72,8 @@ UP="upload/el_test.txt"
 BODY="Webserv elle test icerigi - 12345"
 check "POST /upload/el_test.txt (yeni arşiv 201)" \
     201 "$(curl -s -o /dev/null -w '%{http_code}' -X POST -d "$BODY" "$BASE/$UP")"
-check "GET /files/el_test.txt (dosyayı geri oku)" \
-    200 "$(code "$BASE/files/el_test.txt")"
+check "GET /upload/el_test.txt (405 - sadece POST/DELETE)" \
+    405 "$(code "$BASE/$UP")"
 check "DELETE /upload/el_test.txt (sil 204)" \
     204 "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "$BASE/$UP")"
 check "DELETE yine (artık yok -> 404)" \

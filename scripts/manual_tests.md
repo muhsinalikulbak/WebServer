@@ -1,5 +1,5 @@
 # Webserv elle curl testleri (GET / POST / DELETE / CGI)
-# Sunucu:  ./webserver demo.conf      (varsayılan port 8080)
+# Sunucu:  ./webserver webserver.conf      (varsayılan port 8080)
 # Farklı port için:  BASE=http://127.0.0.1:8092  yap ve komutları tek tek çalıştır
 
 BASE=http://127.0.0.1:8080
@@ -13,7 +13,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "$BASE/old-path"   # 301 -> redirect
 
 # --------------------------- POST (upload) + DELETE -------------------------
 curl -s -i -X POST -d "merhaba icerik" "$BASE/upload/el_test.txt"  # 201 + Location
-curl -s "$BASE/files/el_test.txt"                     # 200 -> yüklenen dosyayı okur
+curl -s -o /dev/null -w "%{http_code}\n" "$BASE/upload/el_test.txt" # 405 -> sadece POST/DELETE (yükleme alanı okumaya kapalı)
 curl -s -i -X DELETE "$BASE/upload/el_test.txt"       # 204 -> silindi
 curl -s -i -X DELETE "$BASE/upload/el_test.txt"       # 404 -> artık yok
 
