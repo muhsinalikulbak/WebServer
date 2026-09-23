@@ -122,7 +122,9 @@ void CgiExecutor::buildStandardEnv(const HttpRequest& request,
     (void)location;
 
     addEnv("GATEWAY_INTERFACE", "CGI/1.1");
-    addEnv("SERVER_PROTOCOL", request.getVersion());
+    // cgi_tester sürümü büyük harf olarak bekler ("HTTP/1.1"). Request ayrıştırmada
+    // toLowerCopy ile küçültüldüğü için burada yeniden büyük harfe çevrilir.
+    addEnv("SERVER_PROTOCOL", toUpperCopy(request.getVersion()));
     addEnv("SERVER_SOFTWARE", "webserv/1.0");
     addEnv("REQUEST_METHOD", toUpperCopy(request.getMethod()));
     addEnv("SCRIPT_FILENAME", resolvedScriptPath);
@@ -133,6 +135,15 @@ void CgiExecutor::buildStandardEnv(const HttpRequest& request,
 
     if (!pathInfo.empty() && scriptName.length() >= pathInfo.length())
         scriptName = scriptName.substr(0, scriptName.length() - pathInfo.length());
+
+    // cgi_tester boş PATH_INFO'yu kabul etmez; path info kısmı yoksa script adı kullanılır.
+    if (pathInfo.empty())
+        pathInfo = scriptName;
+
+    // cgi_tester SCRIPT_NAME/PATH_INFO'yu REQUEST_URI ile birlikte doğrular;
+    // REQUEST_URI yoksa "PATH_INFO incorrect" hata üretir. İstek dosyasının
+    // orijinal URI path'i REQUEST_URI olarak basılır.
+    addEnv("REQUEST_URI", requestPath);
 
     addEnv("SCRIPT_NAME", scriptName);
     addEnv("PATH_INFO", pathInfo);
