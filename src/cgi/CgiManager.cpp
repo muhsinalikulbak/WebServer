@@ -262,7 +262,6 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 			std::cerr << "[CGI] Script produced no output and did not exit cleanly (pid "
 					   << cgiHandler->getPid() << ")." << std::endl;
 
-			Client* client = cgiHandler->getOwner();
 			if (client)
 			{
 				HttpResponse errorResponse = ResponseBuilder::buildErrorResponse(502, client->getServerConfig());
