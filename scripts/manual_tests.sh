@@ -31,7 +31,7 @@ SRV_PID=""
 # Sunucu ayakta değilse demo.conf ile kendimiz başlat
 if ! curl -s -o /dev/null --max-time 2 "$BASE/varlik-yokluk-kontrolu"; then
     echo "[!] $BASE yanıt vermiyor; $CONF ile ./webserver başlatılıyor (bitince kapatılır)..."
-    (cd "$ROOT" && exec ./webserver demo.conf > /tmp/demo_ws.log 2>&1) &
+    (cd "$ROOT" && exec ./webserver "$CONF" > /tmp/demo_ws.log 2>&1) &
     SRV_PID=$!
     started=1
     trap 'kill "$SRV_PID" 2>/dev/null; rm -f /tmp/demo_ws.log' EXIT
