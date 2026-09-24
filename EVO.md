@@ -133,6 +133,17 @@ READ_BYTES=0
 CONTENT=
 ```
 
+**5) CGI — sonsuz döngü (504 timeout)**
+`infinity.py` bir busy-loop'ttur; hiç çıktı üretmez, stdin okumaz ve çıkmaz.
+Bu, CGI timeout davranışını doğrular.
+```bash
+curl -s -m 70 -w "\n%{http_code}\n" http://127.0.0.1:8080/cgi-bin/infinity.py
+```
+Beklenen akış:
+- İstek gelir, CGI fork edilir, `infinity.py` hiçbir şey yazmadan çalışır.
+- `checkCgiTimeouts` eşiği 60 sn (kontrol periyodu 5 sn).
+- ~60-65 sn sonra server CGI'yı sonlandırır ve `504 Gateway Timeout` döner.
+> `-m 70` = curl maksimum bekleme süresi. `-m` olmasaydı istemci sonsuza dek beklerdi.
 ---
 
 ## Sınırlar ve metot denetimi
