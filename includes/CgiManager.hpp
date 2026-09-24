@@ -24,6 +24,7 @@ private:
     std::vector<CgiHandler*>        _pendingDeletion;
     int&                            _epollFd;
     std::set<EpollHandler*>&        _liveHandlers;
+    std::vector<pid_t>              _pendingReap;
 
     CgiManager(const CgiManager& other);
     CgiManager& operator=(const CgiManager& other);
@@ -41,6 +42,7 @@ public:
     void    finishCgiResponse(CgiHandler* cgiHandler);
     void    handleCgiReceive(CgiHandler* cgiHandler);
     void    handleCgiSend(CgiHandler* cgiHandler);
+    void    reapPendingKills();
     CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers);
     ~CgiManager();
 };

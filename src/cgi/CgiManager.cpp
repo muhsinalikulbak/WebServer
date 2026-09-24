@@ -37,6 +37,15 @@ CgiManager::~CgiManager()
     for (size_t i = 0; i < _pendingDeletion.size(); ++i)
         delete _pendingDeletion[i];
     _pendingDeletion.clear();
+
+    // Shutdown'da event loop yok; force-kill edilip (D state yüzünden) hemen
+    // ölemeyen çocukları bloklayarak da olsa topla - zombie kaldırmayız.
+    // Burada görev bitiyor, bloklamak sorun değil.
+    for (size_t i = 0; i < _pendingReap.size(); ++i)
+    {
+        int status;
+        waitpid(_pendingReap[i], &status, 0);
+    }
 }
 
 void CgiManager::registerHandler(CgiHandler* handler)
@@ -114,10 +123,34 @@ void CgiManager::reapCgiProcess(CgiHandler* handler)
         // (timeout ya da client disconnect). Zorla sonlandırıp
         // reap ediyoruz, zombie bırakmamak için.
         kill(pid, SIGKILL);
-        waitpid(pid, &status, 0);
+
+        // SIGKILL genelde anında öldürür, ama child disk I/O'da
+        // uninterruptible sleep (D state, örn. swap baskısı altında)
+        // durumundaysa kernel sinyali hemen işlemez. Blocking waitpid
+        // bu durumda TÜM tek-thread'li event loop'u child ölene kadar
+        // durdurur. Bunun yerine WNOHANG ile bir kez deneriz; ölmediyse
+        // pid'i listeye alıp ileride (checkTimeouts döngüsünde) tekrar
+        // deneriz, event loop asla bloklamaz.
+        result = waitpid(pid, &status, WNOHANG);
+        if (result == 0)
+            _pendingReap.push_back(pid);
     }
     // result == pid: zaten normal şekilde bitmiş ve reap edildi.
     // result == -1 (örn. ECHILD): yapacak bir şey yok, zaten reap edilmiş ya da pid geçersiz.
+}
+
+void CgiManager::reapPendingKills()
+{
+    std::vector<pid_t>::iterator it = _pendingReap.begin();
+    while (it != _pendingReap.end())
+    {
+        int status;
+        pid_t result = waitpid(*it, &status, WNOHANG);
+        if (result != 0)   // reap edildi (result==pid) ya da kalıcı hata (result==-1)
+            it = _pendingReap.erase(it);
+        else
+            ++it;
+    }
 }
 
 bool CgiManager::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
@@ -191,6 +224,8 @@ void CgiManager::startCgi(Client* client,
 
 void CgiManager::checkCgiTimeouts(std::time_t now)
 {
+    reapPendingKills();
+
     std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
     std::set<CgiHandler*>::iterator end = _cgiHandlers.end();
 
