@@ -12,7 +12,6 @@
 #include "ResponseBuilder.hpp"
 #include "CgiExecutor.hpp"
 #include "CgiResponseParser.hpp"
-#include "FdUtils.hpp"
 #include "ResponseQueue.hpp"
 
 CgiManager::CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers)
@@ -205,16 +204,8 @@ void CgiManager::startCgi(Client* client,
 	const std::string& body = client->getRequest().getBody();
 	if (!body.empty())
 	{
-		ssize_t written = write(cgiHandler->getStdinFd(), body.data(), body.size());
-		size_t sent = (written > 0) ? static_cast<size_t>(written) : 0;
-
-		if (sent < body.size())
-		{
-			cgiHandler->setStdinOffset(sent);
-			registerCgiStdinWrite(cgiHandler);
-		}
-		else
-			cgiHandler->closeStdin(_epollFd);
+		cgiHandler->setStdinOffset(0);
+		registerCgiStdinWrite(cgiHandler);
 	}
 	else
 		cgiHandler->closeStdin(_epollFd);
@@ -323,11 +314,9 @@ void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 
 	ssize_t written = write(cgiHandler->getStdinFd(), data, size);
 
-	if (written == -1)
+	if (written <= 0)
 	{
-		if (FdUtils::isTransientIoError(errno))
-			return;
-		std::cerr << "CGI stdin write error: " << strerror(errno) << std::endl;
+		std::cerr << "CGI stdin write failed, closing stdin" << std::endl;
 		cgiHandler->closeStdin(_epollFd);
 		return;
 	}
