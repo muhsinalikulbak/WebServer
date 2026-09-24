@@ -106,9 +106,6 @@ size_t CgiHandler::stdinRemainingSize() const
 void CgiHandler::consumeStdinBuffer(size_t n)
 {
     _stdinWriteOffset += n;
-    const std::string& body = _owner->getRequest().getBody();
-    if (_stdinWriteOffset == body.size())
-        _stdinWriteOffset = 0;
 }
 
 std::time_t CgiHandler::getStartTime() const
