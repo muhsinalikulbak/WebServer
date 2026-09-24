@@ -115,6 +115,7 @@ std::string HttpResponse::serialize() const
     std::ostringstream out;
 
     out << _version << " " << _statusCode << " " << _statusText << "\r\n";
+    out << "Connection: keep-alive\r\n";
 
     std::map<std::string, std::string>::const_iterator it;
     for (it = _headers.begin(); it != _headers.end(); ++it)

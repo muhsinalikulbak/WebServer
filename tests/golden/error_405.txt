@@ -1,4 +1,5 @@
 HTTP/1.1 405 Method Not Allowed
+Connection: keep-alive
 Content-Type: text/html
 Content-Length: 2393
 
