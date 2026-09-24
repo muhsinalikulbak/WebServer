@@ -144,6 +144,9 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
 ```
 Beklenen: `413 Payload Too Large` — `/post_body` limiti 100 bayt.
 
+
+> **Not:** 413 kararı parser'da değil, `routeRequest`'ta verilir — isteğin location'ı kendi `client_max_body_size`'ına sahipse onu (`effectiveBodyLimit`), yoksa server limitini (config'de direktif yoksa default 1 MB) uygular. Parser yalnızca tavanı (`maxBodyCeiling`) uygular; o da default 1 MB'dir.
+
 **Tanımsız metot (405)**
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X PUT -d x http://127.0.0.1:8080/

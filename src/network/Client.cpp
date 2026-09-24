@@ -1,5 +1,4 @@
 #include "Client.hpp"
-#include "FdUtils.hpp"
 
 
 Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.maxBodyCeiling())
@@ -69,14 +68,8 @@ Client::StreamState Client::receiveData()
     char buffer[65536];
     int byte = recv(_clientFd, buffer, 4096, 0);
 
-    if (byte == -1) 
+    if (byte == -1)
     {
-        // EAGAIN/EWOULDBLOCK: Non-blocking socket'te veri henüz hazır değil (read) veya buffer dolu (write)
-        // Bu beklenen bir durumdur, socket daha sonra tekrar denenmelidir
-        // EINTR: Sistem çağrısı bir signal tarafından kesildi, socket/veri hatası değil
-        // epoll loop'u socket ready olduğunda işlemi otomatik tekrarlayacaktır
-        if (FdUtils::isTransientIoError(errno))
-            return TRANSFER_INCOMPLETE;
         perror("Recv() error");
         return TRANSFER_ERROR;
     }
@@ -107,44 +100,26 @@ Client::StreamState Client::drainBuffer()
 
 Client::StreamState Client::sendData()
 {
-
-    int byte = send(_clientFd, _writeBuffer.data() + _writeOffset, _writeBuffer.size() - _writeOffset, 0);
+    ssize_t byte = send(_clientFd, _writeBuffer.data() + _writeOffset,
+                        _writeBuffer.size() - _writeOffset, 0);
 
     if (byte == -1)
     {
-        // EAGAIN/EWOULDBLOCK: Non-blocking socket'te buffer dolu, daha sonra tekrar denenmelidir
-        // EINTR: Sistem çağrısı bir signal tarafından kesildi, socket/veri hatası değil
-        // EPOLLOUT event'i ile socket yazmaya hazır olduğunda işlem tekrarlanacaktır
-        if (FdUtils::isTransientIoError(errno))
-            return TRANSFER_INCOMPLETE;
-        perror("Send() error");
-        return TRANSFER_ERROR;  // Sistem hatası
+        perror("Recv() error");
+        return TRANSFER_ERROR;
     }
-    else if (byte > 0)
-    {
-        _writeOffset += byte;
-        if (_writeOffset == _writeBuffer.size())
-        {
-            _writeBuffer.clear();
-            _writeOffset = 0;
-        }
-    }
-    else if (byte == 0)
-    {
 
-        // Bu koşula ihtiyaç var mı emin olamadım
-        // Cgi response oluştuktan sonra activeCgi NULL yapılabilir
-        // Yani send ederken bir sorun yaratacağını sanmıyorum.
+    if (byte == 0)
+        return TRANSFER_ERROR;
 
-        if (_activeCgi)
-        {
-            _activeCgi = NULL; //  Şimdilik böyle kapatıyoruz, içindeki verileri henüz bilmiyorum.
-            // Temiz bir şekilde kapatılıp NULL set edilecek.
-        }
+    _writeOffset += static_cast<size_t>(byte);
+    if (_writeOffset == _writeBuffer.size())
+    {
+        _writeBuffer.clear();
+        _writeOffset = 0;
         return TRANSFER_COMPLETE;
     }
-
-    return TRANSFER_INCOMPLETE;  // Hala gönderilecek veri var
+    return TRANSFER_INCOMPLETE;
 }
 
 

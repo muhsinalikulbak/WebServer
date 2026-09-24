@@ -308,9 +308,6 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 		return;
 	}
 
-	if (bytesRead == -1 && FdUtils::isTransientIoError(errno))
-		return;
-
 	finishCgiResponse(cgiHandler);
 }
 
