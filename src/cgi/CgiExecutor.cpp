@@ -210,9 +210,17 @@ CgiHandler* CgiExecutor::execute(Client* client)
 
     // İki adet pipe oluşturuyoruz: 
     // Biri CGI'a veri göndermek, diğeri CGI'dan veri okumak için
-    if (pipe(pipeStdin) < 0 || pipe(pipeStdout) < 0)
+    if (pipe(pipeStdin) < 0)
     {
         std::cerr << "Error: pipe() failed." << std::endl;
+        return NULL;
+    }
+
+    if (pipe(pipeStdout) < 0)
+    {
+        std::cerr << "Error: pipe() failed." << std::endl;
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
         return NULL;
     }
 
