@@ -22,7 +22,6 @@ static void handleShutdownSignal(int signum)
 
 int main(int argc, char** argv) 
 {
-	
 	if (argc != 2)
 	{
 		std::cerr << "Usage: ./webserver [config_file]" << std::endl;
@@ -44,7 +43,7 @@ int main(int argc, char** argv)
 	signal(SIGTERM, handleShutdownSignal);
 
 	try
-	{	
+	{
 		ConfigParser config(configPath);
 		Server s;
 	

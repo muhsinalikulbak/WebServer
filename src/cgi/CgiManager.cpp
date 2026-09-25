@@ -298,7 +298,18 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 		return;
 	}
 
-	finishCgiResponse(cgiHandler);
+	if (bytesRead == 0)
+	{
+		// Gerçek EOF: child stdout ucunu kapattı (script bitti).
+		finishCgiResponse(cgiHandler);
+		return;
+	}
+
+	// bytesRead < 0: errno kontrol edilmiyor (proje kuralı gereği).
+	// Non-blocking pipe'ta bu "şimdilik veri yok" anlamına gelir;
+	// hiçbir şey yapmadan çık, sıradaki epoll_wait bu fd'yi tekrar bildirecek.
+	if (bytesRead < 0)
+		return;
 }
 
 void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
@@ -313,15 +324,27 @@ void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 
 	ssize_t written = write(cgiHandler->getStdinFd(), data, size);
 
-	if (written <= 0)
+	if (written < 0)
 	{
-		std::cerr << "CGI stdin write failed, closing stdin" << std::endl;
+		// errno kontrol edilmiyor (proje kuralı gereği). Non-blocking pipe
+		// dolu olduğunda write() -1 döner; bu geçicidir, stdin'i kapatma,
+		// sıradaki EPOLLOUT event'i tekrar deneyecek.
+		return;
+	}
+
+	if (written == 0)
+	{
+		// write(2), size > 0 iken 0 dönmemelidir; kalıcı/anormal durum kabul edilip kapatılır.
+		std::cerr << "CGI stdin write returned 0, closing stdin" << std::endl;
 		cgiHandler->closeStdin(_epollFd);
 		return;
 	}
 
-	cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
+	if (written > 0)
+	{
+		cgiHandler->consumeStdinBuffer(static_cast<size_t>(written));
 
-	if (cgiHandler->stdinRemainingSize() == 0)
-		cgiHandler->closeStdin(_epollFd);
+		if (cgiHandler->stdinRemainingSize() == 0)
+			cgiHandler->closeStdin(_epollFd);
+	}
 }
