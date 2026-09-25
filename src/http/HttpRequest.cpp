@@ -4,18 +4,10 @@
 #include <map>
 #include <cctype>
 
-// HttpRequest basit bir data holder'dır: setter/getter/append/clear sağlar.
-// RFC 7230 uyarınca header field isimleri case-insensitive'dır; bu yüzden
-// getHeader ve hasHeader fonksiyonlarında case-insensitive arama yapıyoruz.
-
-// Dosya-düzeyinde yardımcı: verilen string'in küçük harf kopyasını döner
+// Verilen string'in tamamen küçük harfe çevrilmiş bir kopyasını döner.
 std::string HttpRequest::toLowerCopy(const std::string& s)
 {
     std::string out;
-
-    // C++'DE string StringBuilder gibi dinamik çalışır
-    // O yüzden arka plandaki reallocation'ları azalatmak için kapasiteyi elle size()
-    // Kadar verip realloc yapmadan yola devam ediyoruz.
 
     out.reserve(s.size());
 
@@ -26,24 +18,24 @@ std::string HttpRequest::toLowerCopy(const std::string& s)
     return out;
 }
 
-// Initializer list (üye ilk değer atama listesi) adı verilen bu kısıma
-// İstediğimiz değeri verebiliriz, içini boş bırakırsa empty ("") ile doldurur
-// Ve garbage value riski ortadan kalkar.
-
+// Tüm alanları boş değerlerle başlatan varsayılan HttpRequest oluşturur.
 HttpRequest::HttpRequest()
     : _method(), _uri(), _version(), _headers(), _body(), _path(), _queryString()
 {
 }
 
+// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
 HttpRequest::~HttpRequest()
 {
 }
 
+// HTTP metodunu küçük harfe çevirip saklar.
 void HttpRequest::setMethod(const std::string& method)
 {
     _method = toLowerCopy(method);
 }
 
+// URI'yi path ve query string olarak ayırıp saklar.
 void HttpRequest::setUri(const std::string& uri)
 {
     size_t qPos = uri.find('?');
@@ -57,42 +49,28 @@ void HttpRequest::setUri(const std::string& uri)
         _path = uri;
         _queryString = "";
     }
-    _uri = uri;  // orijinal tam URI'yi de saklamak isteyebilirsin (log, response header için)
+    _uri = uri;
 }
 
-// Burada path cgi'ın hangi path de olduğunu söyler
-// Sonraki kısım ise script'in kullanacağı verilerdir.
-// O yüzden uri'yi ikiye böleriz, path ve query-string olarak
-
-// /cgi-bin/script.py ? name=ali&age=20 #section1
-//   \________________/   \_____________/ \_______/
-//          |                    |            |
-//      Path (Yol)          Query String   Fragment (Çapa)
-
+// HTTP versiyonunu küçük harfe çevirip saklar.
 void HttpRequest::setVersion(const std::string& version)
 {
     _version = toLowerCopy(version);
 }
 
-
+// Bir header'ı (anahtar küçük harfe çevrilerek) ekler veya günceller.
 void HttpRequest::setHeader(const std::string& key, const std::string& value)
 {
-    _headers[toLowerCopy(key)] = value; // aynı key varsa üzerine yazar
+    _headers[toLowerCopy(key)] = value;
 }
 
-
-// Parçaları (chunk) verileri alıp _body'e ekleriz.
-// Eğer request tarafında state BODY ya da CHUNKED_BODY ise
-// Request bu fonksiyonu çağırarak body'i buradaki buffer'da toplar
-
+// Gelen veri parçasını (chunk) body tamponuna ekler.
 void HttpRequest::appendBody(const std::string& data)
 {
     _body.append(data);
 }
 
-
-// Request bitip response edildikten sonra 
-// Tekrar request işlemek için önceki verileri sıfırlarız.
+// Keep-alive'da bir sonraki isteği işlemek için önceki alanları sıfırlar.
 void HttpRequest::clear()
 {
     _method.clear();
@@ -102,40 +80,43 @@ void HttpRequest::clear()
     _headers.clear();
 }
 
-
+// HTTP metodunu döner.
 const std::string& HttpRequest::getMethod() const
 {
     return _method;
 }
 
-
+// Orijinal (path + query string) URI'yi döner.
 const std::string& HttpRequest::getUri() const
 {
     return _uri;
 }
 
-
+// HTTP versiyonunu döner.
 const std::string& HttpRequest::getVersion() const
 {
     return _version;
 }
 
-
+// İstek body'sini döner.
 const std::string& HttpRequest::getBody() const
 {
     return _body;
 }
 
+// Query string kısmını döner.
 const std::string&  HttpRequest::getQueryString() const
 {
     return _queryString;
 }
 
+// Query string olmadan yalnızca path kısmını döner.
 const std::string&  HttpRequest::getPath() const
 {
     return _path;
 }
 
+// Verilen header'ın değerini (case-insensitive) döner; yoksa boş string döner.
 std::string HttpRequest::getHeader(const std::string& key) const
 {
     std::map<std::string, std::string>::const_iterator it = _headers.find(toLowerCopy(key));
@@ -146,15 +127,13 @@ std::string HttpRequest::getHeader(const std::string& key) const
     return std::string();
 }
 
+// Tüm header'ları içeren map'i döner.
 const std::map<std::string, std::string>& HttpRequest::getHeaders() const
 {
     return _headers;
 }
 
-
-// İlgili header var mı ?
-// Örneğin content-length var mı diye kontrol edilir.
-
+// Verilen header'ın (case-insensitive) mevcut olup olmadığını döner.
 bool HttpRequest::hasHeader(const std::string& key) const
 {
     return _headers.find(toLowerCopy(key)) != _headers.end();

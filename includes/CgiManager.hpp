@@ -12,11 +12,6 @@
 
 class Client;
 
-// CgiManager: CGI yaşam döngüsünü yöneten sınıf.
-// Server'dan CGI mantığını ayırmak için oluşturuldu.
-// Epoll işlemlerini kendisi yapar, _liveHandlers referansı üzerinden
-// stale-event kontrolü için Server ile set paylaşır.
-
 class CgiManager
 {
 private:

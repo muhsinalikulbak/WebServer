@@ -8,10 +8,7 @@
 
 namespace ResponseQueue
 {
-    // throwOnError: epoll_ctl hatası olduğunda exception fırlatır (true) veya sadece log yazar (false)
-    // Mevcut koddaki davranışı korumak için: handleParsedRequest/startCgi'de true, checkCgiTimeouts/finishCgiResponse'da false
-    // Eski kodda her response üretilen yerde bu kodu tek tek yazıyordum ve bazı yerde throw fırlatırken
-    // Bazı yerlerde sadece error mesajı basıyordum, bu yapıyı korumak için bir bool parametre ile bunu çözdüm.
+    // Yanıtı client'ın yazma tamponuna koyar ve soketi EPOLLOUT için epoll'a kaydeder; hata durumunda throwOnError'a göre davranır.
     void push(int epollFd, Client* client, const HttpResponse& response, bool throwOnError)
     {
         client->setWriteBuffer(response.serialize());

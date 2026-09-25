@@ -3,9 +3,7 @@
 #include <cerrno>
 #include <cctype>
 
-
-// HttpRequestParser implementasyonu
-
+// maxBodySize sınırıyla ve REQUEST_LINE state'inde başlayan bir RequestParser oluşturur.
 RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
 {
     _state = REQUEST_LINE;
@@ -19,16 +17,19 @@ RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBod
     _errorCode = 400;
 }
 
+// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
 RequestParser::~RequestParser()
 {
 }
 
+// recv() ile okunan ham veriyi iç tampona ekler.
 void RequestParser::append(const std::string& buffer)
 {
     if (!buffer.empty())
         _buffer.append(buffer);
 }
 
+// Mevcut state'e göre tampondaki veriyi işleyip isteği COMPLETE ya da ERROR olana kadar ilerletir.
 RequestParser::State RequestParser::feed()
 {
     while (_state != COMPLETE && _state != ERROR)
@@ -43,7 +44,7 @@ RequestParser::State RequestParser::feed()
 
             processRequestLine(line);
 
-            if (_state == ERROR)    // Bad Request
+            if (_state == ERROR)
                 break;
             
             _state = HEADERS;
@@ -83,7 +84,7 @@ RequestParser::State RequestParser::feed()
     return _state;
 }
 
-
+// Header'lar bitince Transfer-Encoding/Content-Length'e göre body state'ine karar verir.
 void RequestParser::checkAfterHeader()
 {
     if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
@@ -116,11 +117,9 @@ void RequestParser::checkAfterHeader()
     }
     else
         _state = COMPLETE;
-    // HEADER SONRASI BİR ŞEY YOK DEMEKTİR, REQUEST BİTER.
 }
 
-// buffer'dan \r\n'e kadar bir satır çeker, tüketir
-
+// Tampondan bir sonraki "\r\n" sonlandırmalı satırı çekip tampondan tüketir.
 bool RequestParser::extractLine(std::string& line)
 {
     std::size_t pos = _buffer.find("\r\n");
@@ -128,16 +127,14 @@ bool RequestParser::extractLine(std::string& line)
     if (pos == std::string::npos)
         return false;
 
-    // İlgili satırı line'a alıyoruz
     line = _buffer.substr(0, pos);      
     
-    // Satırı aldıktan sonra buffer'dan o satırı siliyoruz.
     _buffer.erase(0, pos + 2);
 
     return true;
 }
 
-
+// İstek satırını (method, URI, versiyon) ayrıştırıp request nesnesine yazar.
 void RequestParser::processRequestLine(const std::string& line)
 {
     std::vector<std::string> requestLine = split(line, ' ');
@@ -154,6 +151,7 @@ void RequestParser::processRequestLine(const std::string& line)
     }
 }
 
+// Bir header satırını "anahtar: değer" olarak ayrıştırıp request nesnesine ekler.
 void RequestParser::processHeaderLine(const std::string& line)
 {
     size_t colonPos = line.find(':');
@@ -179,6 +177,7 @@ void RequestParser::processHeaderLine(const std::string& line)
     _request.setHeader(key, value);
 }
 
+// Verilen string'in başındaki ve sonundaki boşluk karakterlerini siler.
 void RequestParser::trimString(std::string& str)
 {
     if (str.empty())
@@ -199,20 +198,7 @@ void RequestParser::trimString(std::string& str)
 
 
 
-// Connection ve Transfer-Encoding value'ları case insensitive 
-// Yani gelen değerleri lowercase yapıp karşılaştırma yapabilirim
-// "chunked", "keep-alive", "close" vs.
-
-// GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
-// Host: localhost:8080                 <--|
-// User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
-// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir. // Content type olmalı mı
-// Content-Length: 15                   <--|
-
-// {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)
-
-
-
+// Verilen string'i delimiter karakterine göre token'lara ayırır.
 std::vector<std::string> RequestParser::split(const std::string& str, char delimiter) 
 {
     std::vector<std::string> tokens;
@@ -230,23 +216,21 @@ std::vector<std::string> RequestParser::split(const std::string& str, char delim
     return tokens;
 }
 
-
+// Parser'ın mevcut state'ini döner.
 RequestParser::State    RequestParser::getState() const { return _state; }
 
+// İnşa edilmekte olan/tamamlanmış HttpRequest'i döner.
 const HttpRequest&      RequestParser::getRequest() { return _request; }
 
+// State COMPLETE ise true döner.
 bool                    RequestParser::isComplete() const { return _state == COMPLETE; }
 
+// State ERROR ise true döner.
 bool                    RequestParser::hasError() const { return _state == ERROR; }
 
-
-
+// Keep-alive'da bir sonraki istek için parser durumunu (buffer hariç) sıfırlar.
 void RequestParser::reset()
 {
-    // Reset'de _buffer temizlenmeyecek
-    // Çünkü tek bir recv() çağrısında örneğin iki tam request gelebilir.
-    // ilkini işleyip göndeririz ikincisine de bakmamız gerekir.
-
     _state = REQUEST_LINE;
     _contentLength = 0;
     _bodyBytesRead = 0;
@@ -257,15 +241,8 @@ void RequestParser::reset()
     _chunkedState = SIZE;
     _request.clear();
 }
-// keep-alive: bir sonraki request için parser'ı sıfırla
 
-
-
-// digit check + endptr kontrolü olmasının sebebi
-// stroul "   123" gibi baştaki boşlukları da kabul eder
-// aynı zamanda negatif sayıları da unsigned'a çevirir.
-// O yüzden digit check + endptr kontrolü yapılır
-
+// Content-Length/chunk-size değerinin geçerli bir sayı (10 ya da 16 tabanlı) olup olmadığını kontrol edip out'a yazar.
 bool RequestParser::checkContentLength(const std::string& value, size_t& out, int base)
 {
     if (value.empty())
@@ -287,13 +264,14 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
     errno = 0;
     unsigned long result = std::strtoul(value.c_str(), &endptr, base);
 
-    if (*endptr != '\0' || errno == ERANGE)   // strtoul tamamını tüketmediyse
+    if (*endptr != '\0' || errno == ERANGE)
         return false;
 
     out = static_cast<size_t>(result);
     return true;
 }
 
+// Chunked transfer-encoding gövdesini (size/data/trailer state'leri) tampon üzerinden ilerletir.
 bool RequestParser::chunkedBodyRemaining()
 {
     if (_chunkedState == SIZE)
@@ -313,8 +291,6 @@ bool RequestParser::chunkedBodyRemaining()
     }
     else if (_chunkedState == DATA)
     {
-        // 0\r\n
-
         size_t remaining = _chunkLength - _bodyBytesRead;
         size_t size = std::min(remaining, _buffer.size());
 
@@ -341,12 +317,10 @@ bool RequestParser::chunkedBodyRemaining()
             }
             
             _buffer.erase(0, 2);
-            _bodyBytesRead = 0; // Her yeni chunk için sıfırlamamız gerekir.
+            _bodyBytesRead = 0;
             _chunkedState = SIZE;
         }
 
-        // Buffer'da hâlâ veri varsa aynı buffer üzerinden işlemeye devam et,
-        // yoksa yeni veri beklemek için döngüden çık (endless spin'i önler).
         return !_buffer.empty();
     }
     else
@@ -355,14 +329,6 @@ bool RequestParser::chunkedBodyRemaining()
 
         if (!extractLine(trailer))
             return false;
-
-        // size kısmında 0\r\n  '0' kısmı silindi ve
-        // Burada \r\n kısmı da silinerek complete edildi
-        // Örnek 3\r\n sel\r\n 0\r\n \r\n
-
-        //0\r\n
-        // X-Checksum: abc123\r\n  // Burası extension ve burayı reddediyoruz.
-        // \r\n
 
         if (trailer.empty())
             _state = COMPLETE;
@@ -374,15 +340,10 @@ bool RequestParser::chunkedBodyRemaining()
 }
 
 
+// Content-Length ile bilinen sabit boyutlu body'nin kalan kısmını tampondan okuyup body'e ekler.
 void RequestParser::bodyRemaining()
 {
-    // mer\r\nGET
-    // Buffer size = 8
-    // content-length = 3
-    // Bytes-read ilk başta = 0
-
-
-    size_t remaining = _contentLength - _bodyBytesRead; // Burası ne kadar okudum ne kadar kaldı
+    size_t remaining = _contentLength - _bodyBytesRead;
     size_t size = std::min(_buffer.size(), remaining);
     _bodyBytesRead += size;
 
@@ -390,6 +351,8 @@ void RequestParser::bodyRemaining()
     _buffer.erase(0, size);
 }
 
+// State'i ERROR'a çekip verilen HTTP hata kodunu saklar.
 void RequestParser::setError(int code) { _state = ERROR; _errorCode = code; }
 
+// Ayrıştırma sırasında oluşan HTTP hata kodunu döner.
 int  RequestParser::getErrorCode() const { return _errorCode; }

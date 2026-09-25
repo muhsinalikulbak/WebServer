@@ -11,6 +11,7 @@
 
 namespace FdUtils
 {
+    // Verilen fd'yi O_NONBLOCK ile non-blocking moda alır.
     void setNonBlocking(int fd)
     {
         int flags = fcntl(fd, F_GETFL);
@@ -21,6 +22,7 @@ namespace FdUtils
             throw std::runtime_error(std::string("fcntl F_SETFL: ") + strerror(errno));
     }
 
+    // Verilen fd'ye FD_CLOEXEC bayrağını ekler (fork/exec sonrası otomatik kapansın diye).
     void setCloseOnExec(int fd)
     {
         int flags = fcntl(fd, F_GETFD);
@@ -31,15 +33,17 @@ namespace FdUtils
             throw std::runtime_error(std::string("fcntl F_SETFD: ") + strerror(errno));
     }
 
+    // Verilen soket fd'sinde Nagle algoritmasını (TCP_NODELAY) kapatır.
     void setTcpNodelay(int fd)
     {
 		int opt = 1;
-		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1) // NAGLE ALGORİTMASINI KAPAT
+		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)) == -1)
 		{
 			throw std::runtime_error(std::string("Error setsockopt TCP_NODELAY: ") + strerror(errno));
 		}
     }
 
+    // Verilen soket fd'sinde SO_REUSEADDR seçeneğini etkinleştirir.
     void setReuseAddress(int fd)
     {
         int opt = 1;
@@ -47,6 +51,7 @@ namespace FdUtils
             throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
     }
 
+    // Verilen soket fd'sinde SO_REUSEPORT seçeneğini etkinleştirir.
     void setReusePort(int fd)
     {
         int opt = 1;

@@ -20,17 +20,15 @@ public:
     HttpRequest();
     ~HttpRequest();
 
-    // Parser tarafından doldurulur
     void setMethod(const std::string& method);
     void setUri(const std::string& uri);
     void setVersion(const std::string& version);
     void setHeader(const std::string& key, const std::string& value);
     void appendBody(const std::string& data);
-    void clear(); // keep-alive'da bir sonraki request için resetlemek adına
+    void clear();
     static std::string toLowerCopy(const std::string& s);
 
 
-    // Handler/CGI tarafı okur
     const std::string&  getMethod() const;
     const std::string&  getUri() const;
     const std::string&  getVersion() const;
@@ -43,12 +41,3 @@ public:
 };
 
 #endif
-
-
-// GET /index.html HTTP/1.1              <-- 1. Satır: Method, URI, Version
-// Host: localhost:8080                 <--|
-// User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
-// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir.
-// Content-Length: 15                   <--|
-
-// {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)

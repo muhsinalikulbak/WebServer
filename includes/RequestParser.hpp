@@ -24,29 +24,27 @@ public:
     {
         SIZE,
         DATA,
-        TRAILER // 0\r\n bitişi işaret eder
+        TRAILER
     };
 
 private:
     State           _state;
-    std::string     _buffer;       // henüz işlenmemiş ham byte'lar
-    HttpRequest     _request;      // inşa edilmekte olan request
+    std::string     _buffer;
+    HttpRequest     _request;
     ChunkedState    _chunkedState;
 
-    const   size_t  _maxBodySize;   // Bayt Cinsinden Limit: 10485760 (10M)
-    const   size_t  _maxHeaderCount; // This is a deliberate constant; it doesn't come from the config.
+    const   size_t  _maxBodySize;
+    const   size_t  _maxHeaderCount;
     size_t          _headerCount;
     size_t          _contentLength;
     size_t          _chunkLength;
     size_t          _chunkedTotalBytes;
     size_t          _bodyBytesRead;
     bool            _isChunked;    
-    int             _errorCode;   // constructor ve reset()'te 400'e set edilir (default/fallback)
+    int             _errorCode;
     
-    // Transfer-Encoding: chunked tespiti için (şimdilik sadece işaret)
-    // chunked encoding kullanacaksan ayrı state/counter'lar da gerekecek
 
-    bool    extractLine(std::string& line);          // buffer'dan \r\n'e kadar bir satır çeker, tüketir
+    bool    extractLine(std::string& line);
     void    processRequestLine(const std::string& line);
     void    processHeaderLine(const std::string& line);
     void    trimString(std::string& str);
@@ -66,7 +64,6 @@ public:
     RequestParser(size_t maxBodySize);
     ~RequestParser();
 
-    // recv() sonrası çağrılır, kalan state'e göre devam eder
     State               feed();
     void                append(const std::string& buffer);
     State               getState() const;
@@ -75,9 +72,7 @@ public:
     const HttpRequest&  getRequest();
     int                 getErrorCode() const;
 
-    void reset(); // keep-alive: bir sonraki request için parser'ı sıfırla
+    void reset();
 };
 
 #endif
-
-

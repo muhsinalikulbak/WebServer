@@ -6,8 +6,6 @@
 #include "LocationConfig.hpp"
 #include "ServerConfig.hpp"
 
-// Upload (POST) ve silme (DELETE) işlemlerinin tek karar noktası.
-// routeRequest ROUTE_STATIC döndüğünde dispatch() uygun handler'ı çağırır.
 namespace UploadHandler
 {
     HttpResponse post(const HttpRequest& request, const LocationConfig& location,

@@ -1,6 +1,6 @@
 #include "Client.hpp"
 
-
+// Verilen fd ve server config ile client'ı WAITING_FOR_REQUEST durumunda oluşturur.
 Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _parser(config.maxBodyCeiling())
 {
     _clientFd = fd;
@@ -10,7 +10,7 @@ Client::Client(int fd, const ServerConfig& config) : _serverConfig(config), _par
     _writeOffset = 0;
 }
 
-
+// Client soketini kapatır.
 Client::~Client()
 {
     if (_clientFd != -1)
@@ -19,41 +19,49 @@ Client::~Client()
     }
 }
 
-/**** GETTER SETTER ****/
-
-
+// Son aktivite zamanını döner.
 std::time_t                 Client::getLastActivity() const { return _lastActivity; }
 
+// Client'ın mevcut durumunu döner.
 Client::ClientState         Client::getClientState() const { return _clientState; }
 
+// Son aktivite zamanını günceller.
 void                        Client::setLastActivity(std::time_t time) { _lastActivity = time; }
 
+// Client'ın durumunu ayarlar.
 void                        Client::setClientState(Client::ClientState state) { _clientState = state; }
 
-int                         Client::getFd() const { return _clientFd; } // Override
+// Client soketinin fd'sini döner.
+int                         Client::getFd() const { return _clientFd; }
 
-EpollHandler::HandlerType   Client::getType() const { return EpollHandler::HANDLER_CLIENT; } // Override
+// Bu handler'ın epoll handler tipini (CLIENT) döner.
+EpollHandler::HandlerType   Client::getType() const { return EpollHandler::HANDLER_CLIENT; }
 
+// Bu client'ın bağlı olduğu server config'ini döner.
 const ServerConfig&         Client::getServerConfig() const { return _serverConfig; }
 
+// Parser tarafından inşa edilen HttpRequest'i döner.
 const HttpRequest&          Client::getRequest()  { return _parser.getRequest(); }
 
+// Parser'da oluşan HTTP hata kodunu döner.
 int                         Client::getErrorCode() const { return _parser.getErrorCode(); }
 
+// Gönderilecek yanıtı yazma tamponuna koyar ve ofseti sıfırlar.
 void                        Client::setWriteBuffer(const std::string& response) { _writeBuffer = response; _writeOffset = 0; }
 
-
+// Bu client için aktif CGI handler'ını ayarlar.
 void                        Client::setActiveCgi(CgiHandler* cgi) { _activeCgi = cgi; }
 
+// Bu client için aktif CGI handler'ını döner.
 CgiHandler*                 Client::getActiveCgi() const { return _activeCgi; }
 
-
-/**** READ WRITE / HELPER FUNCTIONS ****/
-
+// Parser'da hata oluşup oluşmadığını döner.
 bool                        Client::isBadRequest() const { return _parser.hasError(); }
 
+// Keep-alive için parser durumunu sıfırlar.
 void                        Client::resetParser() { _parser.reset(); }
 
+// RequestParser state'ini Client::StreamState'e çevirir.
 Client::StreamState Client::processParserState(RequestParser::State state)
 {
     if (state == RequestParser::ERROR)
@@ -63,6 +71,7 @@ Client::StreamState Client::processParserState(RequestParser::State state)
     return TRANSFER_INCOMPLETE;
 }
 
+// Soketten bir recv() çağrısı yapıp okunan veriyi parser'a besler.
 Client::StreamState Client::receiveData()
 {
     char buffer[65536];
@@ -76,11 +85,6 @@ Client::StreamState Client::receiveData()
 
     if (byte == 0)
     {
-        // Client bağlantıyı kapattı (EOF), TCP FIN paketi gönderdi
-        // Bir client tek bir istek gönderip kendini kapatırsa totalda 4 işlem olur
-        // Kendini kapatması demek en son TCP'nin Finish paket göndermersi demektir.
-        // 1- Bağlantı İsteği alma recv, 2- Request isteği alma recv 3- Response dönme send, 
-        // 4- TCP fin paketi (kapanma) isteği recv
         return PEER_CLOSED;
     }
     _parser.append(std::string(buffer, byte));
@@ -92,12 +96,14 @@ Client::StreamState Client::receiveData()
     return processParserState(state);
 }
 
+// Yeni recv() yapmadan, parser tamponunda kalan veriyi işler.
 Client::StreamState Client::drainBuffer()
 {
-    RequestParser::State state = _parser.feed();  // recv yok, sadece kalan buffer'ı işler
+    RequestParser::State state = _parser.feed();
     return processParserState(state);
 }
 
+// Yazma tamponundaki kalan yanıt verisini bir send() çağrısıyla client'a gönderir.
 Client::StreamState Client::sendData()
 {
     ssize_t byte = send(_clientFd, _writeBuffer.data() + _writeOffset,
@@ -121,5 +127,4 @@ Client::StreamState Client::sendData()
     }
     return TRANSFER_INCOMPLETE;
 }
-
 

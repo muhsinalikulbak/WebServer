@@ -1,7 +1,5 @@
 #include "CgiExecutor.hpp"
 #include "FdUtils.hpp"
-// Client sınıfının tanımına ihtiyaç duyacağımız için ekliyoruz
-// #include "Client.hpp" 
 
 #include "HttpRequest.hpp"
 #include "LocationConfig.hpp"
@@ -18,6 +16,7 @@
 
 namespace
 {
+    // Girdiyi tamamen büyük harfe çevirir.
     std::string toUpperCopy(const std::string& s)
     {
         std::string out;
@@ -28,6 +27,7 @@ namespace
         return out;
     }
 
+    // HTTP header adını "HTTP_" önekli CGI ortam değişkeni anahtarına dönüştürür.
     std::string toEnvKey(const std::string& key)
     {
         std::string out = "HTTP_";
@@ -43,6 +43,7 @@ namespace
         return out;
     }
 
+    // İstek path'inden script adından sonra kalan PATH_INFO bölümünü çıkarır.
     std::string extractPathInfo(const std::string& requestPath, const std::string& resolvedScriptPath)
     {
         std::string scriptName;
@@ -75,15 +76,18 @@ namespace
     }
 }
 
+// Boş script path ve interpreter ile varsayılan CgiExecutor oluşturur.
 CgiExecutor::CgiExecutor() : _scriptPath(""), _interpreter("")
 {
 }
 
+// Başka bir CgiExecutor'ın alanlarını kopyalayarak yeni nesne oluşturur.
 CgiExecutor::CgiExecutor(const CgiExecutor& copy)
 {
     *this = copy;
 }
 
+// Bu nesneye başka bir CgiExecutor'ın env map, script path ve interpreter'ını atar.
 CgiExecutor& CgiExecutor::operator=(const CgiExecutor& assign)
 {
     if (this != &assign)
@@ -95,25 +99,30 @@ CgiExecutor& CgiExecutor::operator=(const CgiExecutor& assign)
     return *this;
 }
 
+// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
 CgiExecutor::~CgiExecutor()
 {
 }
 
+// Çalıştırılacak CGI script'inin dosya yolunu ayarlar.
 void CgiExecutor::setScriptPath(const std::string& path)
 {
     _scriptPath = path;
 }
 
+// CGI script'ini çalıştıracak yorumlayıcı (örn: python3) yolunu ayarlar.
 void CgiExecutor::setInterpreter(const std::string& interpreter)
 {
     _interpreter = interpreter;
 }
 
+// Env map'e tek bir anahtar/değer ortam değişkeni ekler.
 void CgiExecutor::addEnv(const std::string& key, const std::string& value)
 {
     _envMap[key] = value;
 }
 
+// İstek, location ve server bilgilerinden CGI için standart ortam değişkenlerini üretir.
 void CgiExecutor::buildStandardEnv(const HttpRequest& request,
                                    const LocationConfig& location,
                                    const ServerConfig& serverConfig,
@@ -122,8 +131,6 @@ void CgiExecutor::buildStandardEnv(const HttpRequest& request,
     (void)location;
 
     addEnv("GATEWAY_INTERFACE", "CGI/1.1");
-    // cgi_tester sürümü büyük harf olarak bekler ("HTTP/1.1"). Request ayrıştırmada
-    // toLowerCopy ile küçültüldüğü için burada yeniden büyük harfe çevrilir.
     addEnv("SERVER_PROTOCOL", toUpperCopy(request.getVersion()));
     addEnv("SERVER_SOFTWARE", "webserv/1.0");
     addEnv("REQUEST_METHOD", toUpperCopy(request.getMethod()));
@@ -136,13 +143,9 @@ void CgiExecutor::buildStandardEnv(const HttpRequest& request,
     if (!pathInfo.empty() && scriptName.length() >= pathInfo.length())
         scriptName = scriptName.substr(0, scriptName.length() - pathInfo.length());
 
-    // cgi_tester boş PATH_INFO'yu kabul etmez; path info kısmı yoksa script adı kullanılır.
     if (pathInfo.empty())
         pathInfo = scriptName;
 
-    // cgi_tester SCRIPT_NAME/PATH_INFO'yu REQUEST_URI ile birlikte doğrular;
-    // REQUEST_URI yoksa "PATH_INFO incorrect" hata üretir. İstek dosyasının
-    // orijinal URI path'i REQUEST_URI olarak basılır.
     addEnv("REQUEST_URI", requestPath);
 
     addEnv("SCRIPT_NAME", scriptName);
@@ -178,6 +181,7 @@ void CgiExecutor::buildStandardEnv(const HttpRequest& request,
         addEnv(toEnvKey(it->first), it->second);
 }
 
+// _envMap içeriğinden execve için char* dizisi (envp) tahsis eder.
 char** CgiExecutor::_allocateEnvp() const
 {
     char** envp = new char*[_envMap.size() + 1];
@@ -194,6 +198,7 @@ char** CgiExecutor::_allocateEnvp() const
     return envp;
 }
 
+// _allocateEnvp ile ayrılan envp dizisini ve elemanlarını serbest bırakır.
 void CgiExecutor::_freeEnvp(char** envp) const
 {
     if (!envp)
@@ -203,13 +208,12 @@ void CgiExecutor::_freeEnvp(char** envp) const
     delete[] envp;
 }
 
+// CGI script'ini pipe'lar üzerinden fork/execve ile çalıştırır ve iletişim için CgiHandler döner.
 CgiHandler* CgiExecutor::execute(Client* client)
 {
     int pipeStdin[2];
     int pipeStdout[2];
 
-    // İki adet pipe oluşturuyoruz: 
-    // Biri CGI'a veri göndermek, diğeri CGI'dan veri okumak için
     if (pipe(pipeStdin) < 0)
     {
         std::cerr << "Error: pipe() failed." << std::endl;
@@ -235,23 +239,17 @@ CgiHandler* CgiExecutor::execute(Client* client)
 
     if (pid == 0)
     {
-        // --- CHILD PROCESS ---
-        
-        close(pipeStdin[1]);  // Child stdin'e yazmayacak, okuyacak
-        close(pipeStdout[0]); // Child stdout'tan okumayacak, yazacak
+        close(pipeStdin[1]);
+        close(pipeStdout[0]);
 
-        // Standart dosya tanımlayıcılarını pipe'lara yönlendir
         dup2(pipeStdin[0], STDIN_FILENO);
         dup2(pipeStdout[1], STDOUT_FILENO);
 
-        // Kullanılmış pipe fd'lerini temizle
         close(pipeStdin[0]);
         close(pipeStdout[1]);
 
         char** envp = _allocateEnvp();
         
-        // Argümanları hazırla
-        // Eğer yorumlayıcı (örn: python veya php-cgi) kullanılıyorsa ona göre argv oluşturulur
         char** argv;
         if (!_interpreter.empty())
         {
@@ -269,7 +267,6 @@ CgiHandler* CgiExecutor::execute(Client* client)
 
         execve(argv[0], argv, envp);
 
-        // execve sadece hata durumunda return yapar
         std::cerr << "Error: execve() failed for " << _scriptPath << std::endl;
         _freeEnvp(envp);
         
@@ -286,19 +283,14 @@ CgiHandler* CgiExecutor::execute(Client* client)
     }
     else
     {
-        // --- PARENT PROCESS ---
-        
-        close(pipeStdin[0]);  // Parent stdin'den okumayacak, child'a yazacak
-        close(pipeStdout[1]); // Parent stdout'a yazmayacak, child'dan okuyacak
+        close(pipeStdin[0]);
+        close(pipeStdout[1]);
 
         FdUtils::setNonBlocking(pipeStdout[0]);
         FdUtils::setCloseOnExec(pipeStdout[0]);
         FdUtils::setNonBlocking(pipeStdin[1]);
         FdUtils::setCloseOnExec(pipeStdin[1]);
 
-        // CgiHandler, Epoll'de okuma/yazma yapmak üzere dönülür
-        // Okunacak yer: pipeStdout[0]
-        // Yazılacak yer: pipeStdin[1]
         return new CgiHandler(pipeStdout[0], pipeStdin[1], pid, client);
     }
 }

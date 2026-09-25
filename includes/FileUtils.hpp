@@ -1,4 +1,3 @@
-// FileUtils.hpp
 #ifndef FILEUTILS_HPP
 #define FILEUTILS_HPP
 

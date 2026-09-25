@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <csignal>
 
+// _epollFd'yi henüz oluşturulmamış (-1) olarak işaretleyip son timeout kontrolünü şimdi zamanına ayarlar.
 Server::Server()
 	: _cgiManager(_epollFd, _liveHandlers)
 {
@@ -17,6 +18,7 @@ Server::Server()
 	_lastTimeoutCheck = std::time(NULL);
 }
 
+// Tüm client ve dinleme soketlerini siler, epoll fd'sini kapatır.
 Server::~Server()
 {
 	std::set<Client *>::iterator client = _clientSockets.begin();
@@ -27,21 +29,17 @@ Server::~Server()
 		Client* temp = (*client);
 		client++;
 
-		// fd close() yapıldığında otomatik olarak epoll'dan delete edilir
-		// O yüzden ekstra epoll_ctl_del yazmaya gerek yoktur
 		delete temp;
 	}
 
 	while (sock != _listenSockets.end())
 	{
-		// epoll_ctl(_epollFd, EPOLL_CTL_DEL, (*sock)->getFd(), NULL);
 		Socket* temp = *sock;
 		sock++;
 
 		delete temp;
 	}
 
-	// Dangling pointer'ları set<T> den temizliyoruz
 	_clientSockets.clear();
 	_listenSockets.clear();
 
@@ -49,16 +47,12 @@ Server::~Server()
 		close(_epollFd);
 }
 
+// Config'teki her ip:port için epoll'u ve dinleme soketlerini oluşturup kaydeder.
 void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
 	std::string host;
 	int	port = 0;
-
-	// Size parametrese tarihsel bir kalıntı
-	// Normalde eskiden bu poll'un kaç adet socket'i yöneteceğini temsil ederdi.
-	// Şimdi bu size socket eklendikçe dinamik olarak artıyor.
-	// O yüzden parametre sadece 0'dan büyük olmalı başka bir işe yaramıyor.
 
 	_epollFd = epoll_create(1);
 	if (_epollFd == -1)
@@ -66,7 +60,6 @@ void Server::init(const ConfigParser& config)
 		throw std::runtime_error("Server init failed: epoll_create failed");
 	}
 
-	// Bu flag ileride cgi fork attığında kopyalanan epoll fd'yi oto kapatmasını sağlar
 	FdUtils::setCloseOnExec(_epollFd);
 
 	for (size_t i = 0; i < servers.size(); i++)
@@ -84,7 +77,7 @@ void Server::init(const ConfigParser& config)
 				sock->createSocket();
 				sock->bindSocket();
 				sock->startListening();
-				registerHandler(sock); // Epoll_Ctl_Add throw atıyor, bu yerden sonra zaten vectore ekleme olduğu için sorun yok
+				registerHandler(sock);
 			}
 			catch (const std::exception& e)
 			{
@@ -92,11 +85,6 @@ void Server::init(const ConfigParser& config)
 				delete sock;
 				continue;
 			}
-
-			// Dinleme yapacak ip:port aktifleştiriyoruz, dinleyici socket açıyoruz.
-			// Epoll_wait çağrısı sonra master socket gelirse bu bir client'ın bağlantı kurmak istemesidir.
-			// Artık master socket'e bir bağlantı geldiğinde epoll_wait ile
-			// bunu yakalayabileceğiz.
 		}
 
 	}
@@ -104,9 +92,10 @@ void Server::init(const ConfigParser& config)
 	if (_listenSockets.empty())
 		throw std::runtime_error("An error occurred while opening the sockets, or no socket was specified.");
 
-	_events.resize(100); // Burayı dinamik olarak arttırmalı mıyım
+	_events.resize(100);
 }
 
+// Dinleme soketinde bekleyen bağlantıyı kabul edip yeni bir Client oluşturup epoll'a kaydeder.
 void Server::acceptNewConnection(Socket* masterSocket)
 {
 	int clientFd = masterSocket->acceptConnection();
@@ -131,20 +120,14 @@ void Server::acceptNewConnection(Socket* masterSocket)
 	{
 		std::cerr << e.what() << std::endl;
 
-		// Client NULL değilse fd'ye sahiptir ve direk delete ile hem nesneyi hem de fd'yi kapatırız
-		// Destructor'daki close(_fd) ile
-
 		if (client)
 			delete client;
 		else
 			close(clientFd);
-
-		// Ama eğer Client NULL ise demek ki new Client(clientFd) satırına gelmeden
-		// catch'e düşmüştür yani nesne oluşmamıştır
-		// Ama clientFd oluşmuştur o yüzden sadece clientFd close edilir
 	}
 }
 
+// Client'tan gelen veriyi okuyup parser durumuna göre isteği işler veya bağlantıyı kapatır.
 void Server::handleClientReceive(Client* client)
 {
 	try
@@ -155,7 +138,6 @@ void Server::handleClientReceive(Client* client)
 
 		if (state == Client::TRANSFER_ERROR || state == Client::PEER_CLOSED)
 		{
-			// Client bağlantıyı kapattı (EOF) veya hata oluştu
 			client->setClientState(Client::CLOSING);
 			unregisterHandler(client);
 		}
@@ -169,6 +151,7 @@ void Server::handleClientReceive(Client* client)
 	}
 }
 
+// Client'a yanıt gönderir; tamamlanınca keep-alive için parser'ı sıfırlayıp sıradaki isteği işler.
 void Server::handleClientSend(Client* client, epoll_event *event)
 {
 	try
@@ -183,7 +166,7 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 		}
 		else if (state == Client::TRANSFER_COMPLETE)
 		{
-			if (client->isBadRequest()) // Bad request response dönülmüş şimdi kapatılacak.
+			if (client->isBadRequest())
 			{
 				unregisterHandler(client);
 				return;
@@ -214,6 +197,7 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 	}
 }
 
+// Ayrıştırma sonucuna göre hata yanıtı, CGI başlatma ya da static/upload dispatch dallarından birine yönlendirir.
 void Server::handleParsedRequest(Client* client, Client::StreamState state)
 {
     if (state == Client::REQUEST_ERROR)
@@ -245,16 +229,13 @@ void Server::handleParsedRequest(Client* client, Client::StreamState state)
         if (routeResult == ResponseBuilder::ROUTE_RESPOND_DIRECTLY)
             response = routeErrorResponse;
         else
-            // ROUTE_STATIC: kalacak tek yanıt dalı. matchedLocation, routeRequest'in
-            // ROUTE_STATIC dönebilmesi için location bulması gerektiğinden NULL olamaz;
-            // 404 dalı location bulunamadığında ROUTE_RESPOND_DIRECTLY dönerek buraya ulaşmaz.
             response = ResponseBuilder::dispatch(client->getRequest(), *matchedLocation, client->getServerConfig());
 
         ResponseQueue::push(_epollFd, client, response, true);
     }
-    // TRANSFER_INCOMPLETE ise hiçbir şey yapma, mevcut event ayarı (EPOLLIN) kalsın
 }
 
+// Ana epoll event loop'unu shutdown bayrağı set edilene kadar çalıştırır; olayları dağıtır ve periyodik timeout kontrolü yapar.
 void Server::run()
 {
 	_lastTimeoutCheck = std::time(NULL);
@@ -275,12 +256,10 @@ void Server::run()
 			EpollHandler* sock = static_cast<EpollHandler*>(_events[i].data.ptr);
 
 			if (_liveHandlers.find(sock) == _liveHandlers.end())
-				continue; // Bu batch içinde daha önce silinmiş bir handler'a ait bayat event, atla.
+				continue;
 
 			if (_events[i].events & EPOLLERR)
 			{
-				// socket üzerinde hata oluştu(kernel tarafından otomatik set edilir)
-	
 				if (sock->getType() == EpollHandler::HANDLER_LISTEN)
 				{
 					perror("Listening socket error");
@@ -327,14 +306,11 @@ void Server::run()
 		}
 		checkTimeouts();
 
-		// Bu turda unregister edilen (ama henüz silinmeyen) tüm CGI handler'ları
-		// şimdi güvenle serbest bırakılır - for döngüsü ve checkTimeouts tamamen
-		// bitti, artık hiçbir _events[] girdisi bu pointer'lara referans vermiyor.
 		_cgiManager.flushPendingDeletions();
 	}
 }
 
-
+// Uzun süredir istek beklemeyen (keep-alive timeout) client bağlantılarını kapatır.
 void Server::checkExpiredSockets(std::time_t now)
 {
     std::set<Client*>::iterator it = _clientSockets.begin();
@@ -345,8 +321,6 @@ void Server::checkExpiredSockets(std::time_t now)
         Client* current = *it;
         it++;
 
-		// buradaki request bekleme flag'i kaldırılabilir, çünkü response üretme aşamasında bir problem çıkıp ya da
-		// Uzun sürerek çok fazla beklemeye yol açabilir.
         if (current->getClientState() == Client::WAITING_FOR_REQUEST &&
 				now - current->getLastActivity() > 4)
         {
@@ -356,11 +330,11 @@ void Server::checkExpiredSockets(std::time_t now)
     }
 }
 
+// En fazla 5 saniyede bir client ve CGI timeout kontrollerini tetikler.
 void Server::checkTimeouts()
 {
     std::time_t now = std::time(NULL);
 
-    // Eğer son kontrolden beri 5 saniye geçmediyse HİÇBİR ŞEY YAPMA, direkt dön!
     if (now - _lastTimeoutCheck < 5)
     {
         return;
@@ -369,10 +343,10 @@ void Server::checkTimeouts()
     checkExpiredSockets(now);
     _cgiManager.checkCgiTimeouts(now);
 
-    // 5 saniye geçtiyse zaman damgasını güncelle ve taramayı yap
     _lastTimeoutCheck = std::time(NULL);
 }
 
+// Bir handler'ı epoll'a (EPOLLIN ile) ve tipine uygun iç sete kaydeder.
 void	Server::registerHandler(EpollHandler* socket)
 {
 	struct epoll_event event;
@@ -381,15 +355,10 @@ void	Server::registerHandler(EpollHandler* socket)
 	event.data.ptr = socket;
 	event.events = EPOLLIN;
 
-
-
-	// EPOLL_CTL_ADD CGI ortak olamaz mı ?
-
 	if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
 	{
 		_cgiManager.registerHandler(static_cast<CgiHandler*>(socket));
 		return;  
-		// CgiManager epoll_ctl ADD + set insert + _liveHandlers insert yapar
 	}
 
 	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, socket->getFd(), &event) == -1)
@@ -409,20 +378,16 @@ void	Server::registerHandler(EpollHandler* socket)
 	_liveHandlers.insert(socket);
 }
 
-
+// Bir handler'ı epoll'dan çıkarıp iç setlerden siler; client'ın aktif CGI'si varsa onu da sonlandırır.
 void Server::unregisterHandler(EpollHandler* socket)
 {
 	if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)
 	{
 		_cgiManager.unregisterHandler(static_cast<CgiHandler*>(socket));
-		return;  // CgiManager epoll_ctl DEL + set erase + _liveHandlers erase yapar
+		return;
 	}
 
 	_liveHandlers.erase(socket);
-
-	// Burada close(fd) yerine epoll_ctl_del ile silmemizin sebebi cgi sırasında fd miras alınabilir
-	// Ve o process de kapanmadığı için buradaki epoll'dan otomatik olarak silinmeyebilir.
-	// O yüzden close(fd) + epoll_ctl_del 'i ekstra olarak ekliyoruz.
 
 	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, socket->getFd(), NULL) == -1)
 	{
@@ -436,11 +401,6 @@ void Server::unregisterHandler(EpollHandler* socket)
 	else if (socket->getType() == EpollHandler::HANDLER_CLIENT)
 	{
 		Client* clientPtr = static_cast<Client*>(socket);
-		// Client artık response bekleyemeyeceği için, hâlâ çalışan CGI'yi de hemen
-		// sonlandırıyoruz. Bu hem gereksiz kaynak (process, pipe, bellek) tutmayı
-		// önler hem de CgiHandler'ın client'ın body'sine doğrudan referans tutmasını
-		// (Commit 2) güvenli kılar: CGI, sahibi öldüğü anda kendisi de sonlanır,
-		// hiçbir zaman ölü bir referansa erişmez.
 		if (clientPtr->getActiveCgi())
 			_cgiManager.unregisterHandler(clientPtr->getActiveCgi());
 		_clientSockets.erase(clientPtr);

@@ -14,11 +14,13 @@
 #include "CgiResponseParser.hpp"
 #include "ResponseQueue.hpp"
 
+// epollFd ve liveHandlers referanslarını Server ile paylaşarak CgiManager oluşturur.
 CgiManager::CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers)
     : _epollFd(epollFd), _liveHandlers(liveHandlers)
 {
 }
 
+// Kalan tüm CGI handler'ları, bekleyen silmeleri ve reap edilmemiş child'ları temizler.
 CgiManager::~CgiManager()
 {
     std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
@@ -31,15 +33,10 @@ CgiManager::~CgiManager()
     }
     _cgiHandlers.clear();
 
-    // Server kapanırken flushPendingDeletions() bir daha çağrılmayacağı için
-    // kalan bekleyen silmeleri de serbest bırak (sızıntı önleme).
     for (size_t i = 0; i < _pendingDeletion.size(); ++i)
         delete _pendingDeletion[i];
     _pendingDeletion.clear();
 
-    // Shutdown'da event loop yok; force-kill edilip (D state yüzünden) hemen
-    // ölemeyen çocukları bloklayarak da olsa topla - zombie kaldırmayız.
-    // Burada görev bitiyor, bloklamak sorun değil.
     for (size_t i = 0; i < _pendingReap.size(); ++i)
     {
         int status;
@@ -47,6 +44,7 @@ CgiManager::~CgiManager()
     }
 }
 
+// Yeni bir CGI handler'ı epoll'a (EPOLLIN) ve iç setlere kaydeder.
 void CgiManager::registerHandler(CgiHandler* handler)
 {
     struct epoll_event event;
@@ -64,6 +62,7 @@ void CgiManager::registerHandler(CgiHandler* handler)
     _liveHandlers.insert(handler);
 }
 
+// Bir CGI handler'ını epoll'dan çıkarıp process'ini reap eder; gerçek silme daha sonra yapılır.
 void CgiManager::unregisterHandler(CgiHandler* handler)
 {
     _liveHandlers.erase(handler);
@@ -73,11 +72,6 @@ void CgiManager::unregisterHandler(CgiHandler* handler)
         perror("Epoll dell error");
     }
 
-    // stdin tarafı hâlâ epoll'a kayıtlıysa (yazma tamamlanmadan buraya
-    // gelindiyse), sadece destructor'daki close()'a güvenmek yerine burada
-    // açıkça kaldırıyoruz; aksi halde aynı batch'te bu fd için bekleyen bir
-    // event, silinmek üzere olan bu nesneye (ya da bellek yeniden kullanılırsa
-    // BAŞKA bir nesneye) yanlışlıkla yönlendirilebilir.
     if (handler->getStdinFd() != -1)
     {
         if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, handler->getStdinFd(), NULL) == -1)
@@ -87,16 +81,10 @@ void CgiManager::unregisterHandler(CgiHandler* handler)
     reapCgiProcess(handler);
     _cgiHandlers.erase(handler);
 
-    // delete'i burada yapmıyoruz: aynı epoll_wait() batch'inde bu handler'a ait
-    // başka bir (stdin) event hâlâ _events[] içinde işlenmeyi bekliyor olabilir.
-    // Belleği hemen serbest bırakırsak, aynı adres bu batch bitmeden yeni bir
-    // CgiHandler için (startCgi çağrısıyla) yeniden kullanılabilir ve o eski
-    // event yanlışlıkla yeni nesneye yönlendirilip write()/read() EBADF ile
-    // karşılaşabilir (ABA problemi). Gerçek silme flushPendingDeletions() ile
-    // batch bitince yapılır.
     _pendingDeletion.push_back(handler);
 }
 
+// unregisterHandler tarafından bekletilen handler'ları, batch bitiminde güvenle serbest bırakır.
 void CgiManager::flushPendingDeletions()
 {
     for (size_t i = 0; i < _pendingDeletion.size(); ++i)
@@ -104,6 +92,7 @@ void CgiManager::flushPendingDeletions()
     _pendingDeletion.clear();
 }
 
+// CGI child process'ini SIGKILL ile sonlandırıp reap etmeye çalışır; ölmezse ileride tekrar denenmek üzere kaydeder.
 void CgiManager::reapCgiProcess(CgiHandler* handler)
 {
     if (!handler)
@@ -118,26 +107,15 @@ void CgiManager::reapCgiProcess(CgiHandler* handler)
 
     if (result == 0)
     {
-        // Child henüz bitmemiş ama biz bu handler'ı kapatıyoruz
-        // (timeout ya da client disconnect). Zorla sonlandırıp
-        // reap ediyoruz, zombie bırakmamak için.
         kill(pid, SIGKILL);
 
-        // SIGKILL genelde anında öldürür, ama child disk I/O'da
-        // uninterruptible sleep (D state, örn. swap baskısı altında)
-        // durumundaysa kernel sinyali hemen işlemez. Blocking waitpid
-        // bu durumda TÜM tek-thread'li event loop'u child ölene kadar
-        // durdurur. Bunun yerine WNOHANG ile bir kez deneriz; ölmediyse
-        // pid'i listeye alıp ileride (checkTimeouts döngüsünde) tekrar
-        // deneriz, event loop asla bloklamaz.
         result = waitpid(pid, &status, WNOHANG);
         if (result == 0)
             _pendingReap.push_back(pid);
     }
-    // result == pid: zaten normal şekilde bitmiş ve reap edildi.
-    // result == -1 (örn. ECHILD): yapacak bir şey yok, zaten reap edilmiş ya da pid geçersiz.
 }
 
+// reapCgiProcess'in hemen reap edemediği pid'leri engellemeden tekrar reap etmeyi dener.
 void CgiManager::reapPendingKills()
 {
     std::vector<pid_t>::iterator it = _pendingReap.begin();
@@ -145,13 +123,14 @@ void CgiManager::reapPendingKills()
     {
         int status;
         pid_t result = waitpid(*it, &status, WNOHANG);
-        if (result != 0)   // reap edildi (result==pid) ya da kalıcı hata (result==-1)
+        if (result != 0)
             it = _pendingReap.erase(it);
         else
             ++it;
     }
 }
 
+// Verilen CgiHandler'ın process'i WNOHANG ile çıkış yapmış mı diye bakar; yaptıysa status'ü doldurur.
 bool CgiManager::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
 {
     pid_t pid = cgiHandler->getPid();
@@ -163,6 +142,7 @@ bool CgiManager::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
     return (result == pid);
 }
 
+// CGI'nin stdin pipe'ını EPOLLOUT için epoll'a kaydeder; başarısız olursa stdin'i kapatır.
 void CgiManager::registerCgiStdinWrite(CgiHandler* cgiHandler)
 {
     struct epoll_event event;
@@ -177,6 +157,7 @@ void CgiManager::registerCgiStdinWrite(CgiHandler* cgiHandler)
     }
 }
 
+// Location, ortam değişkenlerini kurup CGI'yi çalıştırır ve client'a bağlar; body varsa stdin yazımını başlatır.
 void CgiManager::startCgi(Client* client,
                           const std::string& scriptPath,
                           const std::string& interpreterPath)
@@ -213,6 +194,7 @@ void CgiManager::startCgi(Client* client,
 	registerHandler(cgiHandler);
 }
 
+// Belirlenen eşiği (60 sn) aşan CGI'ları 504 döndürüp sonlandırır.
 void CgiManager::checkCgiTimeouts(std::time_t now)
 {
     reapPendingKills();
@@ -225,10 +207,6 @@ void CgiManager::checkCgiTimeouts(std::time_t now)
         CgiHandler* current = *it;
         it++;
 
-        // Büyük CGI yükleri (örn. 100MB POST → cgi_tester yankısı) 10 sn'nin
-        // üzerinde sürebilir ve busy loop esnasında timeout kontrolüne bile
-        // ulaşılamayabilir. Bu yüzden 60 sn'lik rahat bir eşik kullanıyoruz;
-        // gerçek takılmış bir script için yine de makul bir sürede 504 döner.
         if (now - current->getStartTime() > 60)
         {
             std::cerr << "[Timeout] CGI pid " << current->getPid() << " timed out, killing." << std::endl;
@@ -246,6 +224,7 @@ void CgiManager::checkCgiTimeouts(std::time_t now)
     }
 }
 
+// CGI çıktısını parse edip client'a yanıt olarak kuyruğa alır; çıktı boş ve script başarısızsa 502 döner.
 void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 {
 	Client* client = cgiHandler->getOwner();
@@ -285,8 +264,7 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 	unregisterHandler(cgiHandler);
 }
 
-// BU client'da olduğu gibi Ayrı bir class içerisinde olabilir mi
-// Mesela handleReceive  Client.cpp de
+// CGI'nin stdout pipe'ından gelen veriyi okuyup tampona ekler; EOF'ta yanıtı tamamlar.
 void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 {
 	char buffer[65536];
@@ -300,22 +278,17 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 
 	if (bytesRead == 0)
 	{
-		// Gerçek EOF: child stdout ucunu kapattı (script bitti).
 		finishCgiResponse(cgiHandler);
 		return;
 	}
 
-	// bytesRead < 0: errno kontrol edilmiyor (proje kuralı gereği).
-	// Non-blocking pipe'ta bu "şimdilik veri yok" anlamına gelir;
-	// hiçbir şey yapmadan çık, sıradaki epoll_wait bu fd'yi tekrar bildirecek.
 	if (bytesRead < 0)
 		return;
 }
 
+// İstek body'sinin kalanını CGI'nin stdin pipe'ına yazar; tamamlanınca stdin'i kapatır.
 void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 {
-	// Adım 1'deki açık DEL kök nedeni gidermeli; bu guard ekstra bir güvenlik
-	// ağıdır - eğer hâlâ bir yarış varsa en azından write(-1,...) çağrısını engeller.
 	if (cgiHandler->getStdinFd() == -1)
 		return;
 
@@ -326,15 +299,11 @@ void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 
 	if (written < 0)
 	{
-		// errno kontrol edilmiyor (proje kuralı gereği). Non-blocking pipe
-		// dolu olduğunda write() -1 döner; bu geçicidir, stdin'i kapatma,
-		// sıradaki EPOLLOUT event'i tekrar deneyecek.
 		return;
 	}
 
 	if (written == 0)
 	{
-		// write(2), size > 0 iken 0 dönmemelidir; kalıcı/anormal durum kabul edilip kapatılır.
 		std::cerr << "CGI stdin write returned 0, closing stdin" << std::endl;
 		cgiHandler->closeStdin(_epollFd);
 		return;

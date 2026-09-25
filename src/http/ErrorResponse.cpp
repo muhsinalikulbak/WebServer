@@ -4,13 +4,9 @@
 #include "FileUtils.hpp"
 #include <map>
 
-// Ortak status/redirect cevapları HttpStatusResponse modülünde tutulur; bu modül
-// yalnızca config'e bağlı GERÇEK hata sayfasını üretir (error_page + fallback).
 namespace ErrorResponse
 {
-    // Hata cevaplarını tek tip üretmek için merkez fonksiyondur.
-    // Önce config'teki özel error page dosyasını dener.
-    // Dosya yoksa her zaman güvenli bir fallback HTML üretir.
+    // İsteğin karşılığında config'teki özel hata sayfasını, yoksa fallback HTML'i döner.
     HttpResponse build(int statusCode, const ServerConfig& serverConfig)
     {
         HttpResponse response;
@@ -20,13 +16,9 @@ namespace ErrorResponse
         std::string body;
         bool loaded = false;
 
-        // Config'te bu status için özel sayfa tanımlıysa onu yüklemeye çalışır.
-        // Amaç kullanıcıya daha anlaşılır ve özelleştirilebilir hata çıktısı vermektir.
         if (it != serverConfig.errorPages.end())
-            loaded = FileUtils::readFile(it->second, body);   // config'teki path'i doğrudan dene
+            loaded = FileUtils::readFile(it->second, body);
 
-        // Özel sayfa okunamazsa hata cevabını boş bırakmamak için fallback üretilir.
-        // Böylece istemci her koşulda geçerli bir HTML body alır.
         if (!loaded)
             body = HttpStatusResponse::html(statusCode);
 

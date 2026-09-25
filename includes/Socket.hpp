@@ -34,7 +34,7 @@ private:
     struct sockaddr_in  _addr;
     std::string         _host;
     int                 _port;
-    const ServerConfig& _serverConfig; // bu socket hangi server bloğuna ait
+    const ServerConfig& _serverConfig;
 
     Socket(const Socket& other);
     Socket& operator=(const Socket& other);
@@ -60,4 +60,4 @@ public:
 
 
 
-#endif // SOCKET_HPP
+#endif

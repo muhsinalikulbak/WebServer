@@ -3,23 +3,28 @@
 #include <sstream>
 #include <cstdlib>
 
+// Boş yapıcı; durumsuz sınıf için kullanılmaz.
 CgiResponseParser::CgiResponseParser()
 {
 }
 
+// Kopya yapıcı; durumsuz sınıf için kullanılmaz.
 CgiResponseParser::CgiResponseParser(const CgiResponseParser&)
 {
 }
 
+// Atama operatörü; durumsuz sınıf için kullanılmaz.
 CgiResponseParser& CgiResponseParser::operator=(const CgiResponseParser&)
 {
     return *this;
 }
 
+// Yıkıcı; durumsuz sınıf için kullanılmaz.
 CgiResponseParser::~CgiResponseParser()
 {
 }
 
+// CGI'nin ham çıktısını header/body olarak ayırıp bir HttpResponse'a dönüştürür.
 HttpResponse CgiResponseParser::parse(const std::string& rawOutput)
 {
     std::string::size_type headerEnd = rawOutput.find("\r\n\r\n");

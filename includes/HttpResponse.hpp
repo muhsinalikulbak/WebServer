@@ -31,8 +31,6 @@ public:
     bool                hasHeader(const std::string& key) const;
     const std::string&  getBody() const;
 
-    // "HTTP/1.1 200 OK\r\nContent-Type: ...\r\n\r\n<body>" tam stringini üretir
-    // Content-Length otomatik hesaplanır/eklenir, çağrıdan önce ekstra bir şey yapmana gerek yok
     std::string serialize() const;
 };
 

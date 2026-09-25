@@ -22,10 +22,10 @@ class Client : public EpollHandler
 public:
     enum StreamState
     {
-        TRANSFER_ERROR,         // Sistem hatası (recv/send işlemi başarısız)
-        PEER_CLOSED,            // Uzak taraf bağlantıyı kapattı (EOF)
-        TRANSFER_INCOMPLETE,    // Okuma/Yazma işlemi tamamlanmadı
-        TRANSFER_COMPLETE,      // Okuma/Yazma işlemi tamamlandı
+        TRANSFER_ERROR,
+        PEER_CLOSED,
+        TRANSFER_INCOMPLETE,
+        TRANSFER_COMPLETE,
         REQUEST_ERROR
     };
 
@@ -43,10 +43,10 @@ private:
     int                     _clientFd;
     std::time_t             _lastActivity;
     ClientState             _clientState;
-    const ServerConfig&     _serverConfig;  // bu client hangi server bloğuna ait
-    CgiHandler*             _activeCgi;     // NULL ise cgi yok
+    const ServerConfig&     _serverConfig;
+    CgiHandler*             _activeCgi;
     std::string             _writeBuffer;
-    size_t                  _writeOffset;  // _writeBuffer içinde henüz gönderilmemiş kısmın başlangıcı
+    size_t                  _writeOffset;
     RequestParser           _parser;
     
     Client(const Client& other);
@@ -60,8 +60,8 @@ public:
     ~Client();
     Client();
 
-    virtual EpollHandler::HandlerType getType() const; // OVERRIDE
-    virtual int         getFd() const;  // OVERRIDE
+    virtual EpollHandler::HandlerType getType() const;
+    virtual int         getFd() const;
 
     ClientState         getClientState() const;
     std::time_t         getLastActivity() const;
@@ -75,8 +75,8 @@ public:
     int                 getErrorCode() const;
 
     StreamState         drainBuffer();
-    StreamState         receiveData();        // İçerisinde SADECE BİR KERE recv() çağrısı yapacak fonksiyon
-    StreamState         sendData();           // Send() çağrısını yapacak fonksiyon
+    StreamState         receiveData();
+    StreamState         sendData();
     void                setActiveCgi(CgiHandler* cgi);
     CgiHandler*         getActiveCgi() const;
 };

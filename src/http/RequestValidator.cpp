@@ -1,35 +1,32 @@
 #include "RequestValidator.hpp"
 
+// HTTP metodunun sunucu tarafından genel olarak desteklenip desteklenmediğini kontrol eder.
 bool RequestValidator::isMethodAllowed(const std::string& method)
 {
     return (method == "get" || method == "post" || method == "delete");
 }
 
+// URI'nin boş olmadığını ve '/' ile başladığını kontrol eder.
 bool RequestValidator::isUriValid(const std::string& uri)
 {
     return (!uri.empty() && uri[0] == '/');
 }
 
+// HTTP versiyonunun desteklenen tek versiyon (HTTP/1.1) olup olmadığını kontrol eder.
 bool RequestValidator::isVersionSupported(const std::string& version)
 {
     return (version == "http/1.1");
 }
 
+// Zorunlu Host header'ının istekte bulunup bulunmadığını kontrol eder.
 bool RequestValidator::hasRequiredHostHeader(const HttpRequest& request)
 {
     return request.hasHeader("host");
 }
 
+// Method, URI, versiyon ve Host header sırasıyla doğrular; geçersizse uygun HTTP status kodunu döner.
 int RequestValidator::validate(const HttpRequest& request)
 {
-    /*
-    * Kontrol sırası ve dönen status kodları:
-    * 1) Method whitelist kontrolü: desteklenmeyen method -> 405
-    * 2) URI format kontrolü: boş ya da '/' ile başlamayan URI -> 400
-    * 3) HTTP version kontrolü: http/1.1 dışı -> 505
-    * 4) Host header zorunluluğu: eksik Host header -> 400
-    * İlk başarısız kontrolün status kodu döner; tüm kontroller geçerse 0 döner.
-    */
     if (!isMethodAllowed(request.getMethod()))
         return 405;
     if (!isUriValid(request.getUri()))
@@ -40,13 +37,3 @@ int RequestValidator::validate(const HttpRequest& request)
         return 400;
     return 0;
 }
-
-
-
-// GET /index.html HTTP/1.1             <-- 1. Satır: Method, URI, Version
-// Host: localhost:8080                 <--|
-// User-Agent: Mozilla/5.0              <--|  İŞTE BUNLAR "HEADER" (BAŞLIKLAR)
-// Content-Type: application/json       <--|  Key: Value şeklinde meta bilgilerdir. // Content type olmalı mı
-// Content-Length: 15                   <--|
-
-// {"name": "Ali"}                       <-- En alttaki kısım: BODY (Gövde)

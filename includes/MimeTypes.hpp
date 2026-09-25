@@ -1,4 +1,3 @@
-// MimeTypes.hpp
 #ifndef MIMETYPES_HPP
 #define MIMETYPES_HPP
 

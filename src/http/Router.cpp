@@ -1,52 +1,40 @@
 #include "Router.hpp"
 
+// Verilen path'in, bir location path'inin segment sınırına uyan bir prefix'i olup olmadığını kontrol eder.
 bool Router::matchesLocationPath(const std::string& path, const std::string& locationPath)
 {
     size_t i;
     size_t locationSize;
 
-    // Root ise direk true
     if (locationPath == "/")
         return true;
 
-    // Empty ise geç
     if (locationPath.empty())
         return false;
 
-    // location size'den küçükse direk false
-    // Örneğin /path ile /xxxxpath 
     locationSize = locationPath.size();
     if (path.size() < locationSize)
         return false;
 
-    // Önce tam prefix eşleşmesini doğruluyoruz.
     for (i = 0; i < locationSize; ++i)
     {
         if (path[i] != locationPath[i])
             return false;
     }
 
-    // `/images` ile `/imagesfoo` arasındaki yanlış-pozitif eşleşmeyi burada engelliyoruz.
-    // Prefix aynı olsa bile, location path tam bir path segmenti olmalı:
-    //   - path == locationPath
-    //   - veya path, locationPath + "/" ile devam etmeli
     if (path.size() == locationSize)
         return true;
 
-    // Bu durumda path size , location size'dan büyüktür.
     return (path[locationSize] == '/');
 }
 
+// Verilen path için config'teki location'lar arasından en uzun (en spesifik) eşleşeni döner.
 const LocationConfig* Router::match(const std::string& path, const ServerConfig& config)
 {
-    // Location olmama durumunu kontrol edebilmek için
-    // Pointer dönülüyor. NULL Check ile hata olduğunu anlıyoruz, çağrılan fonksiyonda
     const LocationConfig* bestMatch;
     size_t bestLength;
     size_t i;
 
-    // Longest-prefix-match mantığı: önce tüm location'ları dolaş, sonra en uzun eşleşeni seç.
-    // Böylece `/` fallback olurken `/images` gibi daha spesifik location'lar öncelik kazanır.
     bestMatch = NULL;
     bestLength = 0;
     for (i = 0; i < config.locations.size(); ++i)
@@ -56,7 +44,6 @@ const LocationConfig* Router::match(const std::string& path, const ServerConfig&
         if (!matchesLocationPath(path, location.path))
             continue;
 
-        // En uzun eşleşen path, en spesifik location'dır.
         if (location.path.size() > bestLength)
         {
             bestMatch = &config.locations[i];

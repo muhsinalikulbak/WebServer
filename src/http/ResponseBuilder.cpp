@@ -13,8 +13,9 @@
 #include <map>
 #include <sstream> 
 #include <sys/stat.h>
-#include <dirent.h>   // opendir/readdir/closedir için
+#include <dirent.h>
 
+// İsteği doğrulayıp uygun location'ı bulur; hata/redirect/CGI/static kararını verir ve sonucu döner.
 ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     const HttpRequest& request,
     const ServerConfig& serverConfig,
@@ -34,8 +35,6 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     }
 
     const LocationConfig* location = Router::match(request.getPath(), serverConfig);
-    // Eşleşen location dispatch aşamasında da gerektiği için dışarı verilir;
-    // NULL olsa bile 404 dalına girmeden önce set edilir.
     outLocation = location;
     if (!location)
     {
@@ -43,9 +42,6 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
         return ROUTE_RESPOND_DIRECTLY;
     }
 
-    // Parser sadece tavanı uygular; location'a özel gerçek limit route belli olduktan
-    // sonra burada uygulanır. Redirect/method kontrolünden önce olması, fazla büyük body'nin
-    // hangi handler'a gideceğinden bağımsız reddedilmesi içindir.
     if (request.getBody().size() > serverConfig.effectiveBodyLimit(location))
     {
         outErrorResponse = buildErrorResponse(413, serverConfig);
@@ -75,9 +71,6 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
         return ROUTE_RESPOND_DIRECTLY;
     }
 
-    // Referans webserv davranışı: CGI uzantılı isteklerde betiğin diske yazılı
-    // olması şart değildir; cgi programı (cgi_tester) script içeriğini okumaz,
-    // stdio üzerinden çalışır. Bu yüzden sadece dizin hedefini 404 ile eliyoruz.
     if (FileUtils::isDirectory(scriptPath))
     {
         outErrorResponse = buildErrorResponse(404, serverConfig);
@@ -97,34 +90,24 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     return ROUTE_CGI;
 }
 
-// dispatch yalnızca ROUTE_STATIC durumunda çağrılır. routeRequest zaten
-// method/redirect/413/404/get kontrolünü yapıp isteği doğrulamıştır; burada
-// validate/match TEKRARLANMAZ. Eski build() bu kontrolleri routeRequest'ten
-// bağımsız ikinci kez yapıyordu ve 413 kontrolü eksikti (routeRequest'te vardı) -
-// iki fonksiyon sessizce sapmıştı. dispatch tek karar noktası olan routeRequest'e
-// güvenerek bu riski ortadan kaldırır.
+// Method'a göre isteği StaticHandler ya da UploadHandler'a yönlendirir (ROUTE_STATIC durumunda çağrılır).
 HttpResponse ResponseBuilder::dispatch(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     if (request.getMethod() == "get")    return StaticHandler::get(request, location, serverConfig);
     if (request.getMethod() == "post")   return UploadHandler::post(request, location, serverConfig);
     if (request.getMethod() == "delete") return UploadHandler::remove(request, location, serverConfig);
-    return buildErrorResponse(501, serverConfig);   // teorik olarak ulaşılamaz güvenlik ağı
+    return buildErrorResponse(501, serverConfig);
 }
 
-// Gerçek üretim ErrorResponse modülüne taşındı; davranış birebir korunur.
+// Verilen status kodu için ErrorResponse modülü üzerinden hata yanıtı üretir.
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
 {
     return ErrorResponse::build(statusCode, serverConfig);
 }
 
-
+// Method'un, location'ın izin verdiği metotlar listesinde olup olmadığını (case-insensitive) kontrol eder.
 bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, const LocationConfig& location)
 {
-    // Location bazlı method kısıtını uygulamak için whitelist kontrolü yapar.
-    // Config'ten gelen değerleri lower-case karşılaştırmak, yazım farklarından
-    // doğacak yanlış negatifleri engelleyerek daha kararlı bir eşleştirme sağlar.
-    // Buradaki toLowerCopy'e test ederken bir bak
-
     for (size_t i = 0; i < location.allowedMethods.size(); i++)
     {
         if (HttpRequest::toLowerCopy(location.allowedMethods[i]) == method)
@@ -133,6 +116,7 @@ bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, c
     return false;
 }
 
+// Path'in uzantısının location'da tanımlı bir CGI uzantısına karşılık gelip gelmediğini kontrol eder.
 bool ResponseBuilder::isCgiRequest(const std::string& path, const LocationConfig& location, std::string& outExtension)
 {
     outExtension.clear();
@@ -150,25 +134,14 @@ bool ResponseBuilder::isCgiRequest(const std::string& path, const LocationConfig
     return (location.cgiExtension.find(outExtension) != location.cgiExtension.end());
 }
     
-// requestPath (örn "/images/cat.png") ile matched location prefix'ini (location.path) çıkarıp
-// kalanı location.root ile birleştirir, gerçek disk path'ini üretir.
-// örn: location.path="/images", location.root="/var/www/static", requestPath="/images/cat.png"
-//      -> kalan="/cat.png" -> sonuç="/var/www/static/cat.png/"
-// GÜVENLİK: ".." içeren path'ler reddedilir (path traversal koruması). Geçersizse "" döner.
-
+// İstek path'ini location prefix'ini çıkarıp root ile birleştirerek gerçek disk path'ine çevirir; ".." varsa reddeder.
 std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, const LocationConfig& location)
 {
-    // URL path'ini filesystem path'ine çeviren temel çözümleyicidir.
-    // Eşleşen location prefix'i atılır ve kalan bölüm root ile birleştirilir.
-    // Böylece routing seviyesi ile disk yerleşimi birbirinden ayrıştırılır.
     std::string remainder = requestPath.substr(location.path.length());
 
-    // ".." tespiti, üst dizinlere kaçış denemesini engellemek içindir.
-    // Güvenlik ihlali riski olduğunda boş path döndürülerek üst katmanda 403 üretilir.
     if (remainder.find("..") != std::string::npos)
         return "";
 
-    // root ve remainder arasındaki slash normalizasyonu FileUtils::joinPath'te ortaklaşır.
     return FileUtils::joinPath(location.root, remainder);
 }
 

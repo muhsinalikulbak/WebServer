@@ -1,5 +1,6 @@
 #include "LocationConfig.hpp"
 
+// Location için varsayılan değerlerle (index.html, autoindex kapalı vb.) alanları başlatır.
 LocationConfig::LocationConfig()
 {
     path = "";
@@ -14,11 +15,13 @@ LocationConfig::LocationConfig()
     hasClientMaxBodySize = false;
 }
 
+// Başka bir LocationConfig'in alanlarını kopyalayarak yeni nesne oluşturur.
 LocationConfig::LocationConfig(const LocationConfig& other)
 {
     *this = other;
 }
 
+// Bu nesneye başka bir LocationConfig'in tüm alanlarını atar.
 LocationConfig& LocationConfig::operator=(const LocationConfig& other)
 {
     if (this != &other)
@@ -39,6 +42,7 @@ LocationConfig& LocationConfig::operator=(const LocationConfig& other)
     return *this;
 }
 
+// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
 LocationConfig::~LocationConfig()
 {
 }
