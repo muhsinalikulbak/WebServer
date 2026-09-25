@@ -127,4 +127,3 @@ Client::StreamState Client::sendData()
     }
     return TRANSFER_INCOMPLETE;
 }
-
