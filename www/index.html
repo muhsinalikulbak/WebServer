@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,10 +26,10 @@
                 <span class="badge badge-cpp">C++98 / Epoll</span>
             </a>
             <ul class="nav-links">
-                <li><a href="#features">Mimari</a></li>
+                <li><a href="#features">Architecture</a></li>
                 <li><a href="#tester">HTTP Tester</a></li>
-                <li><a href="#upload">Dosya Yükle (POST)</a></li>
-                <li><a href="#config">Konfigürasyon</a></li>
+                <li><a href="#upload">Upload File (POST)</a></li>
+                <li><a href="#config">Configuration</a></li>
             </ul>
             <div class="status-indicator">
                 <span class="status-dot"></span>
@@ -42,23 +42,23 @@
     <header class="hero">
         <div class="hero-container">
             <div class="hero-tag">
-                <span class="sparkle">✨</span> Yüksek Performanslı Non-Blocking G/Ç Mimarisi
+                <span class="sparkle">✨</span> High-Performance Non-Blocking I/O Architecture
             </div>
             <h1 class="hero-title">
-                Ölçeklenebilir, Hızlı & <br>
+                Scalable, Fast &amp; <br>
                 <span class="gradient-text">Epoll Event-Loop WebServer</span>
             </h1>
             <p class="hero-description">
-                POSIX <code>epoll</code> I/O multiplexing kullanan, tamamen non-blocking, çift yönlü Keep-Alive ve güvenli MIME beyaz liste filtrelemeli C++ HTTP sunucusu.
+                A C++ HTTP server using POSIX <code>epoll</code> I/O multiplexing, fully non-blocking operation, bidirectional Keep-Alive, and a secure MIME whitelist filter.
             </p>
 
             <div class="hero-actions">
                 <a href="#tester" class="btn btn-primary">
-                    <span>HTTP İsteği Test Et</span>
+                    <span>Test an HTTP Request</span>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
                 <a href="#features" class="btn btn-glass">
-                    <span>Mimari İncele</span>
+                    <span>Explore the Architecture</span>
                 </a>
             </div>
 
@@ -66,11 +66,11 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <span class="stat-value">Epoll</span>
-                    <span class="stat-label">Event Loop Mimarisi</span>
+                    <span class="stat-label">Event Loop Architecturesi</span>
                 </div>
                 <div class="stat-card">
                     <span class="stat-value">O(1)</span>
-                    <span class="stat-label">Soket Bildirim Hızı</span>
+                    <span class="stat-label">Socket Notification Speed</span>
                 </div>
                 <div class="stat-card">
                     <span class="stat-value">100%</span>
@@ -90,33 +90,33 @@
         <!-- Architectural Highlights -->
         <section id="features" class="section">
             <div class="section-header">
-                <h2 class="section-title">Sunucu Mimari Özellikleri</h2>
-                <p class="section-subtitle">Performans ve güvenlik odaklı modüler C++ backend tasarımı</p>
+                <h2 class="section-title">Server Architecture Features</h2>
+                <p class="section-subtitle">Modular C++ backend design focused on performance and security</p>
             </div>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🚀</div>
                     <h3>Epoll Event Loop</h3>
-                    <p>Binlerce eşzamanlı bağlantıyı tek bir thread üzerinde bloklanmadan yöneten Linux epoll multiplexing motoru.</p>
+                    <p>A Linux epoll multiplexing engine that manages thousands of concurrent connections on a single thread without blocking.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
-                    <h3>MIME Whitelist Güvenliği</h3>
-                    <p>Sadece izin verilen metin tabanlı uzantıları (HTML, CSS, JS, JSON vb.) sunar. İkili (binary) dosyaları diske okumadan 415 yanıtı döner.</p>
+                    <h3>MIME Whitelist Security</h3>
+                    <p>Serves only permitted text-based extensions (HTML, CSS, JS, JSON, etc.). Returns a 415 response for binary files without reading them from disk.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚙️</div>
-                    <h3>CGI & Process İzolasyonu</h3>
-                    <p>Çift yönlü pipe'lar ile Python/PHP script çalıştırma ve otomatik kaynak/child process temizliği.</p>
+                    <h3>CGI & Process Isolation</h3>
+                    <p>Runs Python/PHP scripts through bidirectional pipes with automatic resource and child process cleanup.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3>Non-Blocking Write Buffer</h3>
-                    <p>Kısmi yazma (partial write) durumlarını <code>EPOLLOUT</code> ile yöneten kesintisiz veri iletim tamponu.</p>
+                    <p>A seamless data transmission buffer that handles partial writes using <code>EPOLLOUT</code>.</p>
                 </div>
             </div>
         </section>
@@ -124,14 +124,14 @@
         <!-- Interactive HTTP Tester Widget -->
         <section id="tester" class="section">
             <div class="section-header">
-                <h2 class="section-title">İnteraktif HTTP İstek Simülatörü</h2>
-                <p class="section-subtitle">Sunucunuza canlı istek gönderin ve dönen HTTP yanıtını anında görün</p>
+                <h2 class="section-title">Interactive HTTP Request Tester</h2>
+                <p class="section-subtitle">Send a live request to your server and see the HTTP response instantly</p>
             </div>
 
             <div class="tester-card glass-panel">
                 <div class="tester-controls">
                     <div class="control-group">
-                        <label for="httpMethod">HTTP Metodu</label>
+                        <label for="httpMethod">HTTP Method</label>
                         <select id="httpMethod" class="input-select">
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
@@ -140,20 +140,20 @@
                     </div>
 
                     <div class="control-group flex-grow">
-                        <label for="httpEndpoint">Endpoint Yol (URI)</label>
+                        <label for="httpEndpoint">Endpoint Path (URI)</label>
                         <input type="text" id="httpEndpoint" class="input-text" value="/" placeholder="/index.html">
                     </div>
 
                     <div class="control-group">
                         <label>&nbsp;</label>
-                        <button id="sendBtn" class="btn btn-primary">İsteği Gönder</button>
+                        <button id="sendBtn" class="btn btn-primary">Send Request</button>
                     </div>
                 </div>
 
                 <div class="tester-output-grid">
                     <div class="console-box">
                         <div class="console-header">
-                            <span>Gönderilen İstek (Raw Request)</span>
+                            <span>Sent Request (Raw Request)</span>
                             <span class="console-dot green"></span>
                         </div>
                         <pre id="requestConsole" class="code-block"><code>GET / HTTP/1.1
@@ -165,7 +165,7 @@ Connection: keep-alive</code></pre>
 
                     <div class="console-box">
                         <div class="console-header">
-                            <span>Sunucu Yanıtı (HTTP Response)</span>
+                            <span>Server Response (HTTP Response)</span>
                             <span id="responseStatusBadge" class="badge badge-success">HTTP 200 OK</span>
                         </div>
                         <pre id="responseConsole" class="code-block"><code>HTTP/1.1 200 OK
@@ -174,7 +174,7 @@ Content-Length: 1840
 Server: C++ Epoll WebServer
 Connection: keep-alive
 
-[Sunucu Yanıt Gövdesi Hazır]</code></pre>
+[Server response body will appear here]</code></pre>
                     </div>
                 </div>
             </div>
@@ -183,18 +183,18 @@ Connection: keep-alive
         <!-- File Upload Section (POST Request) -->
         <section id="upload" class="section">
             <div class="section-header">
-                <h2 class="section-title">Dosya Yükleme (POST Request)</h2>
-                <p class="section-subtitle">HTTP POST metodu ile sunucuya dosya veya metin verisi yükleyin</p>
+                <h2 class="section-title">File Upload (POST Request)</h2>
+                <p class="section-subtitle">Upload a file or text data to the server using the HTTP POST method</p>
             </div>
 
             <div class="upload-card glass-panel">
                 <form id="uploadForm" class="upload-form">
                     <div class="drop-zone" id="dropZone">
                         <div class="drop-icon">📁</div>
-                        <p class="drop-title">Yüklenecek dosyayı seçin veya buraya sürükleyin</p>
-                        <p class="drop-subtitle">Desteklenen metin formatları: .html, .txt, .json, .css, .js</p>
+                        <p class="drop-title">Choose a file to upload or drag it here</p>
+                        <p class="drop-subtitle">Supported text formats: .html, .txt, .json, .css, .js</p>
                         <input type="file" id="fileInput" name="file" class="file-input" required>
-                        <label for="fileInput" class="btn btn-glass file-label">Dosya Seç</label>
+                        <label for="fileInput" class="btn btn-glass file-label">Choose File</label>
                     </div>
 
                     <div class="selected-file-info" id="fileInfo" style="display: none;">
@@ -205,7 +205,7 @@ Connection: keep-alive
 
                     <div class="upload-actions">
                         <button type="submit" id="uploadBtn" class="btn btn-primary btn-large">
-                            <span>Dosyayı Yükle (POST /upload)</span>
+                            <span>Upload File (POST /upload)</span>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                         </button>
                     </div>
@@ -215,10 +215,10 @@ Connection: keep-alive
                 <div class="upload-output" id="uploadOutput" style="display: none;">
                     <div class="console-box">
                         <div class="console-header">
-                            <span>Yükleme Yanıtı (Upload Response)</span>
+                            <span>Upload Response</span>
                             <span id="uploadStatusBadge" class="badge badge-success">HTTP 200 OK</span>
                         </div>
-                        <pre id="uploadConsole" class="code-block"><code>Yanıt bekleniyor...</code></pre>
+                        <pre id="uploadConsole" class="code-block"><code>Waiting for response...</code></pre>
                     </div>
                 </div>
             </div>
@@ -227,8 +227,8 @@ Connection: keep-alive
         <!-- Config Preview -->
         <section id="config" class="section">
             <div class="section-header">
-                <h2 class="section-title">Sunucu Konfigürasyon Yapısı</h2>
-                <p class="section-subtitle">Nginx benzeri esnek ve okunabilir blok yapısı</p>
+                <h2 class="section-title">Server Configuration Structure</h2>
+                <p class="section-subtitle">A flexible, readable block structure similar to Nginx</p>
             </div>
 
             <div class="code-card glass-panel">

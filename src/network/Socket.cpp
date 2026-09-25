@@ -8,7 +8,7 @@
 #include <netdb.h>
 #include <sstream>
 
-// Verilen host/port ve server config ile IDLE durumunda bir Socket oluşturur.
+// Creates a Socket in the IDLE state with the given host, port, and server configuration.
 Socket::Socket(const std::string& host, int port, const ServerConfig& config) : _serverConfig(config)
 {
   _fd = -1;
@@ -18,7 +18,7 @@ Socket::Socket(const std::string& host, int port, const ServerConfig& config) : 
   _port = port;
 }
 
-// Socket fd'si açıksa kapatır.
+// Closes the socket file descriptor if it is open.
 Socket::~Socket()
 {
   if (_fd != -1)
@@ -27,7 +27,7 @@ Socket::~Socket()
   }
 }
 
-// TCP soketini oluşturup non-blocking/reuse seçeneklerini ayarlar.
+// Creates a TCP socket and configures non-blocking and address reuse options.
 void Socket::createSocket()
 {
   _fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -46,7 +46,7 @@ void Socket::createSocket()
   _state = CREATED;
 }
 
-// Soketi getaddrinfo ile çözümlenen host:port adresine bind eder.
+// Binds the socket to the host:port address resolved by getaddrinfo.
 void Socket::bindSocket()
 {
     struct addrinfo hints;
@@ -78,7 +78,7 @@ void Socket::bindSocket()
     _state = BOUND;
 }
 
-// Soketi SOMAXCONN bekleme kuyruğuyla dinleme moduna alır.
+// Puts the socket into listening mode with a SOMAXCONN backlog.
 void Socket::startListening()
 {
   if (listen(_fd, SOMAXCONN) == -1)
@@ -88,7 +88,7 @@ void Socket::startListening()
   _state = LISTENING;
 }
 
-// Bekleyen bir bağlantıyı kabul edip yeni client fd'sini döner; kabul edilirse bağlantı bilgisini loglar.
+// Accepts a pending connection and returns the new client file descriptor; logs connection details on success.
 int Socket::acceptConnection()
 {
     sockaddr_in client_addr;
@@ -112,20 +112,20 @@ int Socket::acceptConnection()
     return clientFd;
 }
 
-// Bu handler'ın epoll handler tipini (LISTEN) döner.
+// Returns this handler's epoll handler type (LISTEN).
 EpollHandler::HandlerType Socket::getType() const { return EpollHandler::HANDLER_LISTEN; }
 
-// Soketin fd'sini döner.
+// Returns the socket file descriptor.
 int                       Socket::getFd() const { return _fd; }
 
-// Bağlı olduğu host adresini döner.
+// Returns the bound host address.
 const std::string&        Socket::getHost() const { return _host; }
 
-// Bağlı olduğu portu döner.
+// Returns the bound port.
 int                       Socket::getPort() const { return _port; }
 
-// Soketin mevcut durumunu (IDLE/CREATED/BOUND/LISTENING vb.) döner.
+// Returns the socket's current state (IDLE/CREATED/BOUND/LISTENING, etc.).
 Socket::State             Socket::getState() const { return _state; }
 
-// Bu soketin bağlı olduğu server config'ini döner.
+// Returns the server configuration associated with this socket.
 const ServerConfig& Socket::getServerConfig() const { return _serverConfig; }

@@ -8,7 +8,7 @@
 
 namespace ResponseQueue
 {
-    // Yanıtı client'ın yazma tamponuna koyar ve soketi EPOLLOUT için epoll'a kaydeder; hata durumunda throwOnError'a göre davranır.
+    // Queues the response in the client's write buffer and registers the socket with epoll for EPOLLOUT; handles errors according to throwOnError.
     void push(int epollFd, Client* client, const HttpResponse& response, bool throwOnError)
     {
         client->setWriteBuffer(response.serialize());

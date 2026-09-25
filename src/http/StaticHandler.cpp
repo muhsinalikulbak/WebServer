@@ -10,7 +10,7 @@
 
 namespace
 {
-    // Dizin içeriğini basit bir HTML listesi (nginx autoindex benzeri) olarak döner.
+    // Returns the directory contents as a simple HTML listing similar to nginx autoindex.
     HttpResponse buildAutoindexPage(const std::string& dirPath, const std::string& requestPath)
     {
         DIR* dir = opendir(dirPath.c_str());
@@ -57,7 +57,7 @@ namespace
     }
 }
 
-// GET isteğine karşılık hedef dosyayı, dizin index'ini ya da autoindex listesini döner.
+// Returns the target file, directory index, or autoindex listing for a GET request.
 HttpResponse StaticHandler::get(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     std::string filePath = ResponseBuilder::resolveFilePath(request.getPath(), location);

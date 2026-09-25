@@ -6,14 +6,14 @@
 
 volatile sig_atomic_t g_shutdownRequested = 0;
 
-// SIGINT/SIGTERM handler'ı: kapanış bayrağını set eder, ana döngü bunu görüp güvenle çıkar.
+// SIGINT/SIGTERM handler: sets the shutdown flag so the main loop can exit safely.
 static void handleShutdownSignal(int signum)
 {
 	(void)signum;
 	g_shutdownRequested = 1;
 }
 
-// Programın giriş noktası: sinyalleri kurar, config'i ayrıştırıp sunucuyu başlatır ve çalıştırır.
+// Program entry point: sets up signal handling, parses the configuration, and starts and runs the server.
 int main(int argc, char** argv) 
 {
 	

@@ -1,6 +1,6 @@
 #include "Router.hpp"
 
-// Verilen path'in, bir location path'inin segment sınırına uyan bir prefix'i olup olmadığını kontrol eder.
+// Checks whether the given path has a prefix matching a location path at a segment boundary.
 bool Router::matchesLocationPath(const std::string& path, const std::string& locationPath)
 {
     size_t i;
@@ -28,7 +28,7 @@ bool Router::matchesLocationPath(const std::string& path, const std::string& loc
     return (path[locationSize] == '/');
 }
 
-// Verilen path için config'teki location'lar arasından en uzun (en spesifik) eşleşeni döner.
+// Returns the longest (most specific) matching location for the given path.
 const LocationConfig* Router::match(const std::string& path, const ServerConfig& config)
 {
     const LocationConfig* bestMatch;

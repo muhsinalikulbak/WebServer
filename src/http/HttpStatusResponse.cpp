@@ -2,7 +2,7 @@
 #include "LocationConfig.hpp"
 #include <sstream>
 
-// Ortak status HTML gövdesini ("<title>KOD</title>" + "<h1>KOD AÇIKLAMA</h1>") üretir.
+// Builds the shared status HTML body ("<title>CODE</title>" + "<h1>CODE DESCRIPTION</h1>").
 std::string HttpStatusResponse::html(int statusCode)
 {
     std::ostringstream ss;
@@ -12,7 +12,7 @@ std::string HttpStatusResponse::html(int statusCode)
     return ss.str();
 }
 
-// Verilen status kodu ve opsiyonel Location header'ı ile genel bir HTTP yanıtı oluşturur.
+// Creates a generic HTTP response with the given status code and optional Location header.
 HttpResponse HttpStatusResponse::build(int statusCode, const std::string& locationHeader)
 {
     HttpResponse response;
@@ -27,7 +27,7 @@ HttpResponse HttpStatusResponse::build(int statusCode, const std::string& locati
     return response;
 }
 
-// Location konfigürasyonundaki return kuralını HTTP redirect yanıtına çevirir.
+// Converts the return rule in the location configuration into an HTTP redirect response.
 HttpResponse HttpStatusResponse::redirect(const LocationConfig& location)
 {
     return build(location.returnCode, location.returnUrl);

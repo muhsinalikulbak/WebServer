@@ -14,13 +14,13 @@
 #include "CgiResponseParser.hpp"
 #include "ResponseQueue.hpp"
 
-// epollFd ve liveHandlers referanslarını Server ile paylaşarak CgiManager oluşturur.
+// Creates a CgiManager sharing references to epollFd and liveHandlers with the Server.
 CgiManager::CgiManager(int& epollFd, std::set<EpollHandler*>& liveHandlers)
     : _epollFd(epollFd), _liveHandlers(liveHandlers)
 {
 }
 
-// Kalan tüm CGI handler'ları, bekleyen silmeleri ve reap edilmemiş child'ları temizler.
+// Cleans up all remaining CGI handlers, pending removals, and unreaped child processes.
 CgiManager::~CgiManager()
 {
     std::set<CgiHandler*>::iterator it = _cgiHandlers.begin();
@@ -44,7 +44,7 @@ CgiManager::~CgiManager()
     }
 }
 
-// Yeni bir CGI handler'ı epoll'a (EPOLLIN) ve iç setlere kaydeder.
+// Registers a new CGI handler with epoll for EPOLLIN and adds it to the internal sets.
 void CgiManager::registerHandler(CgiHandler* handler)
 {
     struct epoll_event event;
@@ -62,7 +62,7 @@ void CgiManager::registerHandler(CgiHandler* handler)
     _liveHandlers.insert(handler);
 }
 
-// Bir CGI handler'ını epoll'dan çıkarıp process'ini reap eder; gerçek silme daha sonra yapılır.
+// Unregisters a CGI handler from epoll and reaps its process; the actual deletion happens later.
 void CgiManager::unregisterHandler(CgiHandler* handler)
 {
     _liveHandlers.erase(handler);
@@ -84,7 +84,7 @@ void CgiManager::unregisterHandler(CgiHandler* handler)
     _pendingDeletion.push_back(handler);
 }
 
-// unregisterHandler tarafından bekletilen handler'ları, batch bitiminde güvenle serbest bırakır.
+// Safely releases handlers deferred by unregisterHandler when the batch is complete.
 void CgiManager::flushPendingDeletions()
 {
     for (size_t i = 0; i < _pendingDeletion.size(); ++i)
@@ -92,7 +92,7 @@ void CgiManager::flushPendingDeletions()
     _pendingDeletion.clear();
 }
 
-// CGI child process'ini SIGKILL ile sonlandırıp reap etmeye çalışır; ölmezse ileride tekrar denenmek üzere kaydeder.
+// Attempts to kill and reap the CGI child process with SIGKILL; if it remains alive, schedules another attempt.
 void CgiManager::reapCgiProcess(CgiHandler* handler)
 {
     if (!handler)
@@ -115,7 +115,7 @@ void CgiManager::reapCgiProcess(CgiHandler* handler)
     }
 }
 
-// reapCgiProcess'in hemen reap edemediği pid'leri engellemeden tekrar reap etmeyi dener.
+// Retries reaping pids that reapCgiProcess could not reap immediately, without blocking.
 void CgiManager::reapPendingKills()
 {
     std::vector<pid_t>::iterator it = _pendingReap.begin();
@@ -130,7 +130,7 @@ void CgiManager::reapPendingKills()
     }
 }
 
-// Verilen CgiHandler'ın process'i WNOHANG ile çıkış yapmış mı diye bakar; yaptıysa status'ü doldurur.
+// Checks with WNOHANG whether the process for the given CgiHandler has exited and, if so, stores its status.
 bool CgiManager::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
 {
     pid_t pid = cgiHandler->getPid();
@@ -142,7 +142,7 @@ bool CgiManager::peekCgiExitStatus(CgiHandler* cgiHandler, int& status)
     return (result == pid);
 }
 
-// CGI'nin stdin pipe'ını EPOLLOUT için epoll'a kaydeder; başarısız olursa stdin'i kapatır.
+// Registers the CGI stdin pipe with epoll for EPOLLOUT; closes stdin if registration fails.
 void CgiManager::registerCgiStdinWrite(CgiHandler* cgiHandler)
 {
     struct epoll_event event;
@@ -157,7 +157,7 @@ void CgiManager::registerCgiStdinWrite(CgiHandler* cgiHandler)
     }
 }
 
-// Location, ortam değişkenlerini kurup CGI'yi çalıştırır ve client'a bağlar; body varsa stdin yazımını başlatır.
+// Sets up the location and environment, runs the CGI, and associates it with the client; starts writing stdin if a body exists.
 void CgiManager::startCgi(Client* client,
                           const std::string& scriptPath,
                           const std::string& interpreterPath)
@@ -194,7 +194,7 @@ void CgiManager::startCgi(Client* client,
 	registerHandler(cgiHandler);
 }
 
-// Belirlenen eşiği (60 sn) aşan CGI'ları 504 döndürüp sonlandırır.
+// Terminates CGI processes that exceed the 60-second limit and returns 504.
 void CgiManager::checkCgiTimeouts(std::time_t now)
 {
     reapPendingKills();
@@ -224,7 +224,7 @@ void CgiManager::checkCgiTimeouts(std::time_t now)
     }
 }
 
-// CGI çıktısını parse edip client'a yanıt olarak kuyruğa alır; çıktı boş ve script başarısızsa 502 döner.
+// Parses CGI output and queues it as the client response; returns 502 if the output is empty and the script failed.
 void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 {
 	Client* client = cgiHandler->getOwner();
@@ -264,7 +264,7 @@ void CgiManager::finishCgiResponse(CgiHandler* cgiHandler)
 	unregisterHandler(cgiHandler);
 }
 
-// CGI'nin stdout pipe'ından gelen veriyi okuyup tampona ekler; EOF'ta yanıtı tamamlar.
+// Reads data from the CGI stdout pipe into the buffer and completes the response at EOF.
 void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 {
 	char buffer[65536];
@@ -286,7 +286,7 @@ void CgiManager::handleCgiReceive(CgiHandler* cgiHandler)
 		return;
 }
 
-// İstek body'sinin kalanını CGI'nin stdin pipe'ına yazar; tamamlanınca stdin'i kapatır.
+// Writes the remaining request body to the CGI stdin pipe and closes stdin when finished.
 void CgiManager::handleCgiSend(CgiHandler* cgiHandler)
 {
 	if (cgiHandler->getStdinFd() == -1)

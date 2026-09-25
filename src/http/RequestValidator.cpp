@@ -1,30 +1,30 @@
 #include "RequestValidator.hpp"
 
-// HTTP metodunun sunucu tarafından genel olarak desteklenip desteklenmediğini kontrol eder.
+// Checks whether the HTTP method is generally supported by the server.
 bool RequestValidator::isMethodAllowed(const std::string& method)
 {
     return (method == "get" || method == "post" || method == "delete");
 }
 
-// URI'nin boş olmadığını ve '/' ile başladığını kontrol eder.
+// Checks that the URI is non-empty and starts with '/'.
 bool RequestValidator::isUriValid(const std::string& uri)
 {
     return (!uri.empty() && uri[0] == '/');
 }
 
-// HTTP versiyonunun desteklenen tek versiyon (HTTP/1.1) olup olmadığını kontrol eder.
+// Checks whether the HTTP version is the only supported version, HTTP/1.1.
 bool RequestValidator::isVersionSupported(const std::string& version)
 {
     return (version == "http/1.1");
 }
 
-// Zorunlu Host header'ının istekte bulunup bulunmadığını kontrol eder.
+// Checks whether the required Host header is present in the request.
 bool RequestValidator::hasRequiredHostHeader(const HttpRequest& request)
 {
     return request.hasHeader("host");
 }
 
-// Method, URI, versiyon ve Host header sırasıyla doğrular; geçersizse uygun HTTP status kodunu döner.
+// Validates the method, URI, version, and Host header in order; returns the appropriate HTTP status code if invalid.
 int RequestValidator::validate(const HttpRequest& request)
 {
     if (!isMethodAllowed(request.getMethod()))

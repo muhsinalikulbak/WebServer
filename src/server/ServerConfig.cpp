@@ -6,7 +6,7 @@
 #include <cerrno>
 #include <climits>
 
-// Config metnini yorumlardan arındırıp tırnaklı değerleri koruyarak token'lara ("{", "}", ";" ve kelimeler) ayırır.
+// Removes comments from the configuration text and tokenizes it into "{", "}", ";", and words while preserving quoted values.
 static std::vector<std::string> tokenizeConfig(const std::string &conf)
 {
   std::vector<std::string> tokens;
@@ -74,7 +74,7 @@ static std::vector<std::string> tokenizeConfig(const std::string &conf)
   return tokens;
 }
 
-// Token'ı 0-65535 aralığında bir pozitif tamsayıya çevirir; geçersizse belirtilen alan adıyla hata fırlatır.
+// Converts the token to a positive integer in the range 0-65535; throws an error naming the field if invalid.
 static int parsePositiveInt(const std::string &token,
                             const std::string &field)
 {
@@ -88,7 +88,7 @@ static int parsePositiveInt(const std::string &token,
   return static_cast<int>(value);
 }
 
-// K/M/G son eki olan client_max_body_size değerini bayt cinsinden sayıya çevirir.
+// Converts a client_max_body_size value with a K/M/G suffix to a number of bytes.
 static size_t parseBodySize(const std::string &token)
 {
   if (token.empty())
@@ -125,7 +125,7 @@ static size_t parseBodySize(const std::string &token)
   return static_cast<size_t>(value) * multiplier;
 }
 
-// Token dizisinden bir sonraki ";" sonlandırıcıya kadar olan direktif token'larını toplar.
+// Collects directive tokens from the token sequence up to the next ";" terminator.
 static std::vector<std::string>
 readDirective(const std::vector<std::string> &tokens, size_t &i)
 {
@@ -146,7 +146,7 @@ readDirective(const std::vector<std::string> &tokens, size_t &i)
   return directive;
 }
 
-// "host:port" (veya sadece "port") formatındaki listen değerini host/port çiftine ayrıştırır.
+// Parses a listen value in "host:port" (or just "port") format into a host/port pair.
 static std::set<std::pair<std::string, int> > parseListen(const std::string &value)
 {
   size_t colon = value.rfind(':');
@@ -168,7 +168,7 @@ static std::set<std::pair<std::string, int> > parseListen(const std::string &val
   return resultSet;
 }
 
-// "on"/"off" değerini bool'a çevirir; başka bir değer verilirse belirtilen alan adıyla hata fırlatır.
+// Converts "on"/"off" to a bool; throws an error naming the field for any other value.
 static bool parseOnOff(const std::string &value, const std::string &field)
 {
   if (value == "on")
@@ -179,7 +179,7 @@ static bool parseOnOff(const std::string &value, const std::string &field)
                               " must be on/off: " + value);
 }
 
-// Bir location bloğu içindeki tek bir direktifi (allow_methods, root, cgi_ext vb.) ilgili LocationConfig alanına uygular.
+// Applies one directive in a location block (allow_methods, root, cgi_ext, etc.) to the corresponding LocationConfig field.
 static void applyLocationDirective(LocationConfig &location,
                                    const std::vector<std::string> &directive)
 {
@@ -257,7 +257,7 @@ static void applyLocationDirective(LocationConfig &location,
         "Config parse error: unknown location directive: " + key);
 }
 
-// "location <path> { ... }" bloğunu ayrıştırıp dolu bir LocationConfig döner.
+// Parses a "location <path> { ... }" block and returns a populated LocationConfig.
 static LocationConfig parseLocation(const std::vector<std::string> &tokens,
                                     size_t &i)
 {
@@ -283,7 +283,7 @@ static LocationConfig parseLocation(const std::vector<std::string> &tokens,
   return location;
 }
 
-// Aynı server bloğunda birden fazla location'ın aynı path'i kullanmadığını doğrular.
+// Checks that multiple locations in the same server block do not use the same path.
 static void validateUniqueLocationPaths(const std::vector<LocationConfig> &locations)
 {
   for (size_t i = 0; i < locations.size(); ++i)
@@ -296,7 +296,7 @@ static void validateUniqueLocationPaths(const std::vector<LocationConfig> &locat
   }
 }
 
-// Bir server bloğu içindeki tek bir direktifi (listen, server_name, error_page vb.) ilgili ServerConfig alanına uygular.
+// Applies one directive in a server block (listen, server_name, error_page, etc.) to the corresponding ServerConfig field.
 static void applyServerDirective(ServerConfig &server, const std::vector<std::string> &directive)
 {
   if (directive.empty())
@@ -349,7 +349,7 @@ static void applyServerDirective(ServerConfig &server, const std::vector<std::st
         "Config parse error: unknown server directive: " + key);
 }
 
-// Tüm alanları varsayılan değerlere (1M body limiti, boş listeler) sıfırlar.
+// Resets all fields to their default values (1M body limit and empty lists).
 void ServerConfig::init()
 {
   listens.clear();
@@ -359,13 +359,13 @@ void ServerConfig::init()
   locations.clear();
 }
 
-// Varsayılan değerlerle boş bir ServerConfig oluşturur.
+// Creates an empty ServerConfig with default values.
 ServerConfig::ServerConfig()
 {
   init();
 }
 
-// Tek bir "server { ... }" bloğunun ham metnini tokenize edip ayrıştırarak bu ServerConfig'i doldurur.
+// Populates this ServerConfig by tokenizing and parsing the raw text of one "server { ... }" block.
 ServerConfig::ServerConfig(const std::string &allConf)
 {
   init();
@@ -401,10 +401,10 @@ ServerConfig::ServerConfig(const std::string &allConf)
         "Config parse error: no listen directive in server");
 }
 
-// Başka bir ServerConfig'in alanlarını kopyalayarak yeni nesne oluşturur.
+// Creates a new object by copying another ServerConfig's fields.
 ServerConfig::ServerConfig(const ServerConfig &other) { *this = other; }
 
-// Bu nesneye başka bir ServerConfig'in tüm alanlarını atar.
+// Copies all fields from another ServerConfig into this object.
 ServerConfig &ServerConfig::operator=(const ServerConfig &other)
 {
   if (this != &other)
@@ -418,10 +418,10 @@ ServerConfig &ServerConfig::operator=(const ServerConfig &other)
   return *this;
 }
 
-// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
+// Empty destructor; no additional resource management is required.
 ServerConfig::~ServerConfig() {}
 
-// Server limiti ile tüm location override'larının en büyüğünü (parser'ın uygulayacağı tavan) döner.
+// Returns the largest of the server limit and all location overrides (the maximum limit enforced by the parser).
 size_t ServerConfig::maxBodyCeiling() const
 {
   size_t ceiling = clientMaxBodySize;
@@ -434,7 +434,7 @@ size_t ServerConfig::maxBodyCeiling() const
   return ceiling;
 }
 
-// Verilen location için geçerli body limitini (varsa location override'ı, yoksa server limiti) döner.
+// Returns the body limit for the given location: its override if set, otherwise the server limit.
 size_t ServerConfig::effectiveBodyLimit(const LocationConfig* loc) const
 {
   if (loc != NULL && loc->hasClientMaxBodySize)

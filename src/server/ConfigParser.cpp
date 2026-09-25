@@ -8,7 +8,7 @@
 #include <cctype>
 #include <set>
 
-// Config metnindeki '#' yorumlarını (tırnak içindekiler hariç) satır sonuna kadar temizler.
+// Removes '#' comments from the configuration text through the end of each line, except inside quotes.
 static std::string stripComments(const std::string &conf)
 {
     std::string result;
@@ -49,14 +49,14 @@ static std::string stripComments(const std::string &conf)
     return result;
 }
 
-// Boş config dosya yolu ve boş server listesiyle varsayılan ConfigParser oluşturur.
+// Creates a default ConfigParser with an empty configuration file path and server list.
 ConfigParser::ConfigParser()
 {
     this->_configFile = "";
     this->_servers.clear();
 }
 
-// Verilen config dosyasını okuyup her "server { ... }" bloğunu ayrı bir ServerConfig'e dönüştürür.
+// Reads the given configuration file and converts each "server { ... }" block into a separate ServerConfig.
 ConfigParser::ConfigParser(std::string path)
 {
     this->_configFile = path;
@@ -155,13 +155,13 @@ ConfigParser::ConfigParser(std::string path)
     }
 }
 
-// Başka bir ConfigParser'ın alanlarını kopyalayarak yeni nesne oluşturur.
+// Creates a new object by copying another ConfigParser's fields.
 ConfigParser::ConfigParser(const ConfigParser& other)
 {
     *this = other;
 }
 
-// Bu nesneye başka bir ConfigParser'ın config dosya yolunu ve server listesini atar.
+// Copies another ConfigParser's configuration file path and server list into this object.
 ConfigParser& ConfigParser::operator=(const ConfigParser& other)
 {
     if (this != &other)
@@ -172,12 +172,12 @@ ConfigParser& ConfigParser::operator=(const ConfigParser& other)
     return *this;
 }
 
-// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
+// Empty destructor; no additional resource management is required.
 ConfigParser::~ConfigParser()
 {
 }
 
-// Parse edilmiş tüm ServerConfig bloklarını döner.
+// Returns all parsed ServerConfig blocks.
 const std::vector<ServerConfig>& ConfigParser::getServers() const
 {
     return _servers;

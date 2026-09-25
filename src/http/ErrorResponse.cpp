@@ -6,7 +6,7 @@
 
 namespace ErrorResponse
 {
-    // İsteğin karşılığında config'teki özel hata sayfasını, yoksa fallback HTML'i döner.
+    // Returns the configured custom error page for the request, or fallback HTML if none is configured.
     HttpResponse build(int statusCode, const ServerConfig& serverConfig)
     {
         HttpResponse response;

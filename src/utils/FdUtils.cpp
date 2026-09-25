@@ -11,7 +11,7 @@
 
 namespace FdUtils
 {
-    // Verilen fd'yi O_NONBLOCK ile non-blocking moda alır.
+    // Sets the given file descriptor to non-blocking mode with O_NONBLOCK.
     void setNonBlocking(int fd)
     {
         int flags = fcntl(fd, F_GETFL);
@@ -22,7 +22,7 @@ namespace FdUtils
             throw std::runtime_error(std::string("fcntl F_SETFL: ") + strerror(errno));
     }
 
-    // Verilen fd'ye FD_CLOEXEC bayrağını ekler (fork/exec sonrası otomatik kapansın diye).
+    // Adds the FD_CLOEXEC flag to the given file descriptor so it closes automatically after fork/exec.
     void setCloseOnExec(int fd)
     {
         int flags = fcntl(fd, F_GETFD);
@@ -33,7 +33,7 @@ namespace FdUtils
             throw std::runtime_error(std::string("fcntl F_SETFD: ") + strerror(errno));
     }
 
-    // Verilen soket fd'sinde Nagle algoritmasını (TCP_NODELAY) kapatır.
+    // Disables Nagle's algorithm (TCP_NODELAY) on the given socket file descriptor.
     void setTcpNodelay(int fd)
     {
 		int opt = 1;
@@ -43,7 +43,7 @@ namespace FdUtils
 		}
     }
 
-    // Verilen soket fd'sinde SO_REUSEADDR seçeneğini etkinleştirir.
+    // Enables SO_REUSEADDR on the given socket file descriptor.
     void setReuseAddress(int fd)
     {
         int opt = 1;
@@ -51,7 +51,7 @@ namespace FdUtils
             throw std::runtime_error(std::string("setsockopt SO_REUSEADDR: ") + strerror(errno));
     }
 
-    // Verilen soket fd'sinde SO_REUSEPORT seçeneğini etkinleştirir.
+    // Enables SO_REUSEPORT on the given socket file descriptor.
     void setReusePort(int fd)
     {
         int opt = 1;

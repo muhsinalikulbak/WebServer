@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <csignal>
 
-// _epollFd'yi henüz oluşturulmamış (-1) olarak işaretleyip son timeout kontrolünü şimdi zamanına ayarlar.
+// Marks _epollFd as not yet created (-1) and sets the last timeout check to the current time.
 Server::Server()
 	: _cgiManager(_epollFd, _liveHandlers)
 {
@@ -18,7 +18,7 @@ Server::Server()
 	_lastTimeoutCheck = std::time(NULL);
 }
 
-// Tüm client ve dinleme soketlerini siler, epoll fd'sini kapatır.
+// Removes all client and listening sockets, then closes the epoll file descriptor.
 Server::~Server()
 {
 	std::set<Client *>::iterator client = _clientSockets.begin();
@@ -47,7 +47,7 @@ Server::~Server()
 		close(_epollFd);
 }
 
-// Config'teki her ip:port için epoll'u ve dinleme soketlerini oluşturup kaydeder.
+// Creates and registers epoll and listening sockets for each IP:port in the configuration.
 void Server::init(const ConfigParser& config)
 {
 	const std::vector<ServerConfig>& servers = config.getServers();
@@ -95,7 +95,7 @@ void Server::init(const ConfigParser& config)
 	_events.resize(100);
 }
 
-// Dinleme soketinde bekleyen bağlantıyı kabul edip yeni bir Client oluşturup epoll'a kaydeder.
+// Accepts a pending connection on the listening socket, creates a Client, and registers it with epoll.
 void Server::acceptNewConnection(Socket* masterSocket)
 {
 	int clientFd = masterSocket->acceptConnection();
@@ -127,7 +127,7 @@ void Server::acceptNewConnection(Socket* masterSocket)
 	}
 }
 
-// Client'tan gelen veriyi okuyup parser durumuna göre isteği işler veya bağlantıyı kapatır.
+// Reads data from the client and processes the request based on the parser state, or closes the connection.
 void Server::handleClientReceive(Client* client)
 {
 	try
@@ -151,7 +151,7 @@ void Server::handleClientReceive(Client* client)
 	}
 }
 
-// Client'a yanıt gönderir; tamamlanınca keep-alive için parser'ı sıfırlayıp sıradaki isteği işler.
+// Sends the response to the client; when complete, resets the parser for keep-alive and processes the next request.
 void Server::handleClientSend(Client* client, epoll_event *event)
 {
 	try
@@ -197,7 +197,7 @@ void Server::handleClientSend(Client* client, epoll_event *event)
 	}
 }
 
-// Ayrıştırma sonucuna göre hata yanıtı, CGI başlatma ya da static/upload dispatch dallarından birine yönlendirir.
+// Routes the parsed request to an error response, CGI startup, or the static/upload dispatch path.
 void Server::handleParsedRequest(Client* client, Client::StreamState state)
 {
     if (state == Client::REQUEST_ERROR)
@@ -235,7 +235,7 @@ void Server::handleParsedRequest(Client* client, Client::StreamState state)
     }
 }
 
-// Ana epoll event loop'unu shutdown bayrağı set edilene kadar çalıştırır; olayları dağıtır ve periyodik timeout kontrolü yapar.
+// Runs the main epoll event loop until the shutdown flag is set, dispatching events and checking timeouts periodically.
 void Server::run()
 {
 	_lastTimeoutCheck = std::time(NULL);
@@ -310,7 +310,7 @@ void Server::run()
 	}
 }
 
-// Uzun süredir istek beklemeyen (keep-alive timeout) client bağlantılarını kapatır.
+// Closes client connections that have been idle beyond the keep-alive timeout.
 void Server::checkExpiredSockets(std::time_t now)
 {
     std::set<Client*>::iterator it = _clientSockets.begin();
@@ -330,7 +330,7 @@ void Server::checkExpiredSockets(std::time_t now)
     }
 }
 
-// En fazla 5 saniyede bir client ve CGI timeout kontrollerini tetikler.
+// Triggers client and CGI timeout checks at most once every five seconds.
 void Server::checkTimeouts()
 {
     std::time_t now = std::time(NULL);
@@ -346,7 +346,7 @@ void Server::checkTimeouts()
     _lastTimeoutCheck = std::time(NULL);
 }
 
-// Bir handler'ı epoll'a (EPOLLIN ile) ve tipine uygun iç sete kaydeder.
+// Registers a handler with epoll for EPOLLIN and adds it to the matching internal set.
 void	Server::registerHandler(EpollHandler* socket)
 {
 	struct epoll_event event;
@@ -378,7 +378,7 @@ void	Server::registerHandler(EpollHandler* socket)
 	_liveHandlers.insert(socket);
 }
 
-// Bir handler'ı epoll'dan çıkarıp iç setlerden siler; client'ın aktif CGI'si varsa onu da sonlandırır.
+// Removes a handler from epoll and the internal sets; also terminates the client's active CGI, if any.
 void Server::unregisterHandler(EpollHandler* socket)
 {
 	if (socket->getType() == EpollHandler::HANDLER_CGI_PIPE)

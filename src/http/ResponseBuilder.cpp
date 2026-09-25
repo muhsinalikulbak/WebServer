@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-// İsteği doğrulayıp uygun location'ı bulur; hata/redirect/CGI/static kararını verir ve sonucu döner.
+// Validates the request, finds the matching location, selects an error, redirect, CGI, or static response, and returns the result.
 ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     const HttpRequest& request,
     const ServerConfig& serverConfig,
@@ -90,7 +90,7 @@ ResponseBuilder::RouteResult ResponseBuilder::routeRequest(
     return ROUTE_CGI;
 }
 
-// Method'a göre isteği StaticHandler ya da UploadHandler'a yönlendirir (ROUTE_STATIC durumunda çağrılır).
+// Routes the request to StaticHandler or UploadHandler based on the method (called for ROUTE_STATIC).
 HttpResponse ResponseBuilder::dispatch(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     if (request.getMethod() == "get")    return StaticHandler::get(request, location, serverConfig);
@@ -99,13 +99,13 @@ HttpResponse ResponseBuilder::dispatch(const HttpRequest& request, const Locatio
     return buildErrorResponse(501, serverConfig);
 }
 
-// Verilen status kodu için ErrorResponse modülü üzerinden hata yanıtı üretir.
+// Builds an error response for the given status code through the ErrorResponse module.
 HttpResponse ResponseBuilder::buildErrorResponse(int statusCode, const ServerConfig& serverConfig)
 {
     return ErrorResponse::build(statusCode, serverConfig);
 }
 
-// Method'un, location'ın izin verdiği metotlar listesinde olup olmadığını (case-insensitive) kontrol eder.
+// Checks case-insensitively whether the method is in the list allowed by the location.
 bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, const LocationConfig& location)
 {
     for (size_t i = 0; i < location.allowedMethods.size(); i++)
@@ -116,7 +116,7 @@ bool    ResponseBuilder::isMethodAllowedForLocation(const std::string& method, c
     return false;
 }
 
-// Path'in uzantısının location'da tanımlı bir CGI uzantısına karşılık gelip gelmediğini kontrol eder.
+// Checks whether the path extension matches a CGI extension configured in the location.
 bool ResponseBuilder::isCgiRequest(const std::string& path, const LocationConfig& location, std::string& outExtension)
 {
     outExtension.clear();
@@ -134,7 +134,7 @@ bool ResponseBuilder::isCgiRequest(const std::string& path, const LocationConfig
     return (location.cgiExtension.find(outExtension) != location.cgiExtension.end());
 }
     
-// İstek path'ini location prefix'ini çıkarıp root ile birleştirerek gerçek disk path'ine çevirir; ".." varsa reddeder.
+// Maps the request path to a disk path by removing the location prefix and joining it to the root; rejects paths containing "..".
 std::string ResponseBuilder::resolveFilePath(const std::string& requestPath, const LocationConfig& location)
 {
     std::string remainder = requestPath.substr(location.path.length());

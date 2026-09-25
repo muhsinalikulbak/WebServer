@@ -3,28 +3,28 @@
 #include <sstream>
 #include <cstdlib>
 
-// Boş yapıcı; durumsuz sınıf için kullanılmaz.
+// Empty constructor; this stateless class is not instantiated.
 CgiResponseParser::CgiResponseParser()
 {
 }
 
-// Kopya yapıcı; durumsuz sınıf için kullanılmaz.
+// Copy constructor; this stateless class is not instantiated.
 CgiResponseParser::CgiResponseParser(const CgiResponseParser&)
 {
 }
 
-// Atama operatörü; durumsuz sınıf için kullanılmaz.
+// Assignment operator; this stateless class is not instantiated.
 CgiResponseParser& CgiResponseParser::operator=(const CgiResponseParser&)
 {
     return *this;
 }
 
-// Yıkıcı; durumsuz sınıf için kullanılmaz.
+// Destructor; this stateless class is not instantiated.
 CgiResponseParser::~CgiResponseParser()
 {
 }
 
-// CGI'nin ham çıktısını header/body olarak ayırıp bir HttpResponse'a dönüştürür.
+// Splits raw CGI output into headers and body, then converts it to an HttpResponse.
 HttpResponse CgiResponseParser::parse(const std::string& rawOutput)
 {
     std::string::size_type headerEnd = rawOutput.find("\r\n\r\n");

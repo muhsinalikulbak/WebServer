@@ -1,7 +1,7 @@
 #include "HttpResponse.hpp"
 #include <sstream>
 
-// Verilen HTTP status koduna karşılık gelen sabit reason phrase'i döner.
+// Returns the fixed reason phrase for the given HTTP status code.
 std::string HttpResponse::statusTextFor(int code)
 {
     switch (code)
@@ -30,24 +30,24 @@ std::string HttpResponse::statusTextFor(int code)
     }
 }
 
-// Varsayılan olarak 200 OK, HTTP/1.1 ve boş body ile HttpResponse oluşturur.
+// Creates an HttpResponse with 200 OK, HTTP/1.1, and an empty body by default.
 HttpResponse::HttpResponse()
     : _statusCode(200), _statusText(statusTextFor(200)), _version("HTTP/1.1"), _headers(), _body()
 {
 }
 
-// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
+// Empty destructor; no additional resource management is required.
 HttpResponse::~HttpResponse()
 {
 }
 
-// Başka bir HttpResponse'ın alanlarını kopyalayarak yeni nesne oluşturur.
+// Creates a new object by copying another HttpResponse's fields.
 HttpResponse::HttpResponse(const HttpResponse& other)
 {
     *this = other;
 }
 
-// Bu nesneye başka bir HttpResponse'ın tüm alanlarını atar.
+// Copies all fields from another HttpResponse into this object.
 HttpResponse& HttpResponse::operator=(const HttpResponse& other)
 {
     if (this != &other)
@@ -61,38 +61,38 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& other)
     return *this;
 }
 
-// Status kodunu ve buna karşılık gelen reason phrase'i ayarlar.
+// Sets the status code and its corresponding reason phrase.
 void HttpResponse::setStatus(int code)
 {
     _statusCode = code;
     _statusText = statusTextFor(code);
 }
 
-// Bir header'ı ekler veya günceller.
+// Adds or updates a header.
 void HttpResponse::setHeader(const std::string& key, const std::string& value)
 {
     _headers[key] = value;
 }
 
-// Response body'sini tamamen değiştirir.
+// Replaces the entire response body.
 void HttpResponse::setBody(const std::string& body)
 {
     _body = body;
 }
 
-// Verilen veriyi mevcut body'nin sonuna ekler.
+// Appends the given data to the end of the current body.
 void HttpResponse::appendBody(const std::string& data)
 {
     _body.append(data);
 }
 
-// Response status kodunu döner.
+// Returns the response status code.
 int HttpResponse::getStatus() const
 {
     return _statusCode;
 }
 
-// Verilen header'ın değerini döner; yoksa boş string döner.
+// Returns the value of the given header, or an empty string if absent.
 std::string HttpResponse::getHeader(const std::string& key) const
 {
     std::map<std::string, std::string>::const_iterator it = _headers.find(key);
@@ -101,19 +101,19 @@ std::string HttpResponse::getHeader(const std::string& key) const
     return "";
 }
 
-// Verilen header'ın mevcut olup olmadığını döner.
+// Returns whether the given header exists.
 bool HttpResponse::hasHeader(const std::string& key) const
 {
     return _headers.find(key) != _headers.end();
 }
 
-// Response body'sini döner.
+// Returns the response body.
 const std::string& HttpResponse::getBody() const
 {
     return _body;
 }
 
-// HttpResponse'u tam bir HTTP/1.1 yanıt string'ine (status line + header'lar + body) dönüştürür.
+// Converts the HttpResponse into a complete HTTP/1.1 response string (status line, headers, and body).
 std::string HttpResponse::serialize() const
 {
     std::ostringstream out;

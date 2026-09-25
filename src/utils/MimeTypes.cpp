@@ -1,6 +1,6 @@
 #include "MimeTypes.hpp"
 
-// Path'in uzantısına bakıp uygun MIME type'ı döner; bilinmeyen uzantılarda "text/plain" döner.
+// Returns the appropriate MIME type based on the path extension; returns "text/plain" for unknown extensions.
 std::string MimeTypes::fromPath(const std::string& path)
 {
     size_t dotPos = path.rfind('.');

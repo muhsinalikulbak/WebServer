@@ -8,7 +8,7 @@
 
 namespace
 {
-    // Upload hedef dosya yolunu çözer; uploadStore/dosya adı geçersizse errorOut'u doldurup false döner.
+    // Resolves the upload destination path; if uploadStore or the filename is invalid, sets errorOut and returns false.
     bool resolveUploadTarget(const HttpRequest& request, const LocationConfig& location,
                              const ServerConfig& serverConfig, std::string& outFilePath,
                              HttpResponse& errorOut)
@@ -32,7 +32,7 @@ namespace
     }
 }
 
-// POST isteğinin gövdesini uploadStore altına dosya olarak yazar (yeni: 201, üzerine yazma: 200).
+// Writes the POST request body to a file under uploadStore (201 for a new file, 200 when overwriting).
 HttpResponse UploadHandler::post(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     std::string filePath;
@@ -64,7 +64,7 @@ HttpResponse UploadHandler::post(const HttpRequest& request, const LocationConfi
     return HttpStatusResponse::build(statusCode, alreadyExists ? "" : request.getPath());
 }
 
-// DELETE isteğiyle hedeflenen upload dosyasını diskten kaldırır.
+// Removes the upload file targeted by the DELETE request from disk.
 HttpResponse UploadHandler::remove(const HttpRequest& request, const LocationConfig& location, const ServerConfig& serverConfig)
 {
     std::string filePath;

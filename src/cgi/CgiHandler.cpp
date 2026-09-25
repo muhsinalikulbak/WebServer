@@ -1,18 +1,18 @@
 ﻿#include "CgiHandler.hpp"
 #include "Client.hpp"
 
-// Varsayılan CgiHandler'ı boş fd/pid ve NULL owner ile oluşturur.
+// Creates a default CgiHandler with empty file descriptors, a zero pid, and a NULL owner.
 CgiHandler::CgiHandler() : _stdoutPipeFd(-1), _stdinPipeFd(-1), _pid(-1), _owner(NULL), _startTime(std::time(NULL)), _stdinWriteOffset(0)
 {
 }
 
-// Verilen pipe fd'leri, pid ve owner ile CgiHandler'ı oluşturur; başlangıç zamanını damgalar.
+// Creates a CgiHandler with the given pipe file descriptors, pid, and owner, and records its start time.
 CgiHandler::CgiHandler(int stdoutPipeFd, int stdinPipeFd, pid_t pid, Client* owner)
     : _stdoutPipeFd(stdoutPipeFd), _stdinPipeFd(stdinPipeFd), _pid(pid), _owner(owner), _startTime(std::time(NULL)), _stdinWriteOffset(0)
 {
 }
 
-// Açık kalan stdout/stdin pipe fd'lerini kapatır.
+// Closes any remaining open stdout/stdin pipe file descriptors.
 CgiHandler::~CgiHandler()
 {
     if(_stdoutPipeFd != -1)
@@ -21,67 +21,67 @@ CgiHandler::~CgiHandler()
         close(_stdinPipeFd);
 }
 
-// CGI çıktısını okuduğumuz pipe'ın fd'sini döner.
+// Returns the file descriptor of the pipe used to read CGI output.
 int CgiHandler::getStdoutFd() const
 {
     return _stdoutPipeFd;
 }
 
-// CGI'ya body yazdığımız pipe'ın fd'sini döner.
+// Returns the file descriptor of the pipe used to write the request body to CGI.
 int CgiHandler::getStdinFd() const
 {
     return _stdinPipeFd;
 }
 
-// EpollHandler arayüzü için birincil fd olarak stdout pipe'ını döner.
+// Returns the stdout pipe as the primary file descriptor for the EpollHandler interface.
 int CgiHandler::getFd() const
 {
     return _stdoutPipeFd;
 }
 
-// Bu handler'ın epoll handler tipini (CGI pipe) döner.
+// Returns this handler's epoll handler type (CGI pipe).
 EpollHandler::HandlerType CgiHandler::getType() const
 {
     return EpollHandler::HANDLER_CGI_PIPE;
 }
 
-// Çalışan CGI child process'in pid'ini döner.
+// Returns the pid of the running CGI child process.
 pid_t CgiHandler::getPid() const
 {
     return _pid;
 }
 
-// Bu CGI'nin sahibi olan Client'ı döner.
+// Returns the Client that owns this CGI process.
 Client* CgiHandler::getOwner() const
 {
     return _owner;
 }
 
-// CGI child process'in pid'ini ayarlar.
+// Sets the pid of the CGI child process.
 void CgiHandler::setPid(pid_t pid)
 {
     _pid = pid;
 }
 
-// Bu CGI'nin sahibi olan Client'ı ayarlar.
+// Sets the Client that owns this CGI process.
 void CgiHandler::setOwner(Client* owner)
 {
     _owner = owner;
 }
 
-// CGI'dan okunan yeni veriyi çıktı tampununa ekler.
+// Appends newly read CGI data to the output buffer.
 void CgiHandler::appendOutput(const std::string& data)
 {
     _cgiOutputBuffer.append(data);
 }
 
-// Biriktirilmiş ham CGI çıktı tampununu döner.
+// Returns the accumulated raw CGI output buffer.
 const std::string& CgiHandler::getOutputBuffer() const
 {
     return _cgiOutputBuffer;
 }
 
-// Stdin pipe'ını epoll'dan çıkarıp kapatır.
+// Removes the stdin pipe from epoll and closes it.
 void CgiHandler::closeStdin(int epollFd)
 {
     if (_stdinPipeFd != -1)
@@ -92,13 +92,13 @@ void CgiHandler::closeStdin(int epollFd)
     }
 }
 
-// Owner'ın body'sinde script'e henüz yazılmamış kısmın başlangıç ofsetini ayarlar.
+// Sets the starting offset of the owner's request body that has not yet been written to the script.
 void CgiHandler::setStdinOffset(size_t offset)
 {
     _stdinWriteOffset = offset;
 }
 
-// Owner body'sinde henüz script'e yazılmamış verinin başlangıç adresini döner.
+// Returns the start of the owner's request body data that has not yet been written to the script.
 const char* CgiHandler::stdinRemainingData() const
 {
     if (!_owner)
@@ -106,7 +106,7 @@ const char* CgiHandler::stdinRemainingData() const
     return _owner->getRequest().getBody().data() + _stdinWriteOffset;
 }
 
-// Owner body'sinde henüz script'e yazılmamış kalan bayt sayısını döner.
+// Returns the number of remaining request body bytes not yet written to the script.
 size_t CgiHandler::stdinRemainingSize() const
 {
     if (!_owner)
@@ -114,13 +114,13 @@ size_t CgiHandler::stdinRemainingSize() const
     return _owner->getRequest().getBody().size() - _stdinWriteOffset;
 }
 
-// Stdin yazma ofsetini n bayt ileri alır.
+// Advances the stdin write offset by n bytes.
 void CgiHandler::consumeStdinBuffer(size_t n)
 {
     _stdinWriteOffset += n;
 }
 
-// CGI'nin başlatıldığı zamanı döner (timeout kontrolü için kullanılır).
+// Returns the time when the CGI process started (used for timeout checks).
 std::time_t CgiHandler::getStartTime() const
 {
     return _startTime;

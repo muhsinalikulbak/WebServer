@@ -3,7 +3,7 @@
 #include <cerrno>
 #include <cctype>
 
-// maxBodySize sınırıyla ve REQUEST_LINE state'inde başlayan bir RequestParser oluşturur.
+// Creates a RequestParser with the maxBodySize limit, starting in the REQUEST_LINE state.
 RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBodySize(maxBodySize), _maxHeaderCount(100)
 {
     _state = REQUEST_LINE;
@@ -17,19 +17,19 @@ RequestParser::RequestParser(size_t maxBodySize): _buffer(), _request(), _maxBod
     _errorCode = 400;
 }
 
-// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
+// Empty destructor; no additional resource management is required.
 RequestParser::~RequestParser()
 {
 }
 
-// recv() ile okunan ham veriyi iç tampona ekler.
+// Appends raw data read by recv() to the internal buffer.
 void RequestParser::append(const std::string& buffer)
 {
     if (!buffer.empty())
         _buffer.append(buffer);
 }
 
-// Mevcut state'e göre tampondaki veriyi işleyip isteği COMPLETE ya da ERROR olana kadar ilerletir.
+// Processes buffered data according to the current state until the request is COMPLETE or ERROR.
 RequestParser::State RequestParser::feed()
 {
     while (_state != COMPLETE && _state != ERROR)
@@ -84,7 +84,7 @@ RequestParser::State RequestParser::feed()
     return _state;
 }
 
-// Header'lar bitince Transfer-Encoding/Content-Length'e göre body state'ine karar verir.
+// After the headers end, selects the body state based on Transfer-Encoding or Content-Length.
 void RequestParser::checkAfterHeader()
 {
     if (_request.hasHeader("transfer-encoding") && _request.hasHeader("content-length"))
@@ -119,7 +119,7 @@ void RequestParser::checkAfterHeader()
         _state = COMPLETE;
 }
 
-// Tampondan bir sonraki "\r\n" sonlandırmalı satırı çekip tampondan tüketir.
+// Extracts the next line terminated by "\r\n" from the buffer and consumes it.
 bool RequestParser::extractLine(std::string& line)
 {
     std::size_t pos = _buffer.find("\r\n");
@@ -134,7 +134,7 @@ bool RequestParser::extractLine(std::string& line)
     return true;
 }
 
-// İstek satırını (method, URI, versiyon) ayrıştırıp request nesnesine yazar.
+// Parses the request line (method, URI, version) and stores it in the request object.
 void RequestParser::processRequestLine(const std::string& line)
 {
     std::vector<std::string> requestLine = split(line, ' ');
@@ -151,7 +151,7 @@ void RequestParser::processRequestLine(const std::string& line)
     }
 }
 
-// Bir header satırını "anahtar: değer" olarak ayrıştırıp request nesnesine ekler.
+// Parses a header line as "name: value" and adds it to the request object.
 void RequestParser::processHeaderLine(const std::string& line)
 {
     size_t colonPos = line.find(':');
@@ -177,7 +177,7 @@ void RequestParser::processHeaderLine(const std::string& line)
     _request.setHeader(key, value);
 }
 
-// Verilen string'in başındaki ve sonundaki boşluk karakterlerini siler.
+// Trims whitespace from the beginning and end of the given string.
 void RequestParser::trimString(std::string& str)
 {
     if (str.empty())
@@ -198,7 +198,7 @@ void RequestParser::trimString(std::string& str)
 
 
 
-// Verilen string'i delimiter karakterine göre token'lara ayırır.
+// Splits the given string into tokens using the delimiter character.
 std::vector<std::string> RequestParser::split(const std::string& str, char delimiter) 
 {
     std::vector<std::string> tokens;
@@ -216,19 +216,19 @@ std::vector<std::string> RequestParser::split(const std::string& str, char delim
     return tokens;
 }
 
-// Parser'ın mevcut state'ini döner.
+// Returns the parser's current state.
 RequestParser::State    RequestParser::getState() const { return _state; }
 
-// İnşa edilmekte olan/tamamlanmış HttpRequest'i döner.
+// Returns the HttpRequest being built or already completed.
 const HttpRequest&      RequestParser::getRequest() { return _request; }
 
-// State COMPLETE ise true döner.
+// Returns true if the state is COMPLETE.
 bool                    RequestParser::isComplete() const { return _state == COMPLETE; }
 
-// State ERROR ise true döner.
+// Returns true if the state is ERROR.
 bool                    RequestParser::hasError() const { return _state == ERROR; }
 
-// Keep-alive'da bir sonraki istek için parser durumunu (buffer hariç) sıfırlar.
+// Resets the parser state for the next keep-alive request, excluding the buffer.
 void RequestParser::reset()
 {
     _state = REQUEST_LINE;
@@ -242,7 +242,7 @@ void RequestParser::reset()
     _request.clear();
 }
 
-// Content-Length/chunk-size değerinin geçerli bir sayı (10 ya da 16 tabanlı) olup olmadığını kontrol edip out'a yazar.
+// Checks whether the Content-Length/chunk-size value is a valid number (base 10 or 16) and stores it in out.
 bool RequestParser::checkContentLength(const std::string& value, size_t& out, int base)
 {
     if (value.empty())
@@ -271,7 +271,7 @@ bool RequestParser::checkContentLength(const std::string& value, size_t& out, in
     return true;
 }
 
-// Chunked transfer-encoding gövdesini (size/data/trailer state'leri) tampon üzerinden ilerletir.
+// Processes the chunked transfer-encoding body through its size, data, and trailer states using the buffer.
 bool RequestParser::chunkedBodyRemaining()
 {
     if (_chunkedState == SIZE)
@@ -340,7 +340,7 @@ bool RequestParser::chunkedBodyRemaining()
 }
 
 
-// Content-Length ile bilinen sabit boyutlu body'nin kalan kısmını tampondan okuyup body'e ekler.
+// Reads the remaining portion of a fixed-length body known from Content-Length and appends it to the body.
 void RequestParser::bodyRemaining()
 {
     size_t remaining = _contentLength - _bodyBytesRead;
@@ -351,8 +351,8 @@ void RequestParser::bodyRemaining()
     _buffer.erase(0, size);
 }
 
-// State'i ERROR'a çekip verilen HTTP hata kodunu saklar.
+// Sets the state to ERROR and stores the given HTTP error code.
 void RequestParser::setError(int code) { _state = ERROR; _errorCode = code; }
 
-// Ayrıştırma sırasında oluşan HTTP hata kodunu döner.
+// Returns the HTTP error code produced during parsing.
 int  RequestParser::getErrorCode() const { return _errorCode; }

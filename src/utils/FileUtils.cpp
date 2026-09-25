@@ -3,14 +3,14 @@
 #include <fstream>
 #include <sstream>
 
-// stat() ile path'in diskte var olup olmadığını kontrol eder (dosya ya da dizin fark etmez).
+// Checks with stat() whether the path exists on disk, whether it is a file or directory.
 bool FileUtils::pathExists(const std::string& path)
 {
     struct stat st;
     return (stat(path.c_str(), &st) == 0);
 }
 
-// Verilen path'in bir dizin olup olmadığını kontrol eder; stat başarısız olursa false döner.
+// Checks whether the given path is a directory; returns false if stat fails.
 bool FileUtils::isDirectory(const std::string& path)
 {
     struct stat st;
@@ -19,7 +19,7 @@ bool FileUtils::isDirectory(const std::string& path)
     return S_ISDIR(st.st_mode);
 }
 
-// Dosya içeriğini binary modda tek seferde okuyup outContent'e yazar; açılamazsa false döner.
+// Reads the entire file in binary mode into outContent; returns false if the file cannot be opened.
 bool FileUtils::readFile(const std::string& path, std::string& outContent)
 {
     std::ifstream file(path.c_str(), std::ios::binary);
@@ -32,7 +32,7 @@ bool FileUtils::readFile(const std::string& path, std::string& outContent)
     return true;
 }
 
-// İki path parçasını, aralarında tam olarak bir "/" kalacak şekilde birleştirir.
+// Joins two path components with exactly one "/" between them.
 std::string FileUtils::joinPath(const std::string& base, const std::string& rest)
 {
     std::string result = base;
@@ -47,7 +47,7 @@ std::string FileUtils::joinPath(const std::string& base, const std::string& rest
     return result + rest;
 }
 
-// Path'in son '/' işaretinden sonraki parçasını döner; '/' yoksa path'in tamamını döner.
+// Returns the part of the path after the last '/'; returns the entire path if there is no '/'.
 std::string FileUtils::lastPathSegment(const std::string& path)
 {
     size_t slashPos = path.find_last_of('/');
@@ -56,7 +56,7 @@ std::string FileUtils::lastPathSegment(const std::string& path)
     return path.substr(slashPos + 1);
 }
 
-// Path sonu '/' ile bitmiyorsa (veya boşsa) sona '/' ekler.
+// Appends '/' to the path if it does not already end with one or is empty.
 std::string FileUtils::withTrailingSlash(const std::string& path)
 {
     if (path.empty() || path[path.length() - 1] != '/')

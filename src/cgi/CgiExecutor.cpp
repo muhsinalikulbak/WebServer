@@ -16,7 +16,7 @@
 
 namespace
 {
-    // Girdiyi tamamen büyük harfe çevirir.
+    // Converts the input to uppercase.
     std::string toUpperCopy(const std::string& s)
     {
         std::string out;
@@ -27,7 +27,7 @@ namespace
         return out;
     }
 
-    // HTTP header adını "HTTP_" önekli CGI ortam değişkeni anahtarına dönüştürür.
+    // Converts an HTTP header name to a CGI environment variable key prefixed with "HTTP_".
     std::string toEnvKey(const std::string& key)
     {
         std::string out = "HTTP_";
@@ -43,7 +43,7 @@ namespace
         return out;
     }
 
-    // İstek path'inden script adından sonra kalan PATH_INFO bölümünü çıkarır.
+    // Extracts the PATH_INFO portion after the script name from the request path.
     std::string extractPathInfo(const std::string& requestPath, const std::string& resolvedScriptPath)
     {
         std::string scriptName;
@@ -76,18 +76,18 @@ namespace
     }
 }
 
-// Boş script path ve interpreter ile varsayılan CgiExecutor oluşturur.
+// Creates a default CgiExecutor with an empty script path and interpreter.
 CgiExecutor::CgiExecutor() : _scriptPath(""), _interpreter("")
 {
 }
 
-// Başka bir CgiExecutor'ın alanlarını kopyalayarak yeni nesne oluşturur.
+// Creates a new object by copying another CgiExecutor's fields.
 CgiExecutor::CgiExecutor(const CgiExecutor& copy)
 {
     *this = copy;
 }
 
-// Bu nesneye başka bir CgiExecutor'ın env map, script path ve interpreter'ını atar.
+// Copies another CgiExecutor's environment map, script path, and interpreter into this object.
 CgiExecutor& CgiExecutor::operator=(const CgiExecutor& assign)
 {
     if (this != &assign)
@@ -99,30 +99,30 @@ CgiExecutor& CgiExecutor::operator=(const CgiExecutor& assign)
     return *this;
 }
 
-// Ek kaynak yönetimi gerekmediği için boş yıkıcı.
+// Empty destructor; no additional resource management is required.
 CgiExecutor::~CgiExecutor()
 {
 }
 
-// Çalıştırılacak CGI script'inin dosya yolunu ayarlar.
+// Sets the file path of the CGI script to execute.
 void CgiExecutor::setScriptPath(const std::string& path)
 {
     _scriptPath = path;
 }
 
-// CGI script'ini çalıştıracak yorumlayıcı (örn: python3) yolunu ayarlar.
+// Sets the path to the interpreter that will run the CGI script (e.g. python3).
 void CgiExecutor::setInterpreter(const std::string& interpreter)
 {
     _interpreter = interpreter;
 }
 
-// Env map'e tek bir anahtar/değer ortam değişkeni ekler.
+// Adds one key/value environment variable to the environment map.
 void CgiExecutor::addEnv(const std::string& key, const std::string& value)
 {
     _envMap[key] = value;
 }
 
-// İstek, location ve server bilgilerinden CGI için standart ortam değişkenlerini üretir.
+// Builds standard CGI environment variables from the request, location, and server information.
 void CgiExecutor::buildStandardEnv(const HttpRequest& request,
                                    const LocationConfig& location,
                                    const ServerConfig& serverConfig,
@@ -181,7 +181,7 @@ void CgiExecutor::buildStandardEnv(const HttpRequest& request,
         addEnv(toEnvKey(it->first), it->second);
 }
 
-// _envMap içeriğinden execve için char* dizisi (envp) tahsis eder.
+// Allocates a char* array (envp) for execve from _envMap.
 char** CgiExecutor::_allocateEnvp() const
 {
     char** envp = new char*[_envMap.size() + 1];
@@ -198,7 +198,7 @@ char** CgiExecutor::_allocateEnvp() const
     return envp;
 }
 
-// _allocateEnvp ile ayrılan envp dizisini ve elemanlarını serbest bırakır.
+// Frees the envp array and its elements allocated by _allocateEnvp.
 void CgiExecutor::_freeEnvp(char** envp) const
 {
     if (!envp)
@@ -208,7 +208,7 @@ void CgiExecutor::_freeEnvp(char** envp) const
     delete[] envp;
 }
 
-// CGI script'ini pipe'lar üzerinden fork/execve ile çalıştırır ve iletişim için CgiHandler döner.
+// Runs the CGI script with fork/execve through pipes and returns a CgiHandler for communication.
 CgiHandler* CgiExecutor::execute(Client* client)
 {
     int pipeStdin[2];
